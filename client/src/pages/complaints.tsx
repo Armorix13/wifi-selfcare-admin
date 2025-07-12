@@ -51,6 +51,9 @@ import {
   Activity,
   ChevronLeft,
   ChevronRight,
+  List,
+  Grid,
+  Star,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -66,6 +69,7 @@ export default function Complaints() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const itemsPerPage = 5;
 
   const { toast } = useToast();
@@ -78,7 +82,7 @@ export default function Complaints() {
       description: "",
       priority: "medium",
       location: "",
-      customerId: "1",
+      customerId: 1,
       engineerId: null,
       status: "pending",
     },
@@ -166,13 +170,6 @@ export default function Complaints() {
     },
   });
 
-  const handleStatusChange = (complaintId: number, newStatus: string) => {
-    updateComplaintMutation.mutate({
-      id: complaintId,
-      data: { status: newStatus },
-    });
-  };
-
   const handleView = (complaint: any) => {
     setSelectedComplaint(complaint);
     setIsViewDialogOpen(true);
@@ -185,7 +182,7 @@ export default function Complaints() {
       description: complaint.description,
       priority: complaint.priority,
       location: complaint.location,
-      customerId: complaint.customerId.toString(),
+      customerId: complaint.customerId,
       engineerId: complaint.engineerId,
       status: complaint.status,
     });
@@ -209,30 +206,40 @@ export default function Complaints() {
     }
   };
 
+  const getCustomerName = (customerId: number) => {
+    const customer = customers.find((c: any) => c.id === customerId);
+    return customer?.name || "Unknown Customer";
+  };
+
+  const getEngineerName = (engineerId: number | null) => {
+    if (!engineerId) return null;
+    const engineer = engineers.find((e: any) => e.id === engineerId);
+    return engineer?.name || "Unknown Engineer";
+  };
+
   const filteredComplaints = complaints.filter((complaint: any) => {
+    const customerName = getCustomerName(complaint.customerId);
     const matchesSearch =
       !searchQuery ||
       complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       complaint.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      complaint.customer?.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      customerName.toLowerCase().includes(searchQuery.toLowerCase());
 
     return (
       matchesSearch &&
-      (!statusFilter || statusFilter === "all" || complaint.status === statusFilter) &&
-      (!priorityFilter || priorityFilter === "all" || complaint.priority === priorityFilter) &&
-      (!locationFilter || locationFilter === "all" || complaint.location === locationFilter)
+      (statusFilter === "all" || complaint.status === statusFilter) &&
+      (priorityFilter === "all" || complaint.priority === priorityFilter) &&
+      (locationFilter === "all" || complaint.location === locationFilter)
     );
   });
+
+  // Reset to page 1 when filters change
+  const resetPagination = () => setCurrentPage(1);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedComplaints = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
-
-  // Reset to page 1 when filters change
-  const resetPagination = () => setCurrentPage(1);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -268,6 +275,40 @@ export default function Complaints() {
     }
   };
 
+  const renderStars = (rating: number | null) => {
+    if (!rating) return null;
+    return (
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-3 w-3 ${
+              star <= rating
+                ? "text-yellow-400 fill-current"
+                : "text-gray-300"
+            }`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const getTimeAgo = (date: string) => {
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now.getTime() - past.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 0) {
+      return `${diffDays}d ago`;
+    } else if (diffHours > 0) {
+      return `${diffHours}h ago`;
+    } else {
+      return "Just now";
+    }
+  };
+
   const columns = [
     {
       key: "id",
@@ -289,11 +330,11 @@ export default function Complaints() {
           </div>
           <div>
             <div className="text-sm font-medium text-foreground">
-              {row.customer?.name || "Unknown"}
+              {getCustomerName(row.customerId)}
             </div>
             <div className="text-xs text-muted-foreground flex items-center">
-              <Phone className="h-3 w-3 mr-1" />
-              {row.customer?.phone || "No phone"}
+              <MapPin className="h-3 w-3 mr-1" />
+              {row.location}
             </div>
           </div>
         </div>
@@ -307,9 +348,8 @@ export default function Complaints() {
           <div className="text-sm font-medium text-foreground truncate">
             {value}
           </div>
-          <div className="text-xs text-muted-foreground flex items-center mt-1">
-            <MapPin className="h-3 w-3 mr-1" />
-            {row.location}
+          <div className="text-xs text-muted-foreground truncate">
+            {row.description}
           </div>
         </div>
       ),
@@ -326,51 +366,38 @@ export default function Complaints() {
     {
       key: "status",
       label: "Status",
-      render: (value: string, row: any) => (
-        <Select
-          value={value}
-          onValueChange={(newStatus) => handleStatusChange(row.id, newStatus)}
-        >
-          <SelectTrigger className="w-36 h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="assigned">Assigned</SelectItem>
-            <SelectItem value="in-progress">In Progress</SelectItem>
-            <SelectItem value="visited">Visited</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="not-resolved">Not Resolved</SelectItem>
-          </SelectContent>
-        </Select>
+      render: (value: string) => (
+        <Badge className={`${getStatusColor(value)} font-medium`}>
+          {value.replace('-', ' ').toUpperCase()}
+        </Badge>
       ),
     },
     {
       key: "engineer",
       label: "Engineer",
-      render: (value: any, row: any) => (
-        <div className="flex items-center space-x-2">
-          {row.engineer ? (
-            <>
-              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-xs font-medium text-white">
-                  {row.engineer.name
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")}
+      render: (value: any, row: any) => {
+        const engineerName = getEngineerName(row.engineerId);
+        return (
+          <div className="flex items-center space-x-2">
+            {engineerName ? (
+              <>
+                <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-medium text-white">
+                    {engineerName.split(" ").map((n: string) => n[0]).join("")}
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-foreground">
+                  {engineerName}
                 </span>
-              </div>
-              <span className="text-sm font-medium text-foreground">
-                {row.engineer.name}
-              </span>
-            </>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground">
-              Unassigned
-            </Badge>
-          )}
-        </div>
-      ),
+              </>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground">
+                Unassigned
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "createdAt",
@@ -378,7 +405,7 @@ export default function Complaints() {
       render: (value: string) => (
         <div className="text-sm text-muted-foreground flex items-center">
           <Clock className="h-3 w-3 mr-1" />
-          {new Date(value).toLocaleDateString()}
+          {getTimeAgo(value)}
         </div>
       ),
     },
@@ -417,8 +444,7 @@ export default function Complaints() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Complaint</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this complaint? This action
-                  cannot be undone.
+                  Are you sure you want to delete this complaint? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -475,10 +501,7 @@ export default function Complaints() {
               <DialogHeader>
                 <DialogTitle>Create New Complaint</DialogTitle>
               </DialogHeader>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -521,6 +544,11 @@ export default function Complaints() {
                       <SelectItem value="low">Low</SelectItem>
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.priority && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.priority.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="location">Location</Label>
@@ -529,29 +557,34 @@ export default function Complaints() {
                     placeholder="Enter location"
                     {...form.register("location")}
                   />
+                  {form.formState.errors.location && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.location.message}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="customerId">Customer</Label>
                   <Select
-                    value={form.watch("customerId")}
-                    onValueChange={(value) =>
-                      form.setValue("customerId", value)
-                    }
+                    value={form.watch("customerId")?.toString()}
+                    onValueChange={(value) => form.setValue("customerId", parseInt(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
                       {customers.map((customer: any) => (
-                        <SelectItem
-                          key={customer.id}
-                          value={customer.id.toString()}
-                        >
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
                           {customer.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.customerId && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.customerId.message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button
@@ -564,10 +597,9 @@ export default function Complaints() {
                   <Button
                     type="submit"
                     disabled={createComplaintMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
-                    {createComplaintMutation.isPending
-                      ? "Creating..."
-                      : "Create Complaint"}
+                    {createComplaintMutation.isPending ? "Creating..." : "Create Complaint"}
                   </Button>
                 </div>
               </form>
@@ -575,226 +607,271 @@ export default function Complaints() {
           </Dialog>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="stats-card">
-            <CardContent className="p-6">
+        {/* Filters and View Toggle */}
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-slate-50 to-blue-50/30">
+          <CardContent className="p-6">
+            <div className="flex flex-col space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Complaints
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {complaints.length}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <AlertCircle className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stats-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Resolved
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {
-                      complaints.filter((c: any) => c.status === "resolved")
-                        .length
-                    }
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stats-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    In Progress
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {
-                      complaints.filter((c: any) => c.status === "in-progress")
-                        .length
-                    }
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="stats-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Pending
-                  </p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {
-                      complaints.filter((c: any) => c.status === "pending")
-                        .length
-                    }
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <Card className="border border-border/50 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-card to-card/80 border-b border-border/50">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-foreground">
-                Complaints Overview
-              </CardTitle>
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search complaints..."
-                    value={searchQuery}
-                    onChange={(e) => { setSearchQuery(e.target.value); resetPagination(); }}
-                    className="pl-10 w-64"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-
-          {/* Enhanced Filters */}
-          <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); resetPagination(); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="visited">Visited</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="not-resolved">Not Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={priorityFilter} onValueChange={(value) => { setPriorityFilter(value); resetPagination(); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPagination(); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  <SelectItem value="Mumbai Central">Mumbai Central</SelectItem>
-                  <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
-                  <SelectItem value="Bangalore">Bangalore</SelectItem>
-                  <SelectItem value="Chennai">Chennai</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setPriorityFilter("all");
-                  setLocationFilter("all");
-                  setSearchQuery("");
-                  resetPagination();
-                }}
-                className="bg-background hover:bg-muted"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                Clear Filters
-              </Button>
-
-              <div className="text-sm text-muted-foreground flex items-center">
-                Page {currentPage} of {totalPages} • {filteredComplaints.length} total complaints
-              </div>
-            </div>
-          </div>
-
-          <CardContent className="p-0">
-            <DataTable
-              data={paginatedComplaints}
-              columns={columns}
-              searchPlaceholder="Search complaints..."
-            />
-          </CardContent>
-          
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-border/50 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} results
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search complaints..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        resetPagination();
+                      }}
+                      className="pl-10 w-64"
+                    />
+                  </div>
+                  <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); resetPagination(); }}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="assigned">Assigned</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="visited">Visited</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="not-resolved">Not Resolved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={priorityFilter} onValueChange={(value) => { setPriorityFilter(value); resetPagination(); }}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priority</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPagination(); }}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="All Locations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Locations</SelectItem>
+                      <SelectItem value="Mumbai Central">Mumbai Central</SelectItem>
+                      <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
+                      <SelectItem value="Bangalore">Bangalore</SelectItem>
+                      <SelectItem value="Chennai">Chennai</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
-                    variant="outline"
+                    variant={viewMode === "card" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                    className="h-8 w-8 p-0"
+                    onClick={() => setViewMode("card")}
+                    className="px-3"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <Grid className="h-4 w-4" />
                   </Button>
-                  
-                  <div className="flex items-center space-x-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
-                  
                   <Button
-                    variant="outline"
+                    variant={viewMode === "table" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="h-8 w-8 p-0"
+                    onClick={() => setViewMode("table")}
+                    className="px-3"
                   >
-                    <ChevronRight className="h-4 w-4" />
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
-          )}
+          </CardContent>
+        </Card>
+
+        {/* Main Content */}
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-foreground">
+                Complaints ({filteredComplaints.length})
+              </CardTitle>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <span>Page {currentPage} of {totalPages}</span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {viewMode === "table" ? (
+              <div className="px-6">
+                <DataTable columns={columns} data={paginatedComplaints} />
+              </div>
+            ) : (
+              <div className="px-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {paginatedComplaints.map((complaint: any) => (
+                    <Card key={complaint.id} className="border border-border/50 hover:shadow-md transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {/* Header */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-medium text-white">
+                                  #{complaint.id}
+                                </span>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-foreground truncate">
+                                  {complaint.title}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {getCustomerName(complaint.customerId)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex space-x-1">
+                              <Badge className={getPriorityColor(complaint.priority)}>
+                                {complaint.priority.toUpperCase()}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {complaint.description}
+                          </p>
+
+                          {/* Details */}
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-foreground">{complaint.location}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-foreground">{getTimeAgo(complaint.createdAt)}</span>
+                            </div>
+                          </div>
+
+                          {/* Status and Engineer */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Badge className={getStatusColor(complaint.status)}>
+                                {complaint.status.replace('-', ' ').toUpperCase()}
+                              </Badge>
+                              {complaint.rating && (
+                                <div className="flex items-center space-x-1">
+                                  {renderStars(complaint.rating)}
+                                  <span className="text-xs text-muted-foreground">
+                                    ({complaint.rating}/5)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {getEngineerName(complaint.engineerId) || "Unassigned"}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex justify-end space-x-2 pt-2 border-t border-border/50">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleView(complaint)}
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(complaint)}
+                              className="text-green-600 border-green-200 hover:bg-green-50"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Complaint</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this complaint? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(complaint)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-border/50 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} results
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage <= 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage >= totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
         </Card>
       </div>
 
@@ -806,81 +883,82 @@ export default function Complaints() {
           </DialogHeader>
           {selectedComplaint && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Complaint ID
-                  </Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Complaint ID</Label>
                   <p className="text-sm font-mono">#{selectedComplaint.id}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Status
-                  </Label>
-                  <Badge
-                    className={`${getStatusColor(selectedComplaint.status)} ml-2`}
-                  >
-                    {selectedComplaint.status.toUpperCase()}
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <Badge className={getStatusColor(selectedComplaint.status)}>
+                    {selectedComplaint.status.replace('-', ' ').toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Priority
-                  </Label>
-                  <Badge
-                    className={`${getPriorityColor(selectedComplaint.priority)} ml-2`}
-                  >
+                  <Label className="text-sm font-medium text-muted-foreground">Customer</Label>
+                  <p className="text-sm">{getCustomerName(selectedComplaint.customerId)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Priority</Label>
+                  <Badge className={getPriorityColor(selectedComplaint.priority)}>
                     {selectedComplaint.priority.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Location
-                  </Label>
+                  <Label className="text-sm font-medium text-muted-foreground">Location</Label>
                   <p className="text-sm">{selectedComplaint.location}</p>
                 </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Title
-                </Label>
-                <p className="text-sm font-medium">{selectedComplaint.title}</p>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Description
-                </Label>
-                <p className="text-sm">{selectedComplaint.description}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Customer
-                  </Label>
-                  <p className="text-sm">
-                    {selectedComplaint.customer?.name || "Unknown"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">
-                    Engineer
-                  </Label>
-                  <p className="text-sm">
-                    {selectedComplaint.engineer?.name || "Unassigned"}
-                  </p>
+                  <Label className="text-sm font-medium text-muted-foreground">Engineer</Label>
+                  <p className="text-sm">{getEngineerName(selectedComplaint.engineerId) || "Unassigned"}</p>
                 </div>
               </div>
-
+              
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">
-                  Created At
-                </Label>
-                <p className="text-sm">
-                  {new Date(selectedComplaint.createdAt).toLocaleString()}
-                </p>
+                <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                <p className="text-sm font-medium mt-1">{selectedComplaint.title}</p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                <p className="text-sm mt-1">{selectedComplaint.description}</p>
+              </div>
+              
+              {selectedComplaint.resolution && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Resolution</Label>
+                  <p className="text-sm mt-1">{selectedComplaint.resolution}</p>
+                </div>
+              )}
+              
+              {selectedComplaint.rating && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Rating</Label>
+                  <div className="flex items-center space-x-2 mt-1">
+                    {renderStars(selectedComplaint.rating)}
+                    <span className="text-sm">({selectedComplaint.rating}/5)</span>
+                  </div>
+                </div>
+              )}
+              
+              {selectedComplaint.feedback && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Feedback</Label>
+                  <p className="text-sm mt-1">{selectedComplaint.feedback}</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-6 text-sm text-muted-foreground">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Created</Label>
+                  <p className="text-sm">{new Date(selectedComplaint.createdAt).toLocaleString()}</p>
+                </div>
+                {selectedComplaint.resolvedAt && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Resolved</Label>
+                    <p className="text-sm">{new Date(selectedComplaint.resolvedAt).toLocaleString()}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -893,10 +971,7 @@ export default function Complaints() {
           <DialogHeader>
             <DialogTitle>Edit Complaint</DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={editForm.handleSubmit(onEditSubmit)}
-            className="space-y-4"
-          >
+          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
             <div>
               <Label htmlFor="edit-title">Title</Label>
               <Input
@@ -905,9 +980,7 @@ export default function Complaints() {
                 {...editForm.register("title")}
               />
               {editForm.formState.errors.title && (
-                <p className="text-sm text-red-600 mt-1">
-                  {editForm.formState.errors.title.message}
-                </p>
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.title.message}</p>
               )}
             </div>
             <div>
@@ -918,9 +991,7 @@ export default function Complaints() {
                 {...editForm.register("description")}
               />
               {editForm.formState.errors.description && (
-                <p className="text-sm text-red-600 mt-1">
-                  {editForm.formState.errors.description.message}
-                </p>
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.description.message}</p>
               )}
             </div>
             <div>
@@ -939,6 +1010,9 @@ export default function Complaints() {
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
+              {editForm.formState.errors.priority && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.priority.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-location">Location</Label>
@@ -947,17 +1021,37 @@ export default function Complaints() {
                 placeholder="Enter location"
                 {...editForm.register("location")}
               />
+              {editForm.formState.errors.location && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.location.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editForm.watch("status")}
+                onValueChange={(value) => editForm.setValue("status", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="in-progress">In Progress</SelectItem>
+                  <SelectItem value="visited">Visited</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                  <SelectItem value="not-resolved">Not Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+              {editForm.formState.errors.status && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.status.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-engineer">Engineer</Label>
               <Select
                 value={editForm.watch("engineerId")?.toString() || "unassigned"}
-                onValueChange={(value) =>
-                  editForm.setValue(
-                    "engineerId",
-                    value === "unassigned" ? null : parseInt(value),
-                  )
-                }
+                onValueChange={(value) => editForm.setValue("engineerId", value === "unassigned" ? null : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select engineer" />
@@ -965,15 +1059,15 @@ export default function Complaints() {
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {engineers.map((engineer: any) => (
-                    <SelectItem
-                      key={engineer.id}
-                      value={engineer.id.toString()}
-                    >
+                    <SelectItem key={engineer.id} value={engineer.id.toString()}>
                       {engineer.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {editForm.formState.errors.engineerId && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.engineerId.message}</p>
+              )}
             </div>
             <div className="flex justify-end space-x-2">
               <Button
@@ -986,10 +1080,9 @@ export default function Complaints() {
               <Button
                 type="submit"
                 disabled={updateComplaintMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
               >
-                {updateComplaintMutation.isPending
-                  ? "Updating..."
-                  : "Update Complaint"}
+                {updateComplaintMutation.isPending ? "Updating..." : "Update Complaint"}
               </Button>
             </div>
           </form>
