@@ -29,6 +29,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    hmr: {
+      overlay: false, // Disable the runtime error overlay
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],

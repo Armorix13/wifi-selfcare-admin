@@ -8,12 +8,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Filter, Search, Edit, Eye, Trash2, Phone, MapPin, Clock, User, AlertCircle, CheckCircle, Activity } from "lucide-react";
+import {
+  Plus,
+  Filter,
+  Search,
+  Edit,
+  Eye,
+  Trash2,
+  Phone,
+  MapPin,
+  Clock,
+  User,
+  AlertCircle,
+  CheckCircle,
+  Activity,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertComplaintSchema, type InsertComplaint } from "@shared/schema";
@@ -27,7 +63,7 @@ export default function Complaints() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
-  
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,7 +74,7 @@ export default function Complaints() {
       description: "",
       priority: "medium",
       location: "",
-      customerId: 1,
+      customerId: "1",
       engineerId: null,
       status: "pending",
     },
@@ -145,7 +181,7 @@ export default function Complaints() {
       description: complaint.description,
       priority: complaint.priority,
       location: complaint.location,
-      customerId: complaint.customerId,
+      customerId: complaint.customerId.toString(),
       engineerId: complaint.engineerId,
       status: complaint.status,
     });
@@ -170,11 +206,14 @@ export default function Complaints() {
   };
 
   const filteredComplaints = complaints.filter((complaint: any) => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch =
+      !searchQuery ||
       complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       complaint.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      complaint.customer?.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      complaint.customer?.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
     return (
       matchesSearch &&
       (!statusFilter || complaint.status === statusFilter) &&
@@ -185,23 +224,35 @@ export default function Complaints() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "assigned": return "bg-blue-100 text-blue-800";
-      case "in-progress": return "bg-purple-100 text-purple-800";
-      case "visited": return "bg-indigo-100 text-indigo-800";
-      case "resolved": return "bg-green-100 text-green-800";
-      case "not-resolved": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "assigned":
+        return "bg-blue-100 text-blue-800";
+      case "in-progress":
+        return "bg-purple-100 text-purple-800";
+      case "visited":
+        return "bg-indigo-100 text-indigo-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "not-resolved":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "urgent": return "bg-red-100 text-red-800";
-      case "high": return "bg-orange-100 text-orange-800";
-      case "medium": return "bg-yellow-100 text-yellow-800";
-      case "low": return "bg-green-100 text-green-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "urgent":
+        return "bg-red-100 text-red-800";
+      case "high":
+        return "bg-orange-100 text-orange-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -225,7 +276,9 @@ export default function Complaints() {
             <User className="h-4 w-4 text-white" />
           </div>
           <div>
-            <div className="text-sm font-medium text-foreground">{row.customer?.name || "Unknown"}</div>
+            <div className="text-sm font-medium text-foreground">
+              {row.customer?.name || "Unknown"}
+            </div>
             <div className="text-xs text-muted-foreground flex items-center">
               <Phone className="h-3 w-3 mr-1" />
               {row.customer?.phone || "No phone"}
@@ -239,7 +292,9 @@ export default function Complaints() {
       label: "Issue",
       render: (value: string, row: any) => (
         <div className="max-w-xs">
-          <div className="text-sm font-medium text-foreground truncate">{value}</div>
+          <div className="text-sm font-medium text-foreground truncate">
+            {value}
+          </div>
           <div className="text-xs text-muted-foreground flex items-center mt-1">
             <MapPin className="h-3 w-3 mr-1" />
             {row.location}
@@ -287,10 +342,15 @@ export default function Complaints() {
             <>
               <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-xs font-medium text-white">
-                  {row.engineer.name.split(' ').map((n: string) => n[0]).join('')}
+                  {row.engineer.name
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")}
                 </span>
               </div>
-              <span className="text-sm font-medium text-foreground">{row.engineer.name}</span>
+              <span className="text-sm font-medium text-foreground">
+                {row.engineer.name}
+              </span>
             </>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
@@ -315,17 +375,17 @@ export default function Complaints() {
       label: "Actions",
       render: (value: any, row: any) => (
         <div className="flex space-x-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleView(row)}
             className="text-blue-600 hover:text-blue-900 hover:bg-blue-50"
           >
             <Eye className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleEdit(row)}
             className="text-green-600 hover:text-green-900 hover:bg-green-50"
           >
@@ -333,8 +393,8 @@ export default function Complaints() {
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-red-600 hover:text-red-900 hover:bg-red-50"
               >
@@ -345,7 +405,8 @@ export default function Complaints() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Complaint</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this complaint? This action cannot be undone.
+                  Are you sure you want to delete this complaint? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -384,8 +445,12 @@ export default function Complaints() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Complaint Management</h1>
-            <p className="text-muted-foreground">Track and manage customer complaints efficiently</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              Complaint Management
+            </h1>
+            <p className="text-muted-foreground">
+              Track and manage customer complaints efficiently
+            </p>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -398,7 +463,10 @@ export default function Complaints() {
               <DialogHeader>
                 <DialogTitle>Create New Complaint</DialogTitle>
               </DialogHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-4"
+              >
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input
@@ -407,7 +475,9 @@ export default function Complaints() {
                     {...form.register("title")}
                   />
                   {form.formState.errors.title && (
-                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.title.message}</p>
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.title.message}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -418,12 +488,17 @@ export default function Complaints() {
                     {...form.register("description")}
                   />
                   {form.formState.errors.description && (
-                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.description.message}</p>
+                    <p className="text-sm text-red-600 mt-1">
+                      {form.formState.errors.description.message}
+                    </p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="priority">Priority</Label>
-                  <Select value={form.watch("priority")} onValueChange={(value) => form.setValue("priority", value as any)}>
+                  <Select
+                    value={form.watch("priority")}
+                    onValueChange={(value) => form.setValue("priority", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select priority" />
                     </SelectTrigger>
@@ -445,13 +520,21 @@ export default function Complaints() {
                 </div>
                 <div>
                   <Label htmlFor="customerId">Customer</Label>
-                  <Select value={form.watch("customerId")?.toString()} onValueChange={(value) => form.setValue("customerId", parseInt(value))}>
+                  <Select
+                    value={form.watch("customerId")}
+                    onValueChange={(value) =>
+                      form.setValue("customerId", value)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select customer" />
                     </SelectTrigger>
                     <SelectContent>
                       {customers.map((customer: any) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                        <SelectItem
+                          key={customer.id}
+                          value={customer.id.toString()}
+                        >
                           {customer.name}
                         </SelectItem>
                       ))}
@@ -459,11 +542,20 @@ export default function Complaints() {
                   </Select>
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createComplaintMutation.isPending}>
-                    {createComplaintMutation.isPending ? "Creating..." : "Create Complaint"}
+                  <Button
+                    type="submit"
+                    disabled={createComplaintMutation.isPending}
+                  >
+                    {createComplaintMutation.isPending
+                      ? "Creating..."
+                      : "Create Complaint"}
                   </Button>
                 </div>
               </form>
@@ -477,8 +569,12 @@ export default function Complaints() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Complaints</p>
-                  <p className="text-2xl font-bold text-foreground">{complaints.length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Complaints
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {complaints.length}
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <AlertCircle className="h-4 w-4 text-white" />
@@ -490,8 +586,15 @@ export default function Complaints() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Resolved</p>
-                  <p className="text-2xl font-bold text-foreground">{complaints.filter((c: any) => c.status === 'resolved').length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Resolved
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {
+                      complaints.filter((c: any) => c.status === "resolved")
+                        .length
+                    }
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
                   <CheckCircle className="h-4 w-4 text-white" />
@@ -503,8 +606,15 @@ export default function Complaints() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold text-foreground">{complaints.filter((c: any) => c.status === 'in-progress').length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    In Progress
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {
+                      complaints.filter((c: any) => c.status === "in-progress")
+                        .length
+                    }
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg flex items-center justify-center">
                   <Activity className="h-4 w-4 text-white" />
@@ -516,8 +626,15 @@ export default function Complaints() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold text-foreground">{complaints.filter((c: any) => c.status === 'pending').length}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Pending
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {
+                      complaints.filter((c: any) => c.status === "pending")
+                        .length
+                    }
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
                   <Clock className="h-4 w-4 text-white" />
@@ -565,7 +682,7 @@ export default function Complaints() {
                   <SelectItem value="not-resolved">Not Resolved</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Priority" />
@@ -578,7 +695,7 @@ export default function Complaints() {
                   <SelectItem value="low">Low</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={locationFilter} onValueChange={setLocationFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Locations" />
@@ -591,7 +708,7 @@ export default function Complaints() {
                   <SelectItem value="Chennai">Chennai</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Button
                 variant="outline"
                 onClick={() => {
@@ -605,9 +722,10 @@ export default function Complaints() {
                 <Filter className="h-4 w-4 mr-2" />
                 Clear Filters
               </Button>
-              
+
               <div className="text-sm text-muted-foreground flex items-center">
-                Showing {filteredComplaints.length} of {complaints.length} complaints
+                Showing {filteredComplaints.length} of {complaints.length}{" "}
+                complaints
               </div>
             </div>
           </div>
@@ -632,51 +750,79 @@ export default function Complaints() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Complaint ID</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Complaint ID
+                  </Label>
                   <p className="text-sm font-mono">#{selectedComplaint.id}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <Badge className={`${getStatusColor(selectedComplaint.status)} ml-2`}>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Status
+                  </Label>
+                  <Badge
+                    className={`${getStatusColor(selectedComplaint.status)} ml-2`}
+                  >
                     {selectedComplaint.status.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Priority</Label>
-                  <Badge className={`${getPriorityColor(selectedComplaint.priority)} ml-2`}>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Priority
+                  </Label>
+                  <Badge
+                    className={`${getPriorityColor(selectedComplaint.priority)} ml-2`}
+                  >
                     {selectedComplaint.priority.toUpperCase()}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Location
+                  </Label>
                   <p className="text-sm">{selectedComplaint.location}</p>
                 </div>
               </div>
-              
+
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Title</Label>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Title
+                </Label>
                 <p className="text-sm font-medium">{selectedComplaint.title}</p>
               </div>
-              
+
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Description</Label>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Description
+                </Label>
                 <p className="text-sm">{selectedComplaint.description}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Customer</Label>
-                  <p className="text-sm">{selectedComplaint.customer?.name || 'Unknown'}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Customer
+                  </Label>
+                  <p className="text-sm">
+                    {selectedComplaint.customer?.name || "Unknown"}
+                  </p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Engineer</Label>
-                  <p className="text-sm">{selectedComplaint.engineer?.name || 'Unassigned'}</p>
+                  <Label className="text-sm font-medium text-muted-foreground">
+                    Engineer
+                  </Label>
+                  <p className="text-sm">
+                    {selectedComplaint.engineer?.name || "Unassigned"}
+                  </p>
                 </div>
               </div>
-              
+
               <div>
-                <Label className="text-sm font-medium text-muted-foreground">Created At</Label>
-                <p className="text-sm">{new Date(selectedComplaint.createdAt).toLocaleString()}</p>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Created At
+                </Label>
+                <p className="text-sm">
+                  {new Date(selectedComplaint.createdAt).toLocaleString()}
+                </p>
               </div>
             </div>
           )}
@@ -689,7 +835,10 @@ export default function Complaints() {
           <DialogHeader>
             <DialogTitle>Edit Complaint</DialogTitle>
           </DialogHeader>
-          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+          <form
+            onSubmit={editForm.handleSubmit(onEditSubmit)}
+            className="space-y-4"
+          >
             <div>
               <Label htmlFor="edit-title">Title</Label>
               <Input
@@ -698,7 +847,9 @@ export default function Complaints() {
                 {...editForm.register("title")}
               />
               {editForm.formState.errors.title && (
-                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.title.message}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {editForm.formState.errors.title.message}
+                </p>
               )}
             </div>
             <div>
@@ -709,12 +860,17 @@ export default function Complaints() {
                 {...editForm.register("description")}
               />
               {editForm.formState.errors.description && (
-                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.description.message}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  {editForm.formState.errors.description.message}
+                </p>
               )}
             </div>
             <div>
               <Label htmlFor="edit-priority">Priority</Label>
-              <Select value={editForm.watch("priority")} onValueChange={(value) => editForm.setValue("priority", value as any)}>
+              <Select
+                value={editForm.watch("priority")}
+                onValueChange={(value) => editForm.setValue("priority", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
@@ -736,14 +892,25 @@ export default function Complaints() {
             </div>
             <div>
               <Label htmlFor="edit-engineer">Engineer</Label>
-              <Select value={editForm.watch("engineerId")?.toString() || ""} onValueChange={(value) => editForm.setValue("engineerId", value ? parseInt(value) : null)}>
+              <Select
+                value={editForm.watch("engineerId")?.toString() || ""}
+                onValueChange={(value) =>
+                  editForm.setValue(
+                    "engineerId",
+                    value ? parseInt(value) : null,
+                  )
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select engineer" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Unassigned</SelectItem>
                   {engineers.map((engineer: any) => (
-                    <SelectItem key={engineer.id} value={engineer.id.toString()}>
+                    <SelectItem
+                      key={engineer.id}
+                      value={engineer.id.toString()}
+                    >
                       {engineer.name}
                     </SelectItem>
                   ))}
@@ -751,11 +918,20 @@ export default function Complaints() {
               </Select>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateComplaintMutation.isPending}>
-                {updateComplaintMutation.isPending ? "Updating..." : "Update Complaint"}
+              <Button
+                type="submit"
+                disabled={updateComplaintMutation.isPending}
+              >
+                {updateComplaintMutation.isPending
+                  ? "Updating..."
+                  : "Update Complaint"}
               </Button>
             </div>
           </form>
