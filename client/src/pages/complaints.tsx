@@ -70,6 +70,8 @@ export default function Complaints() {
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedEngineerId, setSelectedEngineerId] = useState<string>("");
   const itemsPerPage = 5;
 
   const { toast } = useToast();
@@ -170,6 +172,32 @@ export default function Complaints() {
     },
   });
 
+  const assignComplaintMutation = useMutation({
+    mutationFn: async ({ id, engineerId }: { id: number; engineerId: number }) => {
+      const response = await apiRequest("PUT", `/api/complaints/${id}`, {
+        engineerId,
+        status: "assigned",
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
+      toast({
+        title: "Success",
+        description: "Complaint assigned successfully",
+      });
+      setIsAssignDialogOpen(false);
+      setSelectedEngineerId("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign complaint",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleView = (complaint: any) => {
     setSelectedComplaint(complaint);
     setIsViewDialogOpen(true);
@@ -191,6 +219,21 @@ export default function Complaints() {
 
   const handleDelete = (complaint: any) => {
     deleteComplaintMutation.mutate(complaint.id);
+  };
+
+  const handleAssign = (complaint: any) => {
+    setSelectedComplaint(complaint);
+    setSelectedEngineerId("");
+    setIsAssignDialogOpen(true);
+  };
+
+  const onAssignSubmit = () => {
+    if (selectedComplaint && selectedEngineerId) {
+      assignComplaintMutation.mutate({
+        id: selectedComplaint.id,
+        engineerId: parseInt(selectedEngineerId),
+      });
+    }
   };
 
   const onSubmit = (data: InsertComplaint) => {
@@ -414,6 +457,16 @@ export default function Complaints() {
       label: "Actions",
       render: (value: any, row: any) => (
         <div className="flex space-x-1">
+          {row.status === "pending" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleAssign(row)}
+              className="text-purple-600 hover:text-purple-900 hover:bg-purple-50"
+            >
+              <User className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -772,8 +825,38 @@ export default function Complaints() {
                             </div>
                           </div>
 
+                          {/* Engineer Assignment Info */}
+                          {complaint.status === "assigned" && complaint.engineerId && (
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-white">
+                                    {getEngineerName(complaint.engineerId)?.split(" ").map((n: string) => n[0]).join("")}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-blue-900">
+                                    Assigned to: {getEngineerName(complaint.engineerId)}
+                                  </p>
+                                  <p className="text-xs text-blue-600">Engineer assigned</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Actions */}
                           <div className="flex justify-end space-x-2 pt-2 border-t border-border/50">
+                            {complaint.status === "pending" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAssign(complaint)}
+                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                              >
+                                <User className="h-4 w-4 mr-1" />
+                                Assign
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"
@@ -1086,6 +1169,77 @@ export default function Complaints() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assignment Modal */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Engineer</DialogTitle>
+          </DialogHeader>
+          {selectedComplaint && (
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <h4 className="font-medium text-foreground">Complaint Details</h4>
+                <p className="text-sm text-muted-foreground mt-1">{selectedComplaint.title}</p>
+                <div className="flex items-center space-x-4 mt-2 text-sm">
+                  <span className="flex items-center">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {selectedComplaint.location}
+                  </span>
+                  <Badge className={getPriorityColor(selectedComplaint.priority)}>
+                    {selectedComplaint.priority.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="engineer-select">Select Engineer</Label>
+                <Select value={selectedEngineerId} onValueChange={setSelectedEngineerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an engineer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {engineers
+                      .filter((engineer: any) => engineer.isActive)
+                      .map((engineer: any) => (
+                        <SelectItem key={engineer.id} value={engineer.id.toString()}>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium text-white">
+                                {engineer.name.split(" ").map((n: string) => n[0]).join("")}
+                              </span>
+                            </div>
+                            <span>{engineer.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              ({engineer.location})
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAssignDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={onAssignSubmit}
+                  disabled={!selectedEngineerId || assignComplaintMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {assignComplaintMutation.isPending ? "Assigning..." : "Assign Engineer"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </MainLayout>
