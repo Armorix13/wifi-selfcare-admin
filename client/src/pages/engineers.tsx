@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEngineerSchema, type InsertEngineer } from "@shared/schema";
@@ -358,6 +358,285 @@ export default function Engineers() {
   return (
     <MainLayout title="Engineer Management">
       <div className="space-y-6">
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-cyan-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Engineers</p>
+                  <p className="text-2xl font-bold text-foreground">{engineers.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Registered</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Engineers</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {engineers.filter((e: any) => e.isActive).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {engineers.length > 0 
+                      ? `${Math.round((engineers.filter((e: any) => e.isActive).length / engineers.length) * 100)}%` 
+                      : '0%'} availability
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-pink-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {engineers.length > 0 
+                      ? (engineers.reduce((sum: number, e: any) => sum + (e.rating || 0), 0) / engineers.length / 10).toFixed(1)
+                      : '0.0'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Out of 5.0</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Star className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-50 to-red-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active Jobs</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {engineers.reduce((sum: number, e: any) => sum + (e.activeJobs || 0), 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {engineers.length > 0 
+                      ? `${Math.round(engineers.reduce((sum: number, e: any) => sum + (e.activeJobs || 0), 0) / engineers.length)}` 
+                      : '0'} avg per engineer
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Specialization & Location Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Specialization Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {['WiFi Installation', 'Network Troubleshooting', 'Hardware Repair', 'Fiber Optic', 'Cable Installation'].map(specialization => {
+                const count = engineers.filter((e: any) => e.specialization === specialization).length;
+                const percentage = engineers.length > 0 ? (count / engineers.length) * 100 : 0;
+                const avgRating = count > 0 
+                  ? engineers.filter((e: any) => e.specialization === specialization)
+                    .reduce((sum: number, e: any) => sum + (e.rating || 0), 0) / count / 10
+                  : 0;
+                return (
+                  <div key={specialization} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                      <div>
+                        <span className="text-sm font-medium text-foreground">{specialization}</span>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <span className="text-xs text-muted-foreground">{count} engineers</span>
+                          {count > 0 && (
+                            <>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">{avgRating.toFixed(1)}★ avg</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-8">{Math.round(percentage)}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Location Coverage</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {['Mumbai Central', 'Delhi NCR', 'Bangalore', 'Chennai', 'Mumbai East'].map(location => {
+                const locationEngineers = engineers.filter((e: any) => e.location === location);
+                const count = locationEngineers.length;
+                const activeCount = locationEngineers.filter((e: any) => e.isActive).length;
+                const totalJobs = locationEngineers.reduce((sum: number, e: any) => sum + (e.activeJobs || 0), 0);
+                const percentage = engineers.length > 0 ? (count / engineers.length) * 100 : 0;
+                return (
+                  <div key={location} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">{location}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{count} total</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-green-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{activeCount}/{count} active • {totalJobs} jobs</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Performance Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Top Performers</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {engineers
+                .sort((a: any, b: any) => (b.rating || 0) - (a.rating || 0))
+                .slice(0, 5)
+                .map((engineer: any, index: number) => (
+                  <div key={engineer.id} className="flex items-center space-x-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                      index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-400' : 'bg-blue-500'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className={`w-8 h-8 ${getAvatarColor(engineer.id)} rounded-full flex items-center justify-center`}>
+                      <span className="text-xs font-medium text-white">
+                        {getInitials(engineer.name)}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground">{engineer.name}</p>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center">
+                          {renderStars(engineer.rating)}
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {(engineer.rating / 10).toFixed(1)} • {engineer.completedJobs} jobs
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Workload Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Low workload (0-3 jobs)</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {engineers.filter((e: any) => (e.activeJobs || 0) <= 3).length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Medium workload (4-6 jobs)</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {engineers.filter((e: any) => (e.activeJobs || 0) >= 4 && (e.activeJobs || 0) <= 6).length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">High workload (7+ jobs)</span>
+                  <span className="text-sm font-medium text-foreground">
+                    {engineers.filter((e: any) => (e.activeJobs || 0) >= 7).length}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Total Completed</span>
+                  <span className="text-lg font-bold text-foreground">
+                    {engineers.reduce((sum: number, e: any) => sum + (e.completedJobs || 0), 0)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Status Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    <span className="text-sm text-foreground">Active</span>
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {engineers.filter((e: any) => e.isActive).length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <span className="text-sm text-foreground">Inactive</span>
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {engineers.filter((e: any) => !e.isActive).length}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border/50">
+                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-green-500"
+                    style={{ 
+                      width: `${engineers.length > 0 ? (engineers.filter((e: any) => e.isActive).length / engineers.length) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  {engineers.length > 0 
+                    ? `${Math.round((engineers.filter((e: any) => e.isActive).length / engineers.length) * 100)}%` 
+                    : '0%'} operational capacity
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

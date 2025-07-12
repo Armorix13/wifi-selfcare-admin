@@ -8,6 +8,18 @@ This is a WiFi Self-Care Platform built as a full-stack web application for mana
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**December 2024 - Enhanced Analytics Dashboard**
+- Added comprehensive analytics to both complaints and engineers sections
+- Implemented 4 main metric cards for each section with real-time calculations
+- Added specialization/priority distribution charts with progress bars
+- Created location analytics showing coverage and performance metrics
+- Added top performers ranking system for engineers
+- Implemented workload distribution and status overview charts
+- Enhanced UI with professional gradients and color-coded indicators
+- All analytics update dynamically based on real data from storage
+
 ## System Architecture
 
 ### Frontend Architecture
