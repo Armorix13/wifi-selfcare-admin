@@ -12,6 +12,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface StatusChartProps {
   title: string;
@@ -160,26 +161,26 @@ export function StatusChart({ title, data = [] }: StatusChartProps) {
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <div className="flex items-center gap-2">
-          <select 
-            value={timeRange}
-            onChange={(e) => handleTimeRangeChange(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground hover:bg-muted transition-colors"
-            disabled={isLoading}
-          >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 3 months</option>
-          </select>
-          <select 
-            value={chartType}
-            onChange={(e) => handleChartTypeChange(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground hover:bg-muted transition-colors"
-            disabled={isLoading}
-          >
-            <option value="bar">Bar Chart</option>
-            <option value="pie">Pie Chart</option>
-          </select>
+        <div className="flex items-center gap-3">
+          <Select value={timeRange} onValueChange={handleTimeRangeChange} disabled={isLoading}>
+            <SelectTrigger className="w-[140px] h-8 text-sm border-border/50 hover:border-border transition-colors">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent className="min-w-[140px]">
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 3 months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={chartType} onValueChange={handleChartTypeChange} disabled={isLoading}>
+            <SelectTrigger className="w-[120px] h-8 text-sm border-border/50 hover:border-border transition-colors">
+              <SelectValue placeholder="Chart type" />
+            </SelectTrigger>
+            <SelectContent className="min-w-[120px]">
+              <SelectItem value="bar">Bar Chart</SelectItem>
+              <SelectItem value="pie">Pie Chart</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       

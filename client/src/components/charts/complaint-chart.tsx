@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ResponsiveContainer,
   LineChart,
@@ -203,27 +204,27 @@ export function ComplaintChart({ title, data = [], type = "line" }: ComplaintCha
     <div className="w-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <div className="flex items-center gap-2">
-          <select 
-            value={timeRange}
-            onChange={(e) => handleTimeRangeChange(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground hover:bg-muted transition-colors"
-            disabled={isLoading}
-          >
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 3 months</option>
-          </select>
+        <div className="flex items-center gap-3">
+          <Select value={timeRange} onValueChange={handleTimeRangeChange} disabled={isLoading}>
+            <SelectTrigger className="w-[140px] h-8 text-sm border-border/50 hover:border-border transition-colors">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent className="min-w-[140px]">
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 3 months</SelectItem>
+            </SelectContent>
+          </Select>
           {title.toLowerCase().includes("network") && (
-            <select 
-              value={chartType}
-              onChange={(e) => handleChartTypeChange(e.target.value)}
-              className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground hover:bg-muted transition-colors"
-              disabled={isLoading}
-            >
-              <option value="line">Line Chart</option>
-              <option value="area">Area Chart</option>
-            </select>
+            <Select value={chartType} onValueChange={handleChartTypeChange} disabled={isLoading}>
+              <SelectTrigger className="w-[120px] h-8 text-sm border-border/50 hover:border-border transition-colors">
+                <SelectValue placeholder="Chart type" />
+              </SelectTrigger>
+              <SelectContent className="min-w-[120px]">
+                <SelectItem value="line">Line Chart</SelectItem>
+                <SelectItem value="area">Area Chart</SelectItem>
+              </SelectContent>
+            </Select>
           )}
         </div>
       </div>
