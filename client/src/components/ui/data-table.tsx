@@ -1,16 +1,15 @@
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Search, 
+  ArrowUpDown, 
+  ArrowUp, 
+  ArrowDown 
+} from "lucide-react";
 
 interface Column {
   key: string;
@@ -22,155 +21,202 @@ interface Column {
 interface DataTableProps {
   data: any[];
   columns: Column[];
-  searchable?: boolean;
   searchPlaceholder?: string;
-  onRowClick?: (row: any) => void;
+  itemsPerPage?: number;
 }
 
-export function DataTable({
-  data,
-  columns,
-  searchable = true,
-  searchPlaceholder = "Search...",
-  onRowClick,
+export function DataTable({ 
+  data, 
+  columns, 
+  searchPlaceholder = "Search...", 
+  itemsPerPage = 10 
 }: DataTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{
-    key: string;
-    direction: "asc" | "desc";
-  } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const filteredData = searchable
-    ? data.filter((row) =>
-        Object.values(row).some((value) =>
-          String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      )
-    : data;
+  // Filter data based on search term
+  const filteredData = data.filter(row => {
+    if (!searchTerm) return true;
+    
+    return columns.some(column => {
+      const value = row[column.key];
+      if (value === null || value === undefined) return false;
+      
+      const stringValue = String(value).toLowerCase();
+      return stringValue.includes(searchTerm.toLowerCase());
+    });
+  });
 
-  const sortedData = sortConfig
-    ? [...filteredData].sort((a, b) => {
-        const aVal = a[sortConfig.key];
-        const bVal = b[sortConfig.key];
-        
-        if (aVal < bVal) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (aVal > bVal) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      })
-    : filteredData;
+  // Sort data
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortColumn) return 0;
+    
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+    
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+    
+    let comparison = 0;
+    if (aValue < bValue) comparison = -1;
+    if (aValue > bValue) comparison = 1;
+    
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
 
-  const handleSort = (key: string) => {
-    let direction: "asc" | "desc" = "asc";
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
+  // Pagination
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (columnKey: string) => {
+    if (sortColumn === columnKey) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(columnKey);
+      setSortDirection("asc");
     }
-    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (columnKey: string) => {
+    if (sortColumn !== columnKey) return <ArrowUpDown className="h-4 w-4" />;
+    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
   };
 
   return (
     <div className="space-y-4">
-      {searchable && (
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.key}>
-                  {column.sortable ? (
-                    <Button
-                      variant="ghost"
-                      onClick={() => handleSort(column.key)}
-                      className="font-medium text-xs uppercase tracking-wider p-0 h-auto hover:bg-transparent"
-                    >
-                      {column.label}
-                      {sortConfig?.key === column.key && (
-                        <span className="ml-1">
-                          {sortConfig.direction === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </Button>
-                  ) : (
-                    <span className="font-medium text-xs uppercase tracking-wider text-gray-500">
-                      {column.label}
-                    </span>
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedData.map((row, index) => (
-              <TableRow
-                key={index}
-                onClick={() => onRowClick?.(row)}
-                className={onRowClick ? "cursor-pointer hover:bg-slate-50" : ""}
-              >
-                {columns.map((column) => (
-                  <TableCell key={column.key}>
-                    {column.render
-                      ? column.render(row[column.key], row)
-                      : row[column.key]}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder={searchPlaceholder}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="pl-10"
+        />
       </div>
 
-      {sortedData.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No data found
+      {/* Table */}
+      <div className="rounded-lg border border-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-muted/50">
+              <tr>
+                {columns.map((column) => (
+                  <th key={column.key} className="text-left p-4 font-medium">
+                    {column.sortable !== false ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort(column.key)}
+                        className="h-auto p-0 font-medium hover:bg-transparent"
+                      >
+                        {column.label}
+                        {getSortIcon(column.key)}
+                      </Button>
+                    ) : (
+                      column.label
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {currentData.map((row, index) => (
+                <tr key={index} className="border-t border-border hover:bg-muted/20">
+                  {columns.map((column) => (
+                    <td key={column.key} className="p-4">
+                      {column.render 
+                        ? column.render(row[column.key], row) 
+                        : String(row[column.key] || "")}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {startIndex + 1} to {Math.min(endIndex, sortedData.length)} of {sortedData.length} entries
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNumber = i + 1;
+                return (
+                  <Button
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNumber)}
+                    className="w-8"
+                  >
+                    {pageNumber}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export const StatusBadge = ({ status }: { status: string }) => {
+export function StatusBadge({ status }: { status: string }) {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "pending":
-        return "bg-red-100 text-red-800";
-      case "assigned":
-        return "bg-yellow-100 text-yellow-800";
-      case "in-progress":
-        return "bg-blue-100 text-blue-800";
-      case "resolved":
-        return "bg-green-100 text-green-800";
-      case "urgent":
-        return "bg-red-100 text-red-800";
-      case "high":
-        return "bg-yellow-100 text-yellow-800";
-      case "medium":
-        return "bg-green-100 text-green-800";
-      case "low":
-        return "bg-gray-100 text-gray-800";
+      case 'active':
+      case 'resolved':
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+      case 'open':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'in-progress':
+      case 'assigned':
+        return 'bg-blue-100 text-blue-800';
+      case 'inactive':
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
       default:
-        return "bg-gray-100 text-gray-800";
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
-    <Badge className={`${getStatusColor(status)} rounded-full px-2 py-1 text-xs font-medium`}>
+    <Badge className={getStatusColor(status)}>
       {status}
     </Badge>
   );
-};
+}

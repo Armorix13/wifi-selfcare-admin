@@ -3,19 +3,31 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
+import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2 } from "lucide-react";
+import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEngineerSchema, type InsertEngineer } from "@shared/schema";
 
 export default function Engineers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedEngineer, setSelectedEngineer] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [specializationFilter, setSpecializationFilter] = useState("");
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,6 +50,10 @@ export default function Engineers() {
     },
   });
 
+  const editForm = useForm<InsertEngineer>({
+    resolver: zodResolver(insertEngineerSchema),
+  });
+
   const createEngineerMutation = useMutation({
     mutationFn: async (data: InsertEngineer) => {
       const response = await apiRequest("POST", "/api/engineers", data);
@@ -56,6 +72,28 @@ export default function Engineers() {
       toast({
         title: "Error",
         description: error.message || "Failed to add engineer",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEngineerMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertEngineer> }) => {
+      const response = await apiRequest("PUT", `/api/engineers/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/engineers"] });
+      toast({
+        title: "Success",
+        description: "Engineer updated successfully",
+      });
+      setIsEditDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update engineer",
         variant: "destructive",
       });
     },
@@ -86,11 +124,53 @@ export default function Engineers() {
     createEngineerMutation.mutate(data);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this engineer?")) {
-      deleteEngineerMutation.mutate(id);
+  const onEditSubmit = (data: InsertEngineer) => {
+    if (selectedEngineer) {
+      updateEngineerMutation.mutate({
+        id: selectedEngineer.id,
+        data,
+      });
     }
   };
+
+  const handleView = (engineer: any) => {
+    setSelectedEngineer(engineer);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEdit = (engineer: any) => {
+    setSelectedEngineer(engineer);
+    editForm.reset({
+      name: engineer.name,
+      email: engineer.email,
+      phone: engineer.phone,
+      location: engineer.location,
+      specialization: engineer.specialization,
+      rating: engineer.rating,
+      completedJobs: engineer.completedJobs,
+      activeJobs: engineer.activeJobs,
+      isActive: engineer.isActive,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = (engineer: any) => {
+    deleteEngineerMutation.mutate(engineer.id);
+  };
+
+  const filteredEngineers = engineers.filter((engineer: any) => {
+    const matchesSearch = !searchQuery || 
+      engineer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      engineer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      engineer.specialization.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return (
+      matchesSearch &&
+      (!locationFilter || engineer.location === locationFilter) &&
+      (!statusFilter || (statusFilter === 'active' ? engineer.isActive : !engineer.isActive)) &&
+      (!specializationFilter || engineer.specialization === specializationFilter)
+    );
+  });
 
   const getInitials = (name: string) => {
     return name
@@ -121,6 +201,127 @@ export default function Engineers() {
     );
   };
 
+  const tableColumns = [
+    {
+      key: "name",
+      label: "Engineer",
+      render: (value: string, row: any) => (
+        <div className="flex items-center space-x-3">
+          <div className={`w-8 h-8 ${getAvatarColor(row.id)} rounded-full flex items-center justify-center`}>
+            <span className="text-sm font-medium text-white">
+              {getInitials(value)}
+            </span>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-foreground">{value}</div>
+            <div className="text-xs text-muted-foreground">{row.specialization}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "contact",
+      label: "Contact",
+      render: (value: any, row: any) => (
+        <div className="space-y-1">
+          <div className="text-sm text-foreground flex items-center">
+            <Mail className="h-3 w-3 mr-1 text-muted-foreground" />
+            {row.email}
+          </div>
+          <div className="text-sm text-foreground flex items-center">
+            <Phone className="h-3 w-3 mr-1 text-muted-foreground" />
+            {row.phone}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "location",
+      label: "Location",
+      render: (value: string) => (
+        <div className="text-sm text-foreground flex items-center">
+          <MapPin className="h-3 w-3 mr-1 text-muted-foreground" />
+          {value}
+        </div>
+      ),
+    },
+    {
+      key: "performance",
+      label: "Performance",
+      render: (value: any, row: any) => (
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-foreground">
+              {(row.rating / 10).toFixed(1)}
+            </span>
+            {renderStars(row.rating)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {row.completedJobs} completed • {row.activeJobs} active
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: (value: any, row: any) => (
+        <Badge className={row.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+          {row.isActive ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      render: (value: any, row: any) => (
+        <div className="flex space-x-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleView(row)}
+            className="text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => handleEdit(row)}
+            className="text-green-600 hover:text-green-900 hover:bg-green-50"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="text-red-600 hover:text-red-900 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Engineer</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this engineer? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleDelete(row)}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <MainLayout title="Engineer Management">
@@ -146,183 +347,524 @@ export default function Engineers() {
 
   return (
     <MainLayout title="Engineer Management">
-      <Card className="border border-slate-200">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Engineer Management
-            </CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add Engineer
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Engineer</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter engineer name"
-                      {...form.register("name")}
-                    />
-                    {form.formState.errors.name && (
-                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.name.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter email address"
-                      {...form.register("email")}
-                    />
-                    {form.formState.errors.email && (
-                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.email.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      placeholder="Enter phone number"
-                      {...form.register("phone")}
-                    />
-                    {form.formState.errors.phone && (
-                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.phone.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      placeholder="Enter location"
-                      {...form.register("location")}
-                    />
-                    {form.formState.errors.location && (
-                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.location.message}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label htmlFor="specialization">Specialization</Label>
-                    <Input
-                      id="specialization"
-                      placeholder="Enter specialization"
-                      {...form.register("specialization")}
-                    />
-                    {form.formState.errors.specialization && (
-                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.specialization.message}</p>
-                    )}
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={createEngineerMutation.isPending}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {createEngineerMutation.isPending ? "Adding..." : "Add Engineer"}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Engineer Management</h1>
+            <p className="text-muted-foreground">Manage your field engineers and their assignments</p>
           </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {engineers.map((engineer: any, index: number) => (
-              <div
-                key={engineer.id}
-                className="bg-slate-50 rounded-lg p-6 border border-slate-200"
-              >
-                <div className="flex items-center space-x-4 mb-4">
-                  <div
-                    className={`h-12 w-12 ${getAvatarColor(
-                      index
-                    )} rounded-full flex items-center justify-center`}
-                  >
-                    <span className="text-white font-medium">
-                      {getInitials(engineer.name)}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{engineer.name}</h4>
-                    <p className="text-sm text-gray-500">{engineer.specialization}</p>
-                  </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Engineer
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Engineer</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter engineer name"
+                    {...form.register("name")}
+                  />
+                  {form.formState.errors.name && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.name.message}</p>
+                  )}
                 </div>
-                
-                <div className="space-y-2 text-sm mb-4">
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-gray-600">{engineer.location}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-gray-600">{engineer.phone}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <Mail className="h-4 w-4 text-gray-400 mr-2" />
-                    <span className="text-gray-600">{engineer.email}</span>
-                  </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email address"
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.email.message}</p>
+                  )}
                 </div>
-                
-                <div className="pt-4 border-t border-slate-200 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Active Cases:</span>
-                    <span className="font-medium text-gray-900">{engineer.activeJobs}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Completed:</span>
-                    <span className="font-medium text-gray-900">{engineer.completedJobs}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Rating:</span>
-                    <div className="flex items-center">
-                      <span className="font-medium text-gray-900 mr-1">
-                        {(engineer.rating / 10).toFixed(1)}
-                      </span>
-                      {renderStars(engineer.rating)}
-                    </div>
-                  </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    placeholder="Enter phone number"
+                    {...form.register("phone")}
+                  />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.phone.message}</p>
+                  )}
                 </div>
-                
-                <div className="mt-4 flex space-x-2">
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    placeholder="Enter location"
+                    {...form.register("location")}
+                  />
+                  {form.formState.errors.location && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.location.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="specialization">Specialization</Label>
+                  <Input
+                    id="specialization"
+                    placeholder="Enter specialization"
+                    {...form.register("specialization")}
+                  />
+                  {form.formState.errors.specialization && (
+                    <p className="text-sm text-red-600 mt-1">{form.formState.errors.specialization.message}</p>
+                  )}
+                </div>
+                <div className="flex justify-end space-x-2">
                   <Button
+                    type="button"
                     variant="outline"
-                    size="sm"
-                    className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    onClick={() => setIsDialogOpen(false)}
                   >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    Cancel
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(engineer.id)}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    type="submit"
+                    disabled={createEngineerMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {createEngineerMutation.isPending ? "Adding..." : "Add Engineer"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="stats-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Engineers</p>
+                  <p className="text-2xl font-bold text-foreground">{engineers.length}</p>
+                </div>
+                <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Users className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="stats-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Active</p>
+                  <p className="text-2xl font-bold text-foreground">{engineers.filter((e: any) => e.isActive).length}</p>
+                </div>
+                <div className="h-8 w-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="stats-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {engineers.length > 0 ? (engineers.reduce((sum: number, e: any) => sum + e.rating, 0) / engineers.length / 10).toFixed(1) : '0.0'}
+                  </p>
+                </div>
+                <div className="h-8 w-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg flex items-center justify-center">
+                  <Star className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="stats-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Jobs</p>
+                  <p className="text-2xl font-bold text-foreground">{engineers.reduce((sum: number, e: any) => sum + e.completedJobs, 0)}</p>
+                </div>
+                <div className="h-8 w-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <Card className="border border-border/50 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-card to-card/80 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-foreground">Engineers Overview</CardTitle>
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search engineers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+                <div className="flex items-center border border-border rounded-md">
+                  <Button
+                    variant={viewMode === 'card' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('card')}
+                    className="rounded-r-none"
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'table' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('table')}
+                    className="rounded-l-none"
+                  >
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            ))}
+            </div>
+          </CardHeader>
+
+          {/* Enhanced Filters */}
+          <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Select value={locationFilter} onValueChange={setLocationFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Locations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="Mumbai Central">Mumbai Central</SelectItem>
+                  <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
+                  <SelectItem value="Bangalore">Bangalore</SelectItem>
+                  <SelectItem value="Chennai">Chennai</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Specializations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Specializations</SelectItem>
+                  <SelectItem value="WiFi Installation">WiFi Installation</SelectItem>
+                  <SelectItem value="Network Troubleshooting">Network Troubleshooting</SelectItem>
+                  <SelectItem value="Fiber Optic">Fiber Optic</SelectItem>
+                  <SelectItem value="Cable Installation">Cable Installation</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setLocationFilter("");
+                  setStatusFilter("");
+                  setSpecializationFilter("");
+                  setSearchQuery("");
+                }}
+                className="bg-background hover:bg-muted"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Clear Filters
+              </Button>
+              
+              <div className="text-sm text-muted-foreground flex items-center">
+                Showing {filteredEngineers.length} of {engineers.length} engineers
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <CardContent className="p-0">
+            {viewMode === 'table' ? (
+              <DataTable
+                data={filteredEngineers}
+                columns={tableColumns}
+                searchPlaceholder="Search engineers..."
+              />
+            ) : (
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredEngineers.map((engineer: any, index: number) => (
+                    <Card key={engineer.id} className="stats-card">
+                      <CardContent className="p-6">
+                        <div className="flex items-center space-x-4 mb-4">
+                          <div className={`h-12 w-12 ${getAvatarColor(index)} rounded-full flex items-center justify-center`}>
+                            <span className="text-white font-medium">
+                              {getInitials(engineer.name)}
+                            </span>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-foreground">{engineer.name}</h4>
+                            <p className="text-sm text-muted-foreground">{engineer.specialization}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 text-sm mb-4">
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 text-muted-foreground mr-2" />
+                            <span className="text-foreground">{engineer.location}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Phone className="h-4 w-4 text-muted-foreground mr-2" />
+                            <span className="text-foreground">{engineer.phone}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Mail className="h-4 w-4 text-muted-foreground mr-2" />
+                            <span className="text-foreground">{engineer.email}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-4 border-t border-border space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Status:</span>
+                            <Badge className={engineer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                              {engineer.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Active Cases:</span>
+                            <span className="font-medium text-foreground">{engineer.activeJobs}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Completed:</span>
+                            <span className="font-medium text-foreground">{engineer.completedJobs}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Rating:</span>
+                            <div className="flex items-center">
+                              <span className="font-medium text-foreground mr-1">
+                                {(engineer.rating / 10).toFixed(1)}
+                              </span>
+                              {renderStars(engineer.rating)}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleView(engineer)}
+                            className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(engineer)}
+                            className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Engineer</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this engineer? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(engineer)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* View Modal */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Engineer Details</DialogTitle>
+          </DialogHeader>
+          {selectedEngineer && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className={`w-16 h-16 ${getAvatarColor(selectedEngineer.id)} rounded-full flex items-center justify-center mx-auto mb-3`}>
+                  <span className="text-lg font-medium text-white">
+                    {getInitials(selectedEngineer.name)}
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">{selectedEngineer.name}</h3>
+                <p className="text-sm text-muted-foreground">{selectedEngineer.specialization}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Email</Label>
+                  <p className="text-sm">{selectedEngineer.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
+                  <p className="text-sm">{selectedEngineer.phone}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Location</Label>
+                  <p className="text-sm">{selectedEngineer.location}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <Badge className={selectedEngineer.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                    {selectedEngineer.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Active Jobs</Label>
+                  <p className="text-sm font-medium">{selectedEngineer.activeJobs}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Completed Jobs</Label>
+                  <p className="text-sm font-medium">{selectedEngineer.completedJobs}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Rating</Label>
+                <div className="flex items-center mt-1">
+                  <span className="text-sm font-medium mr-2">
+                    {(selectedEngineer.rating / 10).toFixed(1)}
+                  </span>
+                  {renderStars(selectedEngineer.rating)}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Engineer</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                placeholder="Enter engineer name"
+                {...editForm.register("name")}
+              />
+              {editForm.formState.errors.name && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="Enter email address"
+                {...editForm.register("email")}
+              />
+              {editForm.formState.errors.email && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-phone">Phone</Label>
+              <Input
+                id="edit-phone"
+                placeholder="Enter phone number"
+                {...editForm.register("phone")}
+              />
+              {editForm.formState.errors.phone && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.phone.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                placeholder="Enter location"
+                {...editForm.register("location")}
+              />
+              {editForm.formState.errors.location && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.location.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="edit-specialization">Specialization</Label>
+              <Input
+                id="edit-specialization"
+                placeholder="Enter specialization"
+                {...editForm.register("specialization")}
+              />
+              {editForm.formState.errors.specialization && (
+                <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.specialization.message}</p>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateEngineerMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {updateEngineerMutation.isPending ? "Updating..." : "Update Engineer"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

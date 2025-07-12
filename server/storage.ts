@@ -57,6 +57,7 @@ export interface IStorage {
   getComplaint(id: number): Promise<Complaint | undefined>;
   createComplaint(complaint: InsertComplaint): Promise<Complaint>;
   updateComplaint(id: number, complaint: Partial<InsertComplaint>): Promise<Complaint | undefined>;
+  deleteComplaint(id: number): Promise<boolean>;
   getAllComplaints(): Promise<Complaint[]>;
   getComplaintsByStatus(status: string): Promise<Complaint[]>;
   getComplaintsByEngineer(engineerId: number): Promise<Complaint[]>;
@@ -465,6 +466,10 @@ export class MemStorage implements IStorage {
     const updatedComplaint = { ...complaint, ...updateData, updatedAt: new Date() };
     this.complaints.set(id, updatedComplaint);
     return updatedComplaint;
+  }
+
+  async deleteComplaint(id: number): Promise<boolean> {
+    return this.complaints.delete(id);
   }
 
   async getAllComplaints(): Promise<Complaint[]> {
