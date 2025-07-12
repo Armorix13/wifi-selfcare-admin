@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp } from "lucide-react";
+import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertEngineerSchema, type InsertEngineer } from "@shared/schema";
@@ -24,9 +24,11 @@ export default function Engineers() {
   const [selectedEngineer, setSelectedEngineer] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [searchQuery, setSearchQuery] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [specializationFilter, setSpecializationFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [specializationFilter, setSpecializationFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -166,11 +168,19 @@ export default function Engineers() {
     
     return (
       matchesSearch &&
-      (!locationFilter || engineer.location === locationFilter) &&
-      (!statusFilter || (statusFilter === 'active' ? engineer.isActive : !engineer.isActive)) &&
-      (!specializationFilter || engineer.specialization === specializationFilter)
+      (!locationFilter || locationFilter === "all" || engineer.location === locationFilter) &&
+      (!statusFilter || statusFilter === "all" || (statusFilter === 'active' ? engineer.isActive : !engineer.isActive)) &&
+      (!specializationFilter || specializationFilter === "all" || engineer.specialization === specializationFilter)
     );
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredEngineers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedEngineers = filteredEngineers.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  const resetPagination = () => setCurrentPage(1);
 
   const getInitials = (name: string) => {
     return name
@@ -512,7 +522,7 @@ export default function Engineers() {
                   <Input
                     placeholder="Search engineers..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); resetPagination(); }}
                     className="pl-10 w-64"
                   />
                 </div>
@@ -541,12 +551,12 @@ export default function Engineers() {
           {/* Enhanced Filters */}
           <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   <SelectItem value="Mumbai Central">Mumbai Central</SelectItem>
                   <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
                   <SelectItem value="Bangalore">Bangalore</SelectItem>
@@ -554,23 +564,23 @@ export default function Engineers() {
                 </SelectContent>
               </Select>
               
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
               
-              <Select value={specializationFilter} onValueChange={setSpecializationFilter}>
+              <Select value={specializationFilter} onValueChange={(value) => { setSpecializationFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Specializations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Specializations</SelectItem>
+                  <SelectItem value="all">All Specializations</SelectItem>
                   <SelectItem value="WiFi Installation">WiFi Installation</SelectItem>
                   <SelectItem value="Network Troubleshooting">Network Troubleshooting</SelectItem>
                   <SelectItem value="Fiber Optic">Fiber Optic</SelectItem>
@@ -581,10 +591,11 @@ export default function Engineers() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setLocationFilter("");
-                  setStatusFilter("");
-                  setSpecializationFilter("");
+                  setLocationFilter("all");
+                  setStatusFilter("all");
+                  setSpecializationFilter("all");
                   setSearchQuery("");
+                  setCurrentPage(1);
                 }}
                 className="bg-background hover:bg-muted"
               >
@@ -593,7 +604,7 @@ export default function Engineers() {
               </Button>
               
               <div className="text-sm text-muted-foreground flex items-center">
-                Showing {filteredEngineers.length} of {engineers.length} engineers
+                Page {currentPage} of {totalPages} • {filteredEngineers.length} total engineers
               </div>
             </div>
           </div>
@@ -601,14 +612,14 @@ export default function Engineers() {
           <CardContent className="p-0">
             {viewMode === 'table' ? (
               <DataTable
-                data={filteredEngineers}
+                data={paginatedEngineers}
                 columns={tableColumns}
                 searchPlaceholder="Search engineers..."
               />
             ) : (
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredEngineers.map((engineer: any, index: number) => (
+                  {paginatedEngineers.map((engineer: any, index: number) => (
                     <Card key={engineer.id} className="stats-card">
                       <CardContent className="p-6">
                         <div className="flex items-center space-x-4 mb-4">
@@ -716,6 +727,52 @@ export default function Engineers() {
               </div>
             )}
           </CardContent>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredEngineers.length)} of {filteredEngineers.length} results
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
