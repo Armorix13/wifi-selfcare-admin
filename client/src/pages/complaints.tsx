@@ -533,6 +533,151 @@ export default function Complaints() {
   return (
     <MainLayout title="Complaint Management">
       <div className="space-y-6">
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Complaints</p>
+                  <p className="text-2xl font-bold text-foreground">{complaints.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">All time</p>
+                </div>
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-yellow-50 to-amber-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Pending</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {complaints.filter((c: any) => c.status === "pending").length}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {complaints.length > 0 
+                      ? `${Math.round((complaints.filter((c: any) => c.status === "pending").length / complaints.length) * 100)}%` 
+                      : '0%'} of total
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {complaints.filter((c: any) => ["assigned", "in-progress", "visited"].includes(c.status)).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Active cases
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Resolved</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {complaints.filter((c: any) => c.status === "resolved").length}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {complaints.length > 0 
+                      ? `${Math.round((complaints.filter((c: any) => c.status === "resolved").length / complaints.length) * 100)}%` 
+                      : '0%'} success rate
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Priority & Location Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Priority Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {['urgent', 'high', 'medium', 'low'].map(priority => {
+                const count = complaints.filter((c: any) => c.priority === priority).length;
+                const percentage = complaints.length > 0 ? (count / complaints.length) * 100 : 0;
+                return (
+                  <div key={priority} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Badge className={getPriorityColor(priority)}>{priority.toUpperCase()}</Badge>
+                      <span className="text-sm text-foreground">{count} complaints</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${priority === 'urgent' ? 'bg-red-500' : priority === 'high' ? 'bg-orange-500' : priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-8">{Math.round(percentage)}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold text-foreground">Location Analytics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {['Mumbai Central', 'Delhi NCR', 'Bangalore', 'Chennai'].map(location => {
+                const locationComplaints = complaints.filter((c: any) => c.location === location);
+                const count = locationComplaints.length;
+                const resolvedCount = locationComplaints.filter((c: any) => c.status === 'resolved').length;
+                const percentage = complaints.length > 0 ? (count / complaints.length) * 100 : 0;
+                return (
+                  <div key={location} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground">{location}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{count} total</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{resolvedCount}/{count} resolved</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
