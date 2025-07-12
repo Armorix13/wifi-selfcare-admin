@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/main-layout";
 import { StatsCard } from "@/components/ui/stats-card";
 import { ComplaintChart } from "@/components/charts/complaint-chart";
+import { StatusChart } from "@/components/charts/status-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -204,7 +205,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="crypto-card border-border/50 shadow-2xl floating-element">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                   <Activity className="h-5 w-5 icon-glow" />
                   Performance Analytics
                   <Gem className="h-4 w-4 text-yellow-500 sparkle-animation" />
@@ -218,41 +219,88 @@ export default function Dashboard() {
             {/* Enhanced Status Distribution */}
             <Card className="crypto-card border-border/50 shadow-2xl neon-glow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                   <Target className="h-5 w-5 icon-glow" />
                   Issue Status
                   <Flame className="h-4 w-4 text-orange-500 animate-bounce" />
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <StatusChart title="Issue Status Distribution" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Additional Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="crypto-card border-border/50 shadow-2xl pulse-glow">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 icon-glow" />
+                  Issue Trends
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <StatusChart title="Issue Trends" />
+              </CardContent>
+            </Card>
+
+            <Card className="crypto-card border-border/50 shadow-2xl floating-element">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Signal className="h-5 w-5 icon-glow" />
+                  Network Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ComplaintChart title="Network Uptime" type="area" />
+              </CardContent>
+            </Card>
+
+            <Card className="crypto-card border-border/50 shadow-2xl neon-glow">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Users className="h-5 w-5 icon-glow" />
+                  Engineer Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-500/10 to-red-500/5 border border-red-500/20 hover:scale-105 transition-transform duration-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-foreground">Pending</span>
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        JD
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">John Doe</p>
+                        <p className="text-xs text-muted-foreground">24 resolved</p>
+                      </div>
                     </div>
-                    <Badge variant="destructive" className="shadow-lg">{stats?.complaintStats?.pending || 14}</Badge>
+                    <Badge className="bg-green-100 text-green-800">Top</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 hover:scale-105 transition-transform duration-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-foreground">Assigned</span>
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        JS
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Jane Smith</p>
+                        <p className="text-xs text-muted-foreground">18 resolved</p>
+                      </div>
                     </div>
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 shadow-lg">{stats?.complaintStats?.assigned || 28}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">Good</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:scale-105 transition-transform duration-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20">
                     <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-blue-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-foreground">In Progress</span>
+                      <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        MB
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Mike Brown</p>
+                        <p className="text-xs text-muted-foreground">12 resolved</p>
+                      </div>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800 shadow-lg">{stats?.complaintStats?.inProgress || 31}</Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20 hover:scale-105 transition-transform duration-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-foreground">Resolved</span>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800 shadow-lg">{stats?.complaintStats?.resolved || 142}</Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800">Active</Badge>
                   </div>
                 </div>
               </CardContent>

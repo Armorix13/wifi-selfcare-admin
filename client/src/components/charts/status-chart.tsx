@@ -1,0 +1,172 @@
+import { useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+interface StatusChartProps {
+  title: string;
+  data?: any[];
+}
+
+// Generate realistic status data
+const generateStatusData = (days: number) => {
+  const data = [];
+  for (let i = days; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    
+    data.push({
+      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      pending: Math.floor(Math.random() * 8) + 2,
+      assigned: Math.floor(Math.random() * 12) + 3,
+      inProgress: Math.floor(Math.random() * 10) + 4,
+      resolved: Math.floor(Math.random() * 20) + 8,
+    });
+  }
+  
+  return data;
+};
+
+const getCurrentStatusDistribution = () => [
+  { name: 'Pending', value: 14, color: '#ef4444' },
+  { name: 'Assigned', value: 28, color: '#f59e0b' },
+  { name: 'In Progress', value: 31, color: '#3b82f6' },
+  { name: 'Resolved', value: 142, color: '#10b981' },
+];
+
+export function StatusChart({ title, data = [] }: StatusChartProps) {
+  const [timeRange, setTimeRange] = useState("7");
+  const [chartType, setChartType] = useState<"bar" | "pie">("bar");
+  
+  const chartData = generateStatusData(parseInt(timeRange));
+  const pieData = getCurrentStatusDistribution();
+  
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+          <p className="text-foreground font-medium">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const PieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0];
+      return (
+        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+          <p className="text-foreground font-medium">{data.name}</p>
+          <p className="text-sm" style={{ color: data.payload.color }}>
+            Count: {data.value}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {((data.value / pieData.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}%
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderChart = () => {
+    if (chartType === "pie") {
+      return (
+        <PieChart>
+          <Pie
+            data={pieData}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={5}
+            dataKey="value"
+          >
+            {pieData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip content={<PieTooltip />} />
+          <Legend />
+        </PieChart>
+      );
+    }
+
+    return (
+      <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+        <YAxis stroke="hsl(var(--muted-foreground))" />
+        <Tooltip content={<CustomTooltip />} />
+        <Legend />
+        <Bar dataKey="pending" fill="#ef4444" name="Pending" />
+        <Bar dataKey="assigned" fill="#f59e0b" name="Assigned" />
+        <Bar dataKey="inProgress" fill="#3b82f6" name="In Progress" />
+        <Bar dataKey="resolved" fill="#10b981" name="Resolved" />
+      </BarChart>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        <div className="flex items-center gap-2">
+          <select 
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value)}
+            className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground"
+          >
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 3 months</option>
+          </select>
+          <select 
+            value={chartType}
+            onChange={(e) => setChartType(e.target.value as "bar" | "pie")}
+            className="text-sm border border-border rounded-lg px-3 py-1 bg-background text-foreground"
+          >
+            <option value="bar">Bar Chart</option>
+            <option value="pie">Pie Chart</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart()}
+        </ResponsiveContainer>
+      </div>
+      
+      {/* Chart Summary */}
+      <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Resolution Rate: 85%</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span>Total Issues: {pieData.reduce((sum, item) => sum + item.value, 0)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
