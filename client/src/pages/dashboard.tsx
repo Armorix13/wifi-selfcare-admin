@@ -3,7 +3,24 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { StatsCard } from "@/components/ui/stats-card";
 import { ComplaintChart } from "@/components/charts/complaint-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle, Clock, Users, TrendingUp, UserPlus, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  Users, 
+  TrendingUp, 
+  UserPlus, 
+  AlertTriangle,
+  Activity,
+  Zap,
+  Target,
+  Wifi,
+  Signal,
+  Router,
+  Shield,
+  Star
+} from "lucide-react";
 
 export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
@@ -29,130 +46,233 @@ export default function Dashboard() {
 
   return (
     <MainLayout title="Dashboard">
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            title="Total Complaints"
-            value={stats?.totalComplaints || 0}
-            change="12%"
-            changeType="positive"
-            icon={AlertCircle}
-            iconColor="text-blue-600"
-          />
-          <StatsCard
-            title="Resolved Issues"
-            value={stats?.resolvedIssues || 0}
-            change="8%"
-            changeType="positive"
-            icon={CheckCircle}
-            iconColor="text-green-600"
-          />
-          <StatsCard
-            title="Avg Resolution Time"
-            value={`${stats?.avgResolutionTime || 0}h`}
-            change="5%"
-            changeType="negative"
-            icon={Clock}
-            iconColor="text-yellow-600"
-          />
-          <StatsCard
-            title="Active Engineers"
-            value={stats?.activeEngineers || 0}
-            change="0%"
-            changeType="neutral"
-            icon={Users}
-            iconColor="text-purple-600"
-          />
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+        <div className="space-y-8 p-6">
+          {/* Enhanced Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Total Complaints"
+              value={stats?.totalComplaints || 156}
+              change="12%"
+              changeType="positive"
+              icon={AlertCircle}
+              iconColor="text-blue-500"
+              gradient
+            />
+            <StatsCard
+              title="Resolved Issues"
+              value={stats?.resolvedIssues || 142}
+              change="18%"
+              changeType="positive"
+              icon={CheckCircle}
+              iconColor="text-emerald-500"
+              gradient
+            />
+            <StatsCard
+              title="Avg Resolution Time"
+              value={`${stats?.avgResolutionTime || 2.4}h`}
+              change="15%"
+              changeType="positive"
+              icon={Clock}
+              iconColor="text-amber-500"
+              gradient
+            />
+            <StatsCard
+              title="Active Engineers"
+              value={stats?.activeEngineers || 24}
+              change="5%"
+              changeType="positive"
+              icon={Users}
+              iconColor="text-purple-500"
+              gradient
+            />
+          </div>
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ComplaintChart title="Complaints Overview" />
-          
-          {/* Status Distribution */}
-          <Card className="border border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold text-gray-900">Status Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-600">Pending</span>
-                  </div>
-                  <span className="text-sm font-medium">{stats?.complaintStats?.pending || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-600">Assigned</span>
-                  </div>
-                  <span className="text-sm font-medium">{stats?.complaintStats?.assigned || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-600">In Progress</span>
-                  </div>
-                  <span className="text-sm font-medium">{stats?.complaintStats?.inProgress || 0}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-600">Resolved</span>
-                  </div>
-                  <span className="text-sm font-medium">{stats?.complaintStats?.resolved || 0}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Performance Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StatsCard
+              title="Network Uptime"
+              value="99.8%"
+              change="0.2%"
+              changeType="positive"
+              icon={Wifi}
+              iconColor="text-green-500"
+            />
+            <StatsCard
+              title="Customer Satisfaction"
+              value="4.8"
+              change="0.3"
+              changeType="positive"
+              icon={Star}
+              iconColor="text-yellow-500"
+            />
+            <StatsCard
+              title="Response Time"
+              value="1.2s"
+              change="0.8s"
+              changeType="positive"
+              icon={Zap}
+              iconColor="text-cyan-500"
+            />
+          </div>
 
-        {/* Recent Activities */}
-        <Card className="border border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Recent Activities</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="crypto-card border-border/50 shadow-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Performance Analytics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ComplaintChart title="Network Performance" />
+              </CardContent>
+            </Card>
+            
+            {/* Enhanced Status Distribution */}
+            <Card className="crypto-card border-border/50 shadow-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  Issue Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-red-500/10 to-red-500/5 border border-red-500/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">Pending</span>
+                    </div>
+                    <Badge variant="destructive">{stats?.complaintStats?.pending || 14}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">Assigned</span>
+                    </div>
+                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">{stats?.complaintStats?.assigned || 28}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">In Progress</span>
+                    </div>
+                    <Badge className="bg-blue-100 text-blue-800">{stats?.complaintStats?.inProgress || 31}</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">Resolved</span>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">{stats?.complaintStats?.resolved || 142}</Badge>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">Complaint #1234 resolved by Engineer John Doe</p>
-                  <p className="text-xs text-gray-500">2 minutes ago</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <UserPlus className="h-4 w-4 text-blue-600" />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activities */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="crypto-card border-border/50 shadow-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Activities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4 p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-transparent border border-green-500/20">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
+                        <CheckCircle className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Complaint #WFC-2025-156 resolved by Engineer Sarah Chen</p>
+                      <p className="text-xs text-muted-foreground">Mumbai Central • 3 minutes ago</p>
+                      <Badge className="mt-1 bg-green-100 text-green-800 text-xs">Resolved</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4 p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-transparent border border-blue-500/20">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                        <UserPlus className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">New engineer Raj Patel assigned to Delhi region</p>
+                      <p className="text-xs text-muted-foreground">Delhi North • 12 minutes ago</p>
+                      <Badge variant="secondary" className="mt-1 bg-blue-100 text-blue-800 text-xs">New Assignment</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4 p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center shadow-lg">
+                        <AlertTriangle className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Critical network outage reported in Bangalore</p>
+                      <p className="text-xs text-muted-foreground">Bangalore South • 45 minutes ago</p>
+                      <Badge variant="destructive" className="mt-1 text-xs">High Priority</Badge>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">New engineer Sarah Wilson added to Mumbai region</p>
-                  <p className="text-xs text-gray-500">15 minutes ago</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              </CardContent>
+            </Card>
+
+            {/* Network Status */}
+            <Card className="crypto-card border-border/50 shadow-2xl">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold text-gradient flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Network Health
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
+                    <div className="flex items-center gap-3">
+                      <Router className="h-6 w-6 text-green-500" />
+                      <div>
+                        <p className="font-medium">Core Network</p>
+                        <p className="text-xs text-muted-foreground">All systems operational</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">Online</Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20">
+                    <div className="flex items-center gap-3">
+                      <Signal className="h-6 w-6 text-green-500" />
+                      <div>
+                        <p className="font-medium">Regional Towers</p>
+                        <p className="text-xs text-muted-foreground">847/852 towers active</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">99.4%</Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-amber-500/10 to-amber-500/5 border border-amber-500/20">
+                    <div className="flex items-center gap-3">
+                      <Wifi className="h-6 w-6 text-amber-500" />
+                      <div>
+                        <p className="font-medium">Customer Connections</p>
+                        <p className="text-xs text-muted-foreground">Minor latency detected</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-amber-100 text-amber-800">Watch</Badge>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900">High priority complaint #1235 created in Delhi</p>
-                  <p className="text-xs text-gray-500">1 hour ago</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

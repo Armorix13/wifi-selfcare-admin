@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
   title: string;
@@ -8,6 +8,8 @@ interface StatsCardProps {
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
   iconColor?: string;
+  gradient?: boolean;
+  className?: string;
 }
 
 export function StatsCard({
@@ -16,51 +18,58 @@ export function StatsCard({
   change,
   changeType = "neutral",
   icon: Icon,
-  iconColor = "text-blue-600",
+  iconColor = "text-primary",
+  gradient = false,
+  className,
 }: StatsCardProps) {
-  const getChangeColor = () => {
-    switch (changeType) {
-      case "positive":
-        return "text-green-600";
-      case "negative":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getChangeSymbol = () => {
-    switch (changeType) {
-      case "positive":
-        return "↗";
-      case "negative":
-        return "↘";
-      default:
-        return "→";
-    }
+  const changeColors = {
+    positive: "text-green-600 bg-green-50 dark:bg-green-900/20",
+    negative: "text-red-600 bg-red-50 dark:bg-red-900/20", 
+    neutral: "text-gray-600 bg-gray-50 dark:bg-gray-900/20",
   };
 
   return (
-    <Card className="border border-slate-200">
-      <CardContent className="p-6">
-        <div className="flex items-center">
-          <div className={`p-2 rounded-lg ${iconColor.includes('blue') ? 'bg-blue-100' : iconColor.includes('green') ? 'bg-green-100' : iconColor.includes('yellow') ? 'bg-yellow-100' : 'bg-purple-100'}`}>
-            <Icon className={`h-6 w-6 ${iconColor}`} />
+    <div className={cn(
+      "stats-card p-6 group",
+      gradient && "crypto-card",
+      className
+    )}>
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className={cn(
+              "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+              gradient 
+                ? "bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20" 
+                : "bg-primary/10"
+            )}>
+              <Icon className={cn("h-6 w-6", iconColor)} />
+            </div>
+            {change && (
+              <div className={cn(
+                "px-2 py-1 rounded-full text-xs font-medium",
+                changeColors[changeType]
+              )}>
+                {changeType === "positive" && "+"}
+                {change}
+              </div>
+            )}
           </div>
-          <div className="ml-4">
-            <p className="text-sm font-medium text-gray-600">{title}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-3xl font-bold tracking-tight text-gradient">
+              {value}
+            </p>
           </div>
         </div>
-        {change && (
-          <div className="mt-4">
-            <span className={`text-sm font-medium ${getChangeColor()}`}>
-              {getChangeSymbol()} {change}
-            </span>
-            <span className="text-sm text-gray-500 ml-1">vs last month</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+      
+      {/* Decorative gradient overlay */}
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
+      {/* Animated border effect */}
+      <div className="absolute inset-0 rounded-xl border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+    </div>
   );
 }
