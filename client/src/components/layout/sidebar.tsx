@@ -81,22 +81,38 @@ export function Sidebar() {
                 <ThemeIcon className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => setTheme("light")}>
+            <DropdownMenuContent align="end" className="theme-dropdown w-40">
+              <DropdownMenuItem 
+                onClick={() => setTheme("light")}
+                className="theme-dropdown-item flex items-center"
+              >
                 <Sun className="mr-2 h-4 w-4" />
-                Light
+                <span className="font-medium">Light</span>
+                {theme === "light" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")}>
+              <DropdownMenuItem 
+                onClick={() => setTheme("dark")}
+                className="theme-dropdown-item flex items-center"
+              >
                 <Moon className="mr-2 h-4 w-4" />
-                Dark
+                <span className="font-medium">Dark</span>
+                {theme === "dark" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("crypto")}>
+              <DropdownMenuItem 
+                onClick={() => setTheme("crypto")}
+                className="theme-dropdown-item flex items-center"
+              >
                 <Zap className="mr-2 h-4 w-4" />
-                Crypto
+                <span className="font-medium">Crypto</span>
+                {theme === "crypto" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("neon")}>
+              <DropdownMenuItem 
+                onClick={() => setTheme("neon")}
+                className="theme-dropdown-item flex items-center"
+              >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Neon
+                <span className="font-medium">Neon</span>
+                {theme === "neon" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

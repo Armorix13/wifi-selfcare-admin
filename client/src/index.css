@@ -548,6 +548,20 @@
   @apply bg-slate-50 text-gray-500 uppercase tracking-wider text-xs font-medium;
 }
 
+/* Theme switcher dropdown */
+.theme-dropdown {
+  @apply bg-card border border-border shadow-xl rounded-lg overflow-hidden backdrop-blur-lg;
+  background: hsl(var(--card) / 0.95);
+}
+
+.theme-dropdown-item {
+  @apply px-3 py-2 text-sm font-medium text-card-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors duration-150;
+}
+
+.theme-dropdown-item:hover {
+  background: hsl(var(--muted) / 0.8);
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .mobile-stack {
