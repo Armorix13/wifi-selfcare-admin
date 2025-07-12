@@ -49,6 +49,8 @@ import {
   AlertCircle,
   CheckCircle,
   Activity,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -63,6 +65,8 @@ export default function Complaints() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -221,6 +225,14 @@ export default function Complaints() {
       (!locationFilter || locationFilter === "all" || complaint.location === locationFilter)
     );
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedComplaints = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  const resetPagination = () => setCurrentPage(1);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -657,7 +669,7 @@ export default function Complaints() {
                   <Input
                     placeholder="Search complaints..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => { setSearchQuery(e.target.value); resetPagination(); }}
                     className="pl-10 w-64"
                   />
                 </div>
@@ -668,7 +680,7 @@ export default function Complaints() {
           {/* Enhanced Filters */}
           <div className="px-6 py-4 border-b border-border/50 bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(value) => { setStatusFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -683,7 +695,7 @@ export default function Complaints() {
                 </SelectContent>
               </Select>
 
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <Select value={priorityFilter} onValueChange={(value) => { setPriorityFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Priority" />
                 </SelectTrigger>
@@ -696,7 +708,7 @@ export default function Complaints() {
                 </SelectContent>
               </Select>
 
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <Select value={locationFilter} onValueChange={(value) => { setLocationFilter(value); resetPagination(); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
@@ -716,6 +728,7 @@ export default function Complaints() {
                   setPriorityFilter("all");
                   setLocationFilter("all");
                   setSearchQuery("");
+                  resetPagination();
                 }}
                 className="bg-background hover:bg-muted"
               >
@@ -724,19 +737,64 @@ export default function Complaints() {
               </Button>
 
               <div className="text-sm text-muted-foreground flex items-center">
-                Showing {filteredComplaints.length} of {complaints.length}{" "}
-                complaints
+                Page {currentPage} of {totalPages} • {filteredComplaints.length} total complaints
               </div>
             </div>
           </div>
 
           <CardContent className="p-0">
             <DataTable
-              data={filteredComplaints}
+              data={paginatedComplaints}
               columns={columns}
               searchPlaceholder="Search complaints..."
             />
           </CardContent>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-border/50 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} results
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
 
