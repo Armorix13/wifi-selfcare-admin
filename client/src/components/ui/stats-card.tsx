@@ -30,24 +30,24 @@ export function StatsCard({
 
   return (
     <div className={cn(
-      "stats-card p-6 group",
+      "stats-card p-6 group relative overflow-hidden",
       gradient && "crypto-card",
       className
     )}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative z-10">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-4">
             <div className={cn(
-              "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+              "p-3 rounded-xl transition-all duration-200 ease-in-out",
               gradient 
                 ? "bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20" 
                 : "bg-primary/10"
             )}>
-              <Icon className={cn("h-6 w-6", iconColor)} />
+              <Icon className={cn("h-6 w-6 transition-transform duration-200", iconColor)} />
             </div>
             {change && (
               <div className={cn(
-                "px-2 py-1 rounded-full text-xs font-medium",
+                "px-2 py-1 rounded-full text-xs font-medium transition-all duration-200",
                 changeColors[changeType]
               )}>
                 {changeType === "positive" && "+"}
@@ -57,19 +57,16 @@ export function StatsCard({
           </div>
           
           <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground/70">{title}</p>
-            <p className="text-3xl font-bold tracking-tight text-foreground">
+            <p className="text-sm font-medium text-foreground/70 transition-colors duration-200">{title}</p>
+            <p className="text-3xl font-bold tracking-tight text-foreground transition-colors duration-200">
               {value}
             </p>
           </div>
         </div>
       </div>
       
-      {/* Decorative gradient overlay */}
-      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-      
-      {/* Animated border effect */}
-      <div className="absolute inset-0 rounded-xl border border-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      {/* Subtle hover effect without layout shift */}
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/3 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
     </div>
   );
 }

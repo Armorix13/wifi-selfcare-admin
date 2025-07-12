@@ -163,11 +163,17 @@
   }
   
   .stats-card {
-    @apply relative bg-card backdrop-blur-lg border border-border rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105;
+    @apply relative bg-card backdrop-blur-lg border border-border rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 ease-in-out;
     background: linear-gradient(135deg, 
       hsl(var(--card) / 0.9) 0%, 
       hsl(var(--card) / 0.7) 100%
     );
+    transform: translateZ(0); /* Force GPU acceleration for smooth transitions */
+    will-change: transform, box-shadow; /* Optimize for animations */
+  }
+  
+  .stats-card:hover {
+    transform: translateZ(0) translateY(-2px); /* Subtle lift effect without layout shift */
   }
   
   .stats-card::before {
@@ -184,13 +190,19 @@
   }
   
   .crypto-card {
-    @apply relative bg-card backdrop-blur-lg border rounded-xl shadow-2xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02];
+    @apply relative bg-card backdrop-blur-lg border rounded-xl shadow-2xl hover:shadow-2xl transition-all duration-300 ease-in-out;
     background: linear-gradient(135deg, 
       hsl(var(--card) / 0.9) 0%, 
       hsl(var(--card) / 0.7) 50%,
       hsl(var(--primary) / 0.05) 100%
     );
     border: 1px solid hsl(var(--border) / 0.5);
+    transform: translateZ(0); /* Force GPU acceleration for smooth transitions */
+    will-change: transform, box-shadow; /* Optimize for animations */
+  }
+  
+  .crypto-card:hover {
+    transform: translateZ(0) translateY(-1px); /* Subtle lift effect without layout shift */
   }
   
   .crypto-card::before {
