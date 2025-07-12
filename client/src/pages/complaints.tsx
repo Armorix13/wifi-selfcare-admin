@@ -55,9 +55,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertComplaintSchema, type InsertComplaint } from "@shared/schema";
 
 export default function Complaints() {
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -216,9 +216,9 @@ export default function Complaints() {
 
     return (
       matchesSearch &&
-      (!statusFilter || complaint.status === statusFilter) &&
-      (!priorityFilter || complaint.priority === priorityFilter) &&
-      (!locationFilter || complaint.location === locationFilter)
+      (!statusFilter || statusFilter === "all" || complaint.status === statusFilter) &&
+      (!priorityFilter || priorityFilter === "all" || complaint.priority === priorityFilter) &&
+      (!locationFilter || locationFilter === "all" || complaint.location === locationFilter)
     );
   });
 
@@ -673,7 +673,7 @@ export default function Complaints() {
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="in-progress">In Progress</SelectItem>
@@ -688,7 +688,7 @@ export default function Complaints() {
                   <SelectValue placeholder="All Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Priority</SelectItem>
+                  <SelectItem value="all">All Priority</SelectItem>
                   <SelectItem value="urgent">Urgent</SelectItem>
                   <SelectItem value="high">High</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
@@ -701,7 +701,7 @@ export default function Complaints() {
                   <SelectValue placeholder="All Locations" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   <SelectItem value="Mumbai Central">Mumbai Central</SelectItem>
                   <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
                   <SelectItem value="Bangalore">Bangalore</SelectItem>
@@ -712,9 +712,9 @@ export default function Complaints() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setStatusFilter("");
-                  setPriorityFilter("");
-                  setLocationFilter("");
+                  setStatusFilter("all");
+                  setPriorityFilter("all");
+                  setLocationFilter("all");
                   setSearchQuery("");
                 }}
                 className="bg-background hover:bg-muted"
@@ -893,11 +893,11 @@ export default function Complaints() {
             <div>
               <Label htmlFor="edit-engineer">Engineer</Label>
               <Select
-                value={editForm.watch("engineerId")?.toString() || ""}
+                value={editForm.watch("engineerId")?.toString() || "unassigned"}
                 onValueChange={(value) =>
                   editForm.setValue(
                     "engineerId",
-                    value ? parseInt(value) : null,
+                    value === "unassigned" ? null : parseInt(value),
                   )
                 }
               >
@@ -905,7 +905,7 @@ export default function Complaints() {
                   <SelectValue placeholder="Select engineer" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {engineers.map((engineer: any) => (
                     <SelectItem
                       key={engineer.id}
