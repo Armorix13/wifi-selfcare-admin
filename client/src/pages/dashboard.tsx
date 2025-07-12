@@ -83,7 +83,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-gradient mb-2">
+            <h1 className="text-4xl font-bold text-foreground mb-2">
               Welcome to Your Command Center
             </h1>
             <p className="text-muted-foreground text-lg">
@@ -229,28 +229,28 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-red-500/10 to-red-500/5 border border-red-500/20 hover:scale-105 transition-transform duration-200">
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-gradient">Pending</span>
+                      <span className="text-sm font-medium text-foreground">Pending</span>
                     </div>
                     <Badge variant="destructive" className="shadow-lg">{stats?.complaintStats?.pending || 14}</Badge>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 hover:scale-105 transition-transform duration-200">
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-gradient">Assigned</span>
+                      <span className="text-sm font-medium text-foreground">Assigned</span>
                     </div>
                     <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 shadow-lg">{stats?.complaintStats?.assigned || 28}</Badge>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:scale-105 transition-transform duration-200">
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 bg-blue-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-gradient">In Progress</span>
+                      <span className="text-sm font-medium text-foreground">In Progress</span>
                     </div>
                     <Badge className="bg-blue-100 text-blue-800 shadow-lg">{stats?.complaintStats?.inProgress || 31}</Badge>
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-green-500/5 border border-green-500/20 hover:scale-105 transition-transform duration-200">
                     <div className="flex items-center gap-3">
                       <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg"></div>
-                      <span className="text-sm font-medium text-gradient">Resolved</span>
+                      <span className="text-sm font-medium text-foreground">Resolved</span>
                     </div>
                     <Badge className="bg-green-100 text-green-800 shadow-lg">{stats?.complaintStats?.resolved || 142}</Badge>
                   </div>

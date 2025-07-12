@@ -57,8 +57,8 @@ export function StatsCard({
           </div>
           
           <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight text-gradient">
+            <p className="text-sm font-medium text-foreground/70">{title}</p>
+            <p className="text-3xl font-bold tracking-tight text-foreground">
               {value}
             </p>
           </div>
