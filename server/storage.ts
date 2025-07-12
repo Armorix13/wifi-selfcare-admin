@@ -300,6 +300,8 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...insertUser,
       id: this.userIdCounter++,
+      role: insertUser.role || "manager",
+      isActive: insertUser.isActive ?? true,
       createdAt: new Date(),
     };
     this.users.set(user.id, user);
@@ -328,6 +330,9 @@ export class MemStorage implements IStorage {
     const customer: Customer = {
       ...insertCustomer,
       id: this.customerIdCounter++,
+      isActive: insertCustomer.isActive ?? true,
+      serviceProvider: insertCustomer.serviceProvider ?? null,
+      planId: insertCustomer.planId ?? null,
       createdAt: new Date(),
     };
     this.customers.set(customer.id, customer);
@@ -360,6 +365,10 @@ export class MemStorage implements IStorage {
     const engineer: Engineer = {
       ...insertEngineer,
       id: this.engineerIdCounter++,
+      isActive: insertEngineer.isActive ?? true,
+      rating: insertEngineer.rating ?? 0,
+      completedJobs: insertEngineer.completedJobs ?? 0,
+      activeJobs: insertEngineer.activeJobs ?? 0,
       createdAt: new Date(),
     };
     this.engineers.set(engineer.id, engineer);
@@ -396,6 +405,8 @@ export class MemStorage implements IStorage {
     const plan: ServicePlan = {
       ...insertPlan,
       id: this.planIdCounter++,
+      description: insertPlan.description ?? null,
+      isActive: insertPlan.isActive ?? true,
       createdAt: new Date(),
     };
     this.servicePlans.set(plan.id, plan);
@@ -432,6 +443,14 @@ export class MemStorage implements IStorage {
     const complaint: Complaint = {
       ...insertComplaint,
       id: this.complaintIdCounter++,
+      priority: insertComplaint.priority || "medium",
+      status: insertComplaint.status || "pending",
+      engineerId: insertComplaint.engineerId ?? null,
+      attachments: insertComplaint.attachments ?? null,
+      resolution: insertComplaint.resolution ?? null,
+      rating: insertComplaint.rating ?? null,
+      feedback: insertComplaint.feedback ?? null,
+      resolvedAt: insertComplaint.resolvedAt ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -473,6 +492,10 @@ export class MemStorage implements IStorage {
     const notification: Notification = {
       ...insertNotification,
       id: this.notificationIdCounter++,
+      priority: insertNotification.priority || "normal",
+      recipients: insertNotification.recipients ?? null,
+      deliveredCount: insertNotification.deliveredCount ?? 0,
+      readCount: insertNotification.readCount ?? 0,
       sentAt: new Date(),
     };
     this.notifications.set(notification.id, notification);
@@ -492,6 +515,10 @@ export class MemStorage implements IStorage {
     const ticket: SupportTicket = {
       ...insertTicket,
       id: this.supportTicketIdCounter++,
+      priority: insertTicket.priority || "medium",
+      status: insertTicket.status || "open",
+      assignedTo: insertTicket.assignedTo ?? null,
+      response: insertTicket.response ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
