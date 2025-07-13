@@ -13,7 +13,7 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Customers table
+// Customers table - Enhanced with plan activation details
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -23,6 +23,15 @@ export const customers = pgTable("customers", {
   location: text("location").notNull(),
   serviceProvider: text("service_provider"),
   planId: integer("plan_id"),
+  planName: text("plan_name"),
+  activationDate: timestamp("activation_date"),
+  expirationDate: timestamp("expiration_date"),
+  balanceDue: integer("balance_due").default(0),
+  staticIp: text("static_ip"),
+  macAddress: text("mac_address"),
+  status: text("status").default("active"), // active, suspended, expired, pending
+  area: text("area"), // rural, urban
+  mode: text("mode").default("online"), // online, offline
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
