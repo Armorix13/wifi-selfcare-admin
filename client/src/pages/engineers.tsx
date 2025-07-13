@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -14,30 +13,115 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { insertEngineerSchema, type InsertEngineer } from "@shared/schema";
 
+// Engineer data type
+type EngineerData = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  location: string;
+  specialization: string;
+  rating: number;
+  completedJobs: number;
+  activeJobs: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+// Dummy engineer data
+const initialEngineers: EngineerData[] = [
+  {
+    id: 1,
+    name: "John Doe",
+    email: "john.doe@company.com",
+    phone: "+91 98765 43210",
+    location: "Mumbai",
+    specialization: "Fiber Installation",
+    rating: 4.8,
+    completedJobs: 156,
+    activeJobs: 3,
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z",
+  },
+  {
+    id: 2,
+    name: "Priya Sharma",
+    email: "priya.sharma@company.com",
+    phone: "+91 87654 32109",
+    location: "Delhi",
+    specialization: "Network Troubleshooting",
+    rating: 4.9,
+    completedJobs: 203,
+    activeJobs: 5,
+    isActive: true,
+    createdAt: "2023-11-20T10:00:00Z",
+  },
+  {
+    id: 3,
+    name: "Amit Kumar",
+    email: "amit.kumar@company.com",
+    phone: "+91 76543 21098",
+    location: "Bangalore",
+    specialization: "Router Configuration",
+    rating: 4.6,
+    completedJobs: 89,
+    activeJobs: 2,
+    isActive: true,
+    createdAt: "2024-02-10T10:00:00Z",
+  },
+  {
+    id: 4,
+    name: "Sneha Patel",
+    email: "sneha.patel@company.com",
+    phone: "+91 65432 10987",
+    location: "Pune",
+    specialization: "WiFi Setup",
+    rating: 4.7,
+    completedJobs: 134,
+    activeJobs: 4,
+    isActive: false,
+    createdAt: "2023-12-05T10:00:00Z",
+  },
+  {
+    id: 5,
+    name: "Rajesh Singh",
+    email: "rajesh.singh@company.com",
+    phone: "+91 54321 09876",
+    location: "Chennai",
+    specialization: "Cable Installation",
+    rating: 4.5,
+    completedJobs: 98,
+    activeJobs: 1,
+    isActive: true,
+    createdAt: "2024-01-28T10:00:00Z",
+  },
+];
+
 export default function Engineers() {
+  const [engineers, setEngineers] = useState<EngineerData[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedEngineer, setSelectedEngineer] = useState<any>(null);
+  const [selectedEngineer, setSelectedEngineer] = useState<EngineerData | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [specializationFilter, setSpecializationFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 5;
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: engineers = [], isLoading } = useQuery({
-    queryKey: ["/api/engineers"],
-  });
+  // Initialize with dummy data
+  useEffect(() => {
+    setEngineers(initialEngineers);
+  }, []);
 
-  const form = useForm<InsertEngineer>({
+  const form = useForm<Omit<EngineerData, 'id' | 'createdAt'>>({
     resolver: zodResolver(insertEngineerSchema),
     defaultValues: {
       name: "",
@@ -52,112 +136,58 @@ export default function Engineers() {
     },
   });
 
-  const editForm = useForm<InsertEngineer>({
+  const editForm = useForm<Omit<EngineerData, 'id' | 'createdAt'>>({
     resolver: zodResolver(insertEngineerSchema),
   });
 
-  const createEngineerMutation = useMutation({
-    mutationFn: async (data: InsertEngineer) => {
-      const response = await apiRequest("POST", "/api/engineers", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/engineers"] });
-      toast({
-        title: "Success",
-        description: "Engineer added successfully",
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add engineer",
-        variant: "destructive",
-      });
-    },
-  });
+  const onSubmit = (data: Omit<EngineerData, 'id' | 'createdAt'>) => {
+    const newEngineer: EngineerData = {
+      ...data,
+      id: Math.max(...engineers.map(e => e.id), 0) + 1,
+      createdAt: new Date().toISOString(),
+    };
+    
+    setEngineers(prev => [...prev, newEngineer]);
+    toast({
+      title: "Success",
+      description: "Engineer added successfully",
+    });
+    setIsDialogOpen(false);
+    form.reset();
+  };
 
-  const updateEngineerMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertEngineer> }) => {
-      const response = await apiRequest("PUT", `/api/engineers/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/engineers"] });
+  const onEditSubmit = (data: Omit<EngineerData, 'id' | 'createdAt'>) => {
+    if (selectedEngineer) {
+      setEngineers(prev => prev.map(engineer => 
+        engineer.id === selectedEngineer.id 
+          ? { ...data, id: selectedEngineer.id, createdAt: selectedEngineer.createdAt }
+          : engineer
+      ));
       toast({
         title: "Success",
         description: "Engineer updated successfully",
       });
       setIsEditDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update engineer",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteEngineerMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/engineers/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/engineers"] });
-      toast({
-        title: "Success",
-        description: "Engineer deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete engineer",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const onSubmit = (data: InsertEngineer) => {
-    createEngineerMutation.mutate(data);
-  };
-
-  const onEditSubmit = (data: InsertEngineer) => {
-    if (selectedEngineer) {
-      updateEngineerMutation.mutate({
-        id: selectedEngineer.id,
-        data,
-      });
     }
   };
 
-  const handleView = (engineer: any) => {
+  const handleView = (engineer: EngineerData) => {
     setSelectedEngineer(engineer);
     setIsViewDialogOpen(true);
   };
 
-  const handleEdit = (engineer: any) => {
+  const handleEdit = (engineer: EngineerData) => {
     setSelectedEngineer(engineer);
-    editForm.reset({
-      name: engineer.name,
-      email: engineer.email,
-      phone: engineer.phone,
-      location: engineer.location,
-      specialization: engineer.specialization,
-      rating: engineer.rating,
-      completedJobs: engineer.completedJobs,
-      activeJobs: engineer.activeJobs,
-      isActive: engineer.isActive,
-    });
+    editForm.reset(engineer);
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (engineer: any) => {
-    deleteEngineerMutation.mutate(engineer.id);
+  const handleDelete = (id: number) => {
+    setEngineers(prev => prev.filter(engineer => engineer.id !== id));
+    toast({
+      title: "Success",
+      description: "Engineer deleted successfully",
+    });
   };
 
   const filteredEngineers = engineers.filter((engineer: any) => {
@@ -285,12 +315,12 @@ export default function Engineers() {
       key: "actions",
       label: "Actions",
       render: (value: any, row: any) => (
-        <div className="flex space-x-1">
+        <div className="flex gap-1">
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={() => handleView(row)}
-            className="text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30"
           >
             <Eye className="h-4 w-4" />
           </Button>
@@ -298,7 +328,7 @@ export default function Engineers() {
             variant="ghost" 
             size="sm" 
             onClick={() => handleEdit(row)}
-            className="text-green-600 hover:text-green-900 hover:bg-green-50"
+            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -307,7 +337,7 @@ export default function Engineers() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -321,7 +351,7 @@ export default function Engineers() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleDelete(row)}>
+                <AlertDialogAction onClick={() => handleDelete(row.id)}>
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -721,10 +751,10 @@ export default function Engineers() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createEngineerMutation.isPending}
+                    disabled={isLoading}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
-                    {createEngineerMutation.isPending ? "Adding..." : "Add Engineer"}
+                    {isLoading ? "Adding..." : "Add Engineer"}
                   </Button>
                 </div>
               </form>
@@ -954,23 +984,23 @@ export default function Engineers() {
                           </div>
                         </div>
                         
-                        <div className="mt-4 flex space-x-2">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleView(engineer)}
-                            className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                            className="flex-1 min-w-[70px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30 border-blue-200 dark:border-blue-800"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
+                            <Eye className="h-3.5 w-3.5 mr-1.5" />
                             View
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleEdit(engineer)}
-                            className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
+                            className="flex-1 min-w-[70px] text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800"
                           >
-                            <Edit className="h-4 w-4 mr-1" />
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </Button>
                           <AlertDialog>
@@ -978,9 +1008,10 @@ export default function Engineers() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="text-red-600 border-red-200 hover:bg-red-50"
+                                className="flex-1 min-w-[70px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 border-red-200 dark:border-red-800"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                                Delete
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
@@ -992,7 +1023,7 @@ export default function Engineers() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(engineer)}>
+                                <AlertDialogAction onClick={() => handleDelete(engineer.id)}>
                                   Delete
                                 </AlertDialogAction>
                               </AlertDialogFooter>
@@ -1192,10 +1223,10 @@ export default function Engineers() {
               </Button>
               <Button
                 type="submit"
-                disabled={updateEngineerMutation.isPending}
+                disabled={isLoading}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {updateEngineerMutation.isPending ? "Updating..." : "Update Engineer"}
+                {isLoading ? "Updating..." : "Update Engineer"}
               </Button>
             </div>
           </form>
