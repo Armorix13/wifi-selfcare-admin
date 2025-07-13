@@ -1063,8 +1063,8 @@ export default function UserManagement() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createUserMutation.isPending}>
-                  {createUserMutation.isPending ? "Adding..." : "Add User"}
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Adding..." : "Add User"}
                 </Button>
               </div>
             </form>
@@ -1136,8 +1136,8 @@ export default function UserManagement() {
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateUserMutation.isPending}>
-                  {updateUserMutation.isPending ? "Updating..." : "Update User"}
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Updating..." : "Update User"}
                 </Button>
               </div>
             </form>
