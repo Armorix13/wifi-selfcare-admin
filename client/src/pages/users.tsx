@@ -775,20 +775,20 @@ export default function UserManagement() {
                           )}
                         </div>
 
-                        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                          <Button variant="outline" size="sm" onClick={() => handleView(user)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                            <Eye className="h-4 w-4 mr-1" />
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                          <Button variant="outline" size="sm" onClick={() => handleView(user)} className="flex-1 min-w-[70px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                            <Eye className="h-3.5 w-3.5 mr-1.5" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
-                            <Edit className="h-4 w-4 mr-1" />
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="flex-1 min-w-[70px] text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
+                            <Edit className="h-3.5 w-3.5 mr-1.5" />
                             Edit
                           </Button>
                           {user.isActive ? (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/30 border-orange-200 dark:border-orange-800">
-                                  <ShieldOff className="h-4 w-4 mr-1" />
+                                <Button variant="outline" size="sm" className="flex-1 min-w-[70px] text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+                                  <ShieldOff className="h-3.5 w-3.5 mr-1.5" />
                                   Block
                                 </Button>
                               </AlertDialogTrigger>
@@ -808,15 +808,15 @@ export default function UserManagement() {
                               </AlertDialogContent>
                             </AlertDialog>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
-                              <Shield className="h-4 w-4 mr-1" />
+                            <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)} className="flex-1 min-w-[70px] text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
+                              <Shield className="h-3.5 w-3.5 mr-1.5" />
                               Unblock
                             </Button>
                           )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 border-red-200 dark:border-red-800">
-                                <Trash2 className="h-4 w-4 mr-1" />
+                              <Button variant="outline" size="sm" className="flex-1 min-w-[70px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 border-red-200 dark:border-red-800">
+                                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                                 Delete
                               </Button>
                             </AlertDialogTrigger>
