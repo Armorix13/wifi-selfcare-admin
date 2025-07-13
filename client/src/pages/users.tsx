@@ -427,17 +427,29 @@ export default function UserManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { color: "bg-green-100 text-green-800", icon: CheckCircle },
-      suspended: { color: "bg-red-100 text-red-800", icon: AlertTriangle },
-      pending: { color: "bg-yellow-100 text-yellow-800", icon: Activity },
-      expired: { color: "bg-gray-100 text-gray-800", icon: WifiOff },
+      active: { 
+        color: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700", 
+        icon: CheckCircle 
+      },
+      suspended: { 
+        color: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700", 
+        icon: AlertTriangle 
+      },
+      pending: { 
+        color: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700", 
+        icon: Activity 
+      },
+      expired: { 
+        color: "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600", 
+        icon: WifiOff 
+      },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     const Icon = config.icon;
     
     return (
-      <Badge className={`${config.color} gap-1`}>
+      <Badge className={`${config.color} gap-1.5 px-3 py-1.5 text-xs font-semibold border shadow-sm`}>
         <Icon className="h-3 w-3" />
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
@@ -701,81 +713,81 @@ export default function UserManagement() {
                 {paginatedUsers.map((user: any, index: number) => {
                   const daysRemaining = getDaysRemaining(user.expirationDate);
                   return (
-                    <Card key={user.id} className="border border-gray-200 hover:shadow-lg transition-shadow duration-200">
+                    <Card key={user.id} className="border border-slate-200 dark:border-slate-700 hover:shadow-xl dark:hover:shadow-slate-900/30 transition-all duration-300 bg-white dark:bg-slate-800 rounded-xl">
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center">
-                            <div className={`h-12 w-12 ${getAvatarColor(index)} rounded-full flex items-center justify-center text-white font-bold text-lg`}>
+                            <div className={`h-12 w-12 ${getAvatarColor(index)} rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg ring-2 ring-white dark:ring-slate-700`}>
                               {getInitials(user.name)}
                             </div>
                             <div className="ml-3">
-                              <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                              <p className="text-sm text-gray-500">ID: CU{user.id.toString().padStart(3, '0')}</p>
+                              <h3 className="font-semibold text-slate-900 dark:text-slate-50">{user.name}</h3>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">ID: CU{user.id.toString().padStart(3, '0')}</p>
                             </div>
                           </div>
                           {getStatusBadge(user.status)}
                         </div>
 
                         <div className="space-y-3">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Mail className="h-4 w-4 mr-2" />
-                            {user.email}
+                          <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                            <Mail className="h-4 w-4 mr-3 text-slate-500 dark:text-slate-400" />
+                            <span className="font-medium">{user.email}</span>
                           </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Phone className="h-4 w-4 mr-2" />
-                            {user.phone}
+                          <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                            <Phone className="h-4 w-4 mr-3 text-slate-500 dark:text-slate-400" />
+                            <span className="font-medium">{user.phone}</span>
                           </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            {user.location} ({user.area})
+                          <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                            <MapPin className="h-4 w-4 mr-3 text-slate-500 dark:text-slate-400" />
+                            <span className="font-medium">{user.location} ({user.area})</span>
                           </div>
                           
                           {user.serviceProvider && (
                             <>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Wifi className="h-4 w-4 mr-2" />
-                                {user.planName || user.serviceProvider}
+                              <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                                <Wifi className="h-4 w-4 mr-3 text-blue-500 dark:text-blue-400" />
+                                <span className="font-medium">{user.planName || user.serviceProvider}</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Activated: {formatDate(user.activationDate)}
+                              <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                                <Calendar className="h-4 w-4 mr-3 text-slate-500 dark:text-slate-400" />
+                                <span className="font-medium">Activated: {formatDate(user.activationDate)}</span>
                               </div>
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Expires: {formatDate(user.expirationDate)}
+                              <div className="flex items-center text-sm text-slate-700 dark:text-slate-300">
+                                <Calendar className="h-4 w-4 mr-3 text-slate-500 dark:text-slate-400" />
+                                <span className="font-medium">Expires: {formatDate(user.expirationDate)}</span>
                                 {daysRemaining !== null && (
-                                  <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                                    daysRemaining < 30 ? 'bg-red-100 text-red-800' : 
-                                    daysRemaining < 60 ? 'bg-yellow-100 text-yellow-800' : 
-                                    'bg-green-100 text-green-800'
+                                  <span className={`ml-2 px-2 py-1 text-xs rounded-full font-semibold shadow-sm ${
+                                    daysRemaining < 30 ? 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700' : 
+                                    daysRemaining < 60 ? 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700' : 
+                                    'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700'
                                   }`}>
                                     {daysRemaining > 0 ? `${daysRemaining} days left` : 'Expired'}
                                   </span>
                                 )}
                               </div>
                               {user.balanceDue > 0 && (
-                                <div className="flex items-center text-sm text-red-600">
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Balance Due: ₹{user.balanceDue}
+                                <div className="flex items-center text-sm text-red-600 dark:text-red-400">
+                                  <CreditCard className="h-4 w-4 mr-3" />
+                                  <span className="font-semibold">Balance Due: ₹{user.balanceDue}</span>
                                 </div>
                               )}
                             </>
                           )}
                         </div>
 
-                        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-100">
-                          <Button variant="outline" size="sm" onClick={() => handleView(user)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                          <Button variant="outline" size="sm" onClick={() => handleView(user)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-950/30 border-blue-200 dark:border-blue-800">
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
                           </Button>
                           {user.isActive ? (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/30 border-orange-200 dark:border-orange-800">
                                   <ShieldOff className="h-4 w-4 mr-1" />
                                   Block
                                 </Button>
@@ -796,14 +808,14 @@ export default function UserManagement() {
                               </AlertDialogContent>
                             </AlertDialog>
                           ) : (
-                            <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                            <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:hover:bg-green-950/30 border-green-200 dark:border-green-800">
                               <Shield className="h-4 w-4 mr-1" />
                               Unblock
                             </Button>
                           )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 border-red-200 dark:border-red-800">
                                 <Trash2 className="h-4 w-4 mr-1" />
                                 Delete
                               </Button>
