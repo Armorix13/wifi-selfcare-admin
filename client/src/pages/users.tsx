@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -7,21 +6,212 @@ import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, List, Eye, Edit, Trash2, ChevronLeft, ChevronRight, User, Activity, Users, CheckCircle, TrendingUp, WifiOff, AlertTriangle, CreditCard } from "lucide-react";
+import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, List, Eye, Edit, Trash2, ChevronLeft, ChevronRight, User, Activity, Users, CheckCircle, TrendingUp, WifiOff, AlertTriangle, CreditCard, Download, Upload, X, Shield, ShieldOff, FilterX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { insertCustomerSchema, type InsertCustomer } from "@shared/schema";
+import { z } from "zod";
+
+// Define user schema for form validation
+const userSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(1, "Phone is required"),
+  address: z.string().min(1, "Address is required"),
+  location: z.string().min(1, "Location is required"),
+  serviceProvider: z.string().optional(),
+  planName: z.string().optional(),
+  activationDate: z.string().optional(),
+  expirationDate: z.string().optional(),
+  balanceDue: z.number().min(0, "Balance due must be non-negative").default(0),
+  staticIp: z.string().optional(),
+  macAddress: z.string().optional(),
+  status: z.enum(["active", "suspended", "pending", "expired"]),
+  area: z.enum(["urban", "rural"]),
+  mode: z.enum(["online", "offline"]),
+  isActive: z.boolean().default(true),
+});
+
+type UserData = z.infer<typeof userSchema> & {
+  id: number;
+  createdAt: string;
+};
+
+// Dummy data
+const generateDummyUsers = (): UserData[] => [
+  {
+    id: 1,
+    name: "Rajesh Kumar",
+    email: "rajesh@email.com",
+    phone: "+91 98765 43210",
+    address: "123 Main St, Mumbai Central",
+    location: "Mumbai Central",
+    serviceProvider: "Jio Fiber",
+    planName: "Jio Fiber 100 Mbps",
+    activationDate: "2024-01-15",
+    expirationDate: "2024-12-15",
+    balanceDue: 0,
+    staticIp: "192.168.1.100",
+    macAddress: "AA:BB:CC:DD:EE:01",
+    status: "active",
+    area: "urban",
+    mode: "online",
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z",
+  },
+  {
+    id: 2,
+    name: "Priya Sharma",
+    email: "priya@email.com", 
+    phone: "+91 87654 32109",
+    address: "456 Park Ave, Delhi NCR",
+    location: "Delhi NCR",
+    serviceProvider: "",
+    planName: "",
+    activationDate: "",
+    expirationDate: "",
+    balanceDue: 0,
+    staticIp: "",
+    macAddress: "",
+    status: "pending",
+    area: "urban",
+    mode: "offline",
+    isActive: true,
+    createdAt: "2024-02-01T10:00:00Z",
+  },
+  {
+    id: 3,
+    name: "Amit Patel",
+    email: "amit@email.com",
+    phone: "+91 76543 21098",
+    address: "789 Tech Park, Bangalore",
+    location: "Bangalore",
+    serviceProvider: "BSNL Broadband",
+    planName: "BSNL Standard 50 Mbps",
+    activationDate: "2023-12-01",
+    expirationDate: "2024-11-30",
+    balanceDue: 1200,
+    staticIp: "192.168.1.102",
+    macAddress: "AA:BB:CC:DD:EE:03",
+    status: "suspended",
+    area: "rural",
+    mode: "offline",
+    isActive: false,
+    createdAt: "2023-12-01T10:00:00Z",
+  },
+  {
+    id: 4,
+    name: "Sunita Verma",
+    email: "sunita.verma@email.com",
+    phone: "+91 91234 56789",
+    address: "321 Rural Lane, Patna",
+    location: "Patna",
+    serviceProvider: "Airtel",
+    planName: "Airtel Xstream 200 Mbps",
+    activationDate: "2024-02-01",
+    expirationDate: "2025-01-31",
+    balanceDue: 500,
+    staticIp: "192.168.1.101",
+    macAddress: "AA:BB:CC:DD:EE:02",
+    status: "active",
+    area: "rural",
+    mode: "online",
+    isActive: true,
+    createdAt: "2024-02-01T10:00:00Z",
+  },
+  {
+    id: 5,
+    name: "Vikram Singh",
+    email: "vikram.singh@email.com",
+    phone: "+91 98123 45678",
+    address: "654 Tech Park, Hyderabad",
+    location: "Hyderabad",
+    serviceProvider: "My Internet",
+    planName: "My Internet Premium 300 Mbps",
+    activationDate: "2024-03-10",
+    expirationDate: "2025-03-09",
+    balanceDue: 0,
+    staticIp: "192.168.1.103",
+    macAddress: "AA:BB:CC:DD:EE:04",
+    status: "active",
+    area: "urban",
+    mode: "online",
+    isActive: true,
+    createdAt: "2024-03-10T10:00:00Z",
+  },
+  {
+    id: 6,
+    name: "Kavita Reddy",
+    email: "kavita.reddy@email.com",
+    phone: "+91 95678 12345",
+    address: "987 IT Hub, Chennai",
+    location: "Chennai",
+    serviceProvider: "ACT Fibernet",
+    planName: "ACT Storm 150 Mbps",
+    activationDate: "2024-01-20",
+    expirationDate: "2024-12-20",
+    balanceDue: 2500,
+    staticIp: "192.168.1.104",
+    macAddress: "AA:BB:CC:DD:EE:05",
+    status: "expired",
+    area: "urban",
+    mode: "offline",
+    isActive: false,
+    createdAt: "2024-01-20T10:00:00Z",
+  },
+  {
+    id: 7,
+    name: "Manoj Gupta",
+    email: "manoj.gupta@email.com",
+    phone: "+91 94567 89012",
+    address: "147 Village Road, Jaipur",
+    location: "Jaipur",
+    serviceProvider: "Railwire",
+    planName: "Railwire Basic 25 Mbps",
+    activationDate: "2023-11-15",
+    expirationDate: "2024-10-15",
+    balanceDue: 800,
+    staticIp: "192.168.1.105",
+    macAddress: "AA:BB:CC:DD:EE:06",
+    status: "suspended",
+    area: "rural",
+    mode: "offline",
+    isActive: false,
+    createdAt: "2023-11-15T10:00:00Z",
+  },
+  {
+    id: 8,
+    name: "Deepika Nair",
+    email: "deepika.nair@email.com",
+    phone: "+91 93456 78901",
+    address: "258 Metro City, Kochi",
+    location: "Kochi",
+    serviceProvider: "BSNL Fiber",
+    planName: "BSNL Fiber 100 Mbps",
+    activationDate: "2024-04-01",
+    expirationDate: "2025-03-31",
+    balanceDue: 0,
+    staticIp: "192.168.1.106",
+    macAddress: "AA:BB:CC:DD:EE:07",
+    status: "active",
+    area: "urban",
+    mode: "online",
+    isActive: true,
+    createdAt: "2024-04-01T10:00:00Z",
+  }
+];
 
 export default function UserManagement() {
+  const [users, setUsers] = useState<UserData[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [searchQuery, setSearchQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("all");
@@ -29,17 +219,19 @@ export default function UserManagement() {
   const [planFilter, setPlanFilter] = useState("all");
   const [areaFilter, setAreaFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [importData, setImportData] = useState("");
   const itemsPerPage = 6;
   
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["/api/customers"],
-  });
+  // Initialize with dummy data
+  useEffect(() => {
+    setUsers(generateDummyUsers());
+  }, []);
 
-  const form = useForm<InsertCustomer>({
-    resolver: zodResolver(insertCustomerSchema),
+  const form = useForm<Omit<UserData, 'id' | 'createdAt'>>({
+    resolver: zodResolver(userSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -47,8 +239,9 @@ export default function UserManagement() {
       address: "",
       location: "",
       serviceProvider: "",
-      planId: null,
       planName: "",
+      activationDate: "",
+      expirationDate: "",
       balanceDue: 0,
       staticIp: "",
       macAddress: "",
@@ -59,99 +252,141 @@ export default function UserManagement() {
     },
   });
 
-  const editForm = useForm<InsertCustomer>({
-    resolver: zodResolver(insertCustomerSchema),
+  const editForm = useForm<Omit<UserData, 'id' | 'createdAt'>>({
+    resolver: zodResolver(userSchema),
   });
 
-  const createUserMutation = useMutation({
-    mutationFn: async (data: InsertCustomer) => {
-      const response = await apiRequest("POST", "/api/customers", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
-        title: "Success",
-        description: "User added successfully",
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add user",
-        variant: "destructive",
-      });
-    },
-  });
+  const onSubmit = (data: Omit<UserData, 'id' | 'createdAt'>) => {
+    const newUser: UserData = {
+      ...data,
+      id: Math.max(...users.map(u => u.id), 0) + 1,
+      createdAt: new Date().toISOString(),
+    };
+    
+    setUsers(prev => [...prev, newUser]);
+    toast({
+      title: "Success",
+      description: "User added successfully",
+    });
+    setIsDialogOpen(false);
+    form.reset();
+  };
 
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertCustomer> }) => {
-      const response = await apiRequest("PUT", `/api/customers/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+  const onEditSubmit = (data: Omit<UserData, 'id' | 'createdAt'>) => {
+    if (selectedUser) {
+      setUsers(prev => prev.map(user => 
+        user.id === selectedUser.id 
+          ? { ...data, id: selectedUser.id, createdAt: selectedUser.createdAt }
+          : user
+      ));
       toast({
         title: "Success",
         description: "User updated successfully",
       });
       setIsEditDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update user",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteUserMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/customers/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete user",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const onSubmit = (data: InsertCustomer) => {
-    createUserMutation.mutate(data);
-  };
-
-  const onEditSubmit = (data: InsertCustomer) => {
-    if (selectedUser) {
-      updateUserMutation.mutate({ id: selectedUser.id, data });
     }
   };
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: UserData) => {
     setSelectedUser(user);
     editForm.reset(user);
     setIsEditDialogOpen(true);
   };
 
-  const handleView = (user: any) => {
+  const handleView = (user: UserData) => {
     setSelectedUser(user);
     setIsViewDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
-    deleteUserMutation.mutate(id);
+    setUsers(prev => prev.filter(user => user.id !== id));
+    toast({
+      title: "Success",
+      description: "User deleted successfully",
+    });
+  };
+
+  const handleBlock = (id: number) => {
+    setUsers(prev => prev.map(user => 
+      user.id === id 
+        ? { ...user, isActive: false, status: "suspended" as const }
+        : user
+    ));
+    toast({
+      title: "Success",
+      description: "User blocked successfully",
+    });
+  };
+
+  const handleUnblock = (id: number) => {
+    setUsers(prev => prev.map(user => 
+      user.id === id 
+        ? { ...user, isActive: true, status: "active" as const }
+        : user
+    ));
+    toast({
+      title: "Success",
+      description: "User unblocked successfully",
+    });
+  };
+
+  const handleExportData = () => {
+    const dataStr = JSON.stringify(users, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `users-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Success",
+      description: "Data exported successfully",
+    });
+  };
+
+  const handleImportData = () => {
+    try {
+      const importedUsers = JSON.parse(importData);
+      if (Array.isArray(importedUsers)) {
+        const newUsers = importedUsers.map((user, index) => ({
+          ...user,
+          id: Math.max(...users.map(u => u.id), 0) + index + 1,
+          createdAt: user.createdAt || new Date().toISOString(),
+        }));
+        setUsers(prev => [...prev, ...newUsers]);
+        toast({
+          title: "Success",
+          description: `${newUsers.length} users imported successfully`,
+        });
+        setIsImportDialogOpen(false);
+        setImportData("");
+      } else {
+        throw new Error("Invalid data format");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Invalid JSON format. Please check your data.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setLocationFilter("all");
+    setStatusFilter("all");
+    setPlanFilter("all");
+    setAreaFilter("all");
+    setCurrentPage(1);
+    toast({
+      title: "Filters Cleared",
+      description: "All filters have been reset",
+    });
   };
 
   const resetPagination = () => {
@@ -159,7 +394,7 @@ export default function UserManagement() {
   };
 
   // Filter logic
-  const filteredUsers = customers.filter((user: any) => {
+  const filteredUsers = users.filter((user: UserData) => {
     const matchesSearch = !searchQuery || 
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -182,11 +417,12 @@ export default function UserManagement() {
 
   // Statistics
   const stats = {
-    total: customers.length,
-    active: customers.filter((u: any) => u.status === "active").length,
-    suspended: customers.filter((u: any) => u.status === "suspended").length,
-    pending: customers.filter((u: any) => u.status === "pending").length,
-    withPlans: customers.filter((u: any) => u.serviceProvider).length,
+    total: users.length,
+    active: users.filter((u: UserData) => u.status === "active").length,
+    suspended: users.filter((u: UserData) => u.status === "suspended").length,
+    pending: users.filter((u: UserData) => u.status === "pending").length,
+    expired: users.filter((u: UserData) => u.status === "expired").length,
+    withPlans: users.filter((u: UserData) => u.serviceProvider && u.serviceProvider.trim() !== "").length,
   };
 
   const getStatusBadge = (status: string) => {
@@ -242,8 +478,8 @@ export default function UserManagement() {
     return (
       <MainLayout title="User Management">
         <div className="animate-pulse space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
                 <div className="h-8 bg-slate-200 rounded mb-2"></div>
                 <div className="h-6 bg-slate-200 rounded"></div>
@@ -351,18 +587,38 @@ export default function UserManagement() {
               <div className="flex flex-wrap items-center gap-2">
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200">
                       <UserPlus className="h-4 w-4 mr-2" />
                       Add User
                     </Button>
                   </DialogTrigger>
                 </Dialog>
 
-                <div className="flex items-center gap-2">
+                <Button onClick={handleExportData} variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+
+                <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import
+                    </Button>
+                  </DialogTrigger>
+                </Dialog>
+
+                <Button onClick={clearAllFilters} variant="outline" className="border-orange-200 text-orange-700 hover:bg-orange-50">
+                  <FilterX className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+
+                <div className="flex items-center gap-2 border-l pl-2 ml-2">
                   <Button
                     variant={viewMode === 'card' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setViewMode('card')}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
@@ -370,6 +626,7 @@ export default function UserManagement() {
                     variant={viewMode === 'table' ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setViewMode('table')}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
                   >
                     <List className="h-4 w-4" />
                   </Button>
@@ -507,17 +764,46 @@ export default function UserManagement() {
                         </div>
 
                         <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-100">
-                          <Button variant="outline" size="sm" onClick={() => handleView(user)}>
+                          <Button variant="outline" size="sm" onClick={() => handleView(user)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                             <Eye className="h-4 w-4 mr-1" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(user)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
                           </Button>
+                          {user.isActive ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                                  <ShieldOff className="h-4 w-4 mr-1" />
+                                  Block
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Block User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to block {user.name}? They will not be able to access services until unblocked.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleBlock(user.id)} className="bg-orange-600 hover:bg-orange-700">
+                                    Block User
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleUnblock(user.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                              <Shield className="h-4 w-4 mr-1" />
+                              Unblock
+                            </Button>
+                          )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
                                 <Trash2 className="h-4 w-4 mr-1" />
                                 Delete
                               </Button>
@@ -604,15 +890,42 @@ export default function UserManagement() {
                     label: "Actions",
                     render: (value: any, row: any) => (
                       <div className="flex space-x-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleView(row)} className="text-blue-600 hover:text-blue-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleView(row)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(row)} className="text-green-600 hover:text-green-700">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(row)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {row.isActive ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                                <ShieldOff className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Block User</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to block {row.name}? They will not be able to access services until unblocked.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleBlock(row.id)} className="bg-orange-600 hover:bg-orange-700">
+                                  Block User
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => handleUnblock(row.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                            <Shield className="h-4 w-4" />
+                          </Button>
+                        )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
@@ -831,6 +1144,38 @@ export default function UserManagement() {
           </DialogContent>
         </Dialog>
 
+        {/* Import Data Dialog */}
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Import User Data</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="importData">JSON Data</Label>
+                <Textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  placeholder="Paste your JSON data here..."
+                  className="min-h-40 font-mono text-sm"
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Paste an array of user objects in JSON format. The system will automatically assign new IDs.
+                </p>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleImportData} disabled={!importData.trim()}>
+                  Import Data
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* View User Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
           <DialogContent className="max-w-2xl">
@@ -873,7 +1218,7 @@ export default function UserManagement() {
                   </div>
                 </div>
 
-                {selectedUser.serviceProvider && (
+                {selectedUser.serviceProvider && selectedUser.serviceProvider.trim() !== "" && (
                   <div className="border-t pt-4">
                     <h4 className="font-medium text-gray-900 mb-3">Plan Details</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -883,7 +1228,7 @@ export default function UserManagement() {
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Plan Name</Label>
-                        <p className="text-sm text-gray-900">{selectedUser.planName}</p>
+                        <p className="text-sm text-gray-900">{selectedUser.planName || "Not specified"}</p>
                       </div>
                       <div>
                         <Label className="text-sm font-medium text-gray-500">Activation Date</Label>
