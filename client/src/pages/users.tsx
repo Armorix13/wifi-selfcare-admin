@@ -687,7 +687,7 @@ export default function UserManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
-                  {Array.from(new Set(customers.map((u: any) => u.location))).map((location: any) => (
+                  {Array.from(new Set(users.map((u: UserData) => u.location))).map((location: string) => (
                     <SelectItem key={location} value={location}>{location}</SelectItem>
                   ))}
                 </SelectContent>
