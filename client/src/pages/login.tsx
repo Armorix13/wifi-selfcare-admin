@@ -31,7 +31,6 @@ export default function Login() {
     defaultValues: {
       email: "admin@company.com",
       password: "password123",
-      role: "super-admin",
     },
   });
 
@@ -62,16 +61,21 @@ export default function Login() {
     }
   };
 
-  const onSubmit = (data: LoginData) => {
+  const onSubmit = async (data: LoginData) => {
     setIsLoading(true);
     
-    // Simulate network delay
-    setTimeout(() => {
-      const user = dummyUsers[data.email as keyof typeof dummyUsers];
-      
-      if (user && user.password === data.password && user.role === data.role) {
-        const { password, ...userWithoutPassword } = user;
-        login(userWithoutPassword, "dummy-token-123");
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        login(result.user, result.token);
         toast({
           title: "Success",
           description: "Login successful",
@@ -80,12 +84,19 @@ export default function Login() {
       } else {
         toast({
           title: "Error", 
-          description: "Invalid credentials",
+          description: "Invalid email or password",
           variant: "destructive",
         });
       }
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Login failed. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -134,27 +145,7 @@ export default function Login() {
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                  Role
-                </Label>
-                <Select
-                  value={form.watch("role")}
-                  onValueChange={(value) => form.setValue("role", value as any)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="super-admin">Super Admin</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.role && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.role.message}</p>
-                )}
-              </div>
+
             </div>
 
             <div className="flex items-center justify-between">
