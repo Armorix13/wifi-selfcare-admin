@@ -149,10 +149,10 @@ export default function Complaints() {
   ]);
 
   const engineers = [
-    { id: 1, name: "Mike Johnson", specialization: "Network Setup" },
-    { id: 2, name: "Sarah Davis", specialization: "Hardware Repair" },
-    { id: 3, name: "Tom Wilson", specialization: "WiFi Configuration" },
-    { id: 4, name: "Lisa Garcia", specialization: "Network Security" }
+    { id: 1, name: "Mike Johnson", specialization: "Network Setup", isActive: true, location: "New York" },
+    { id: 2, name: "Sarah Davis", specialization: "Hardware Repair", isActive: true, location: "Los Angeles" },
+    { id: 3, name: "Tom Wilson", specialization: "WiFi Configuration", isActive: true, location: "Chicago" },
+    { id: 4, name: "Lisa Garcia", specialization: "Network Security", isActive: true, location: "Miami" }
   ];
 
   const customers = [
