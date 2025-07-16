@@ -22,6 +22,9 @@ const insertEngineerSchema = z.object({
   phone: z.string().min(10, "Valid phone number is required"),
   location: z.string().min(1, "Location is required"),
   specialization: z.string().min(1, "Specialization is required"),
+  rating: z.number().min(0).max(5).default(4.0),
+  completedJobs: z.number().min(0).default(0),
+  activeJobs: z.number().min(0).default(0),
   isActive: z.boolean().default(true),
 });
 
@@ -141,7 +144,7 @@ export default function Engineers() {
       phone: "",
       location: "",
       specialization: "",
-      rating: 0,
+      rating: 4.0,
       completedJobs: 0,
       activeJobs: 0,
       isActive: true,
@@ -190,7 +193,17 @@ export default function Engineers() {
 
   const handleEdit = (engineer: EngineerData) => {
     setSelectedEngineer(engineer);
-    editForm.reset(engineer);
+    editForm.reset({
+      name: engineer.name,
+      email: engineer.email,
+      phone: engineer.phone,
+      location: engineer.location,
+      specialization: engineer.specialization,
+      rating: engineer.rating,
+      completedJobs: engineer.completedJobs,
+      activeJobs: engineer.activeJobs,
+      isActive: engineer.isActive,
+    });
     setIsEditDialogOpen(true);
   };
 
@@ -753,6 +766,66 @@ export default function Engineers() {
                     <p className="text-sm text-red-600 mt-1">{form.formState.errors.specialization.message}</p>
                   )}
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="rating">Rating (1-5)</Label>
+                    <Input
+                      id="rating"
+                      type="number"
+                      step="0.1"
+                      min="1"
+                      max="5"
+                      placeholder="4.5"
+                      {...form.register("rating", { valueAsNumber: true })}
+                    />
+                    {form.formState.errors.rating && (
+                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.rating.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="completedJobs">Completed Jobs</Label>
+                    <Input
+                      id="completedJobs"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      {...form.register("completedJobs", { valueAsNumber: true })}
+                    />
+                    {form.formState.errors.completedJobs && (
+                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.completedJobs.message}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="activeJobs">Active Jobs</Label>
+                    <Input
+                      id="activeJobs"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      {...form.register("activeJobs", { valueAsNumber: true })}
+                    />
+                    {form.formState.errors.activeJobs && (
+                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.activeJobs.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="isActive">Status</Label>
+                    <Select onValueChange={(value) => form.setValue("isActive", value === "true")} defaultValue="true">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Active</SelectItem>
+                        <SelectItem value="false">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.isActive && (
+                      <p className="text-sm text-red-600 mt-1">{form.formState.errors.isActive.message}</p>
+                    )}
+                  </div>
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button
                     type="button"
@@ -1224,6 +1297,66 @@ export default function Engineers() {
               {editForm.formState.errors.specialization && (
                 <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.specialization.message}</p>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-rating">Rating (1-5)</Label>
+                <Input
+                  id="edit-rating"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="5"
+                  placeholder="4.5"
+                  {...editForm.register("rating", { valueAsNumber: true })}
+                />
+                {editForm.formState.errors.rating && (
+                  <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.rating.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="edit-completedJobs">Completed Jobs</Label>
+                <Input
+                  id="edit-completedJobs"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  {...editForm.register("completedJobs", { valueAsNumber: true })}
+                />
+                {editForm.formState.errors.completedJobs && (
+                  <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.completedJobs.message}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-activeJobs">Active Jobs</Label>
+                <Input
+                  id="edit-activeJobs"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  {...editForm.register("activeJobs", { valueAsNumber: true })}
+                />
+                {editForm.formState.errors.activeJobs && (
+                  <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.activeJobs.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="edit-isActive">Status</Label>
+                <Select onValueChange={(value) => editForm.setValue("isActive", value === "true")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editForm.formState.errors.isActive && (
+                  <p className="text-sm text-red-600 mt-1">{editForm.formState.errors.isActive.message}</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-end space-x-2">
               <Button
