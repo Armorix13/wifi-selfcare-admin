@@ -1,13 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/main-layout";
 import { StatsCard } from "@/components/ui/stats-card";
 import { ComplaintChart } from "@/components/charts/complaint-chart";
 import { TrendingUp, Clock, Star, Users } from "lucide-react";
 
 export default function Analytics() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
-  });
+  // Dummy analytics data
+  const stats = {
+    complaintStats: {
+      total: 24,
+      resolved: 18,
+      pending: 4,
+      inProgress: 2
+    }
+  };
+  
+  const isLoading = false;
 
   if (isLoading) {
     return (

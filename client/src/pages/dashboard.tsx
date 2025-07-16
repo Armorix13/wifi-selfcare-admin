@@ -49,9 +49,23 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
-  });
+  // Dummy dashboard data
+  const stats = {
+    totalComplaints: 24,
+    resolvedIssues: 18,
+    activeEngineers: 8,
+    totalCustomers: 156,
+    complaintsByMonth: [
+      { month: "Jan", complaints: 12, resolved: 10 },
+      { month: "Feb", complaints: 18, resolved: 15 },
+      { month: "Mar", complaints: 24, resolved: 18 },
+      { month: "Apr", complaints: 20, resolved: 17 },
+      { month: "May", complaints: 16, resolved: 14 },
+      { month: "Jun", complaints: 22, resolved: 19 }
+    ]
+  };
+  
+  const isLoading = false;
 
   if (isLoading) {
     return (

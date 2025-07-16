@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
@@ -32,30 +31,19 @@ export default function Settings() {
     defaultValues: systemSettings,
   });
 
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (data: SystemSettings) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return data;
-    },
-    onSuccess: (data) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onSubmit = (data: SystemSettings) => {
+    setIsLoading(true);
+    // Simulate saving
+    setTimeout(() => {
       setSystemSettings(data);
       toast({
         title: "Success",
         description: "Settings saved successfully",
       });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to save settings",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const onSubmit = (data: SystemSettings) => {
-    saveSettingsMutation.mutate(data);
+      setIsLoading(false);
+    }, 1000);
   };
 
   // Role permissions matrix

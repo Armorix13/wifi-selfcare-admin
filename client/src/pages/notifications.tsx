@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -12,17 +11,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { apiRequest } from "@/lib/queryClient";
 import { insertNotificationSchema, type InsertNotification } from "@shared/schema";
 
 export default function Notifications() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["/api/notifications"],
-  });
+  // Dummy notifications data
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      title: "Scheduled Maintenance",
+      message: "Network maintenance scheduled for tomorrow 2-4 AM. Minimal downtime expected.",
+      type: "all-users",
+      priority: "high",
+      recipientType: "all-users",
+      recipients: null,
+      sentBy: 1,
+      deliveredCount: 156,
+      readCount: 89,
+      sentAt: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 2,
+      title: "New Service Plan Available",
+      message: "We're excited to announce our new Ultra High-Speed 1 Gbps plan now available in your area!",
+      type: "customers",
+      priority: "normal",
+      recipientType: "customers",
+      recipients: null,
+      sentBy: 1,
+      deliveredCount: 234,
+      readCount: 145,
+      sentAt: "2024-01-14T15:30:00Z"
+    },
+    {
+      id: 3,
+      title: "Engineer Assignment Updates",
+      message: "New protocol for complaint assignments has been implemented. Please review the updated guidelines.",
+      type: "engineers",
+      priority: "urgent",
+      recipientType: "engineers",
+      recipients: null,
+      sentBy: 1,
+      deliveredCount: 12,
+      readCount: 8,
+      sentAt: "2024-01-13T09:15:00Z"
+    }
+  ]);
+
+  const isLoading = false;
 
   const form = useForm<InsertNotification>({
     resolver: zodResolver(insertNotificationSchema),
@@ -39,33 +77,21 @@ export default function Notifications() {
     },
   });
 
-  const createNotificationMutation = useMutation({
-    mutationFn: async (data: InsertNotification) => {
-      const response = await apiRequest("POST", "/api/notifications", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      toast({
-        title: "Success",
-        description: "Notification sent successfully",
-      });
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send notification",
-        variant: "destructive",
-      });
-    },
-  });
-
   const onSubmit = (data: InsertNotification) => {
-    createNotificationMutation.mutate({
+    const newNotification = {
+      id: Math.max(...notifications.map(n => n.id)) + 1,
       ...data,
       sentBy: user?.id || 1,
+      deliveredCount: 0,
+      readCount: 0,
+      sentAt: new Date().toISOString()
+    };
+    setNotifications([newNotification, ...notifications]);
+    toast({
+      title: "Success",
+      description: "Notification sent successfully",
     });
+    form.reset();
   };
 
   const getPriorityColor = (priority: string) => {

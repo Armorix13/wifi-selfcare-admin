@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -9,16 +8,71 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { insertServicePlanSchema, type InsertServicePlan } from "@shared/schema";
 
 export default function Plans() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: plans = [], isLoading } = useQuery({
-    queryKey: ["/api/service-plans"],
-  });
+  // Dummy service plans data
+  const [plans, setPlans] = useState([
+    {
+      id: 1,
+      name: "Basic 50 Mbps",
+      provider: "jio",
+      speed: "50 Mbps",
+      price: 499,
+      validity: 30,
+      description: "Perfect for small families with basic internet needs",
+      isActive: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 2,
+      name: "Premium 100 Mbps",
+      provider: "jio",
+      speed: "100 Mbps", 
+      price: 799,
+      validity: 30,
+      description: "High-speed internet for streaming and gaming",
+      isActive: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 3,
+      name: "Ultra 200 Mbps",
+      provider: "airtel",
+      speed: "200 Mbps",
+      price: 1299,
+      validity: 30,
+      description: "Ultra-fast speeds for heavy usage and multiple devices",
+      isActive: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 4,
+      name: "Economy 25 Mbps",
+      provider: "bsnl",
+      speed: "25 Mbps",
+      price: 299,
+      validity: 30,
+      description: "Budget-friendly option for basic browsing",
+      isActive: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    },
+    {
+      id: 5,
+      name: "Business 500 Mbps",
+      provider: "my-internet",
+      speed: "500 Mbps",
+      price: 2999,
+      validity: 30,
+      description: "Enterprise-grade connectivity for businesses",
+      isActive: true,
+      createdAt: "2024-01-15T10:00:00Z"
+    }
+  ]);
+
+  const isLoading = false;
 
   const form = useForm<InsertServicePlan>({
     resolver: zodResolver(insertServicePlanSchema),
@@ -33,56 +87,27 @@ export default function Plans() {
     },
   });
 
-  const createPlanMutation = useMutation({
-    mutationFn: async (data: InsertServicePlan) => {
-      const response = await apiRequest("POST", "/api/service-plans", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-plans"] });
-      toast({
-        title: "Success",
-        description: "Service plan added successfully",
-      });
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to add service plan",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deletePlanMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/service-plans/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/service-plans"] });
-      toast({
-        title: "Success",
-        description: "Service plan deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete service plan",
-        variant: "destructive",
-      });
-    },
-  });
-
   const onSubmit = (data: InsertServicePlan) => {
-    createPlanMutation.mutate(data);
+    const newPlan = {
+      id: Math.max(...plans.map(p => p.id)) + 1,
+      ...data,
+      createdAt: new Date().toISOString()
+    };
+    setPlans([...plans, newPlan]);
+    toast({
+      title: "Success",
+      description: "Service plan added successfully",
+    });
+    form.reset();
   };
 
   const handleDelete = (id: number) => {
     if (window.confirm("Are you sure you want to delete this service plan?")) {
-      deletePlanMutation.mutate(id);
+      setPlans(plans.filter(p => p.id !== id));
+      toast({
+        title: "Success",
+        description: "Service plan deleted successfully",
+      });
     }
   };
 
