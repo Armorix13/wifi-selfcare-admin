@@ -61,21 +61,16 @@ export default function Login() {
     }
   };
 
-  const onSubmit = async (data: LoginData) => {
+  const onSubmit = (data: LoginData) => {
     setIsLoading(true);
     
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        login(result.user, result.token);
+    // Completely client-side login - no API calls
+    setTimeout(() => {
+      const user = dummyUsers[data.email as keyof typeof dummyUsers];
+      
+      if (user && user.password === data.password) {
+        const { password, ...userWithoutPassword } = user;
+        login(userWithoutPassword, "dummy-token-123");
         toast({
           title: "Success",
           description: "Login successful",
@@ -88,15 +83,8 @@ export default function Login() {
           variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error", 
-        description: "Login failed. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
