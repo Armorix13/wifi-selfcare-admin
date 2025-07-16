@@ -242,10 +242,9 @@ export default function Notifications() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={createNotificationMutation.isPending}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  {createNotificationMutation.isPending ? "Sending..." : "Send Now"}
+                  Send Now
                 </Button>
               </div>
             </form>
