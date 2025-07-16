@@ -187,11 +187,13 @@ export default function Engineers() {
   };
 
   const handleView = (engineer: EngineerData) => {
+    console.log("Viewing engineer:", engineer);
     setSelectedEngineer(engineer);
     setIsViewDialogOpen(true);
   };
 
   const handleEdit = (engineer: EngineerData) => {
+    console.log("Editing engineer:", engineer);
     setSelectedEngineer(engineer);
     editForm.reset({
       name: engineer.name,
@@ -208,6 +210,7 @@ export default function Engineers() {
   };
 
   const handleDelete = (id: number) => {
+    console.log("Deleting engineer with id:", id);
     setEngineers(prev => prev.filter(engineer => engineer.id !== id));
     toast({
       title: "Success",
@@ -1344,7 +1347,10 @@ export default function Engineers() {
               </div>
               <div>
                 <Label htmlFor="edit-isActive">Status</Label>
-                <Select onValueChange={(value) => editForm.setValue("isActive", value === "true")}>
+                <Select 
+                  onValueChange={(value) => editForm.setValue("isActive", value === "true")}
+                  defaultValue={selectedEngineer?.isActive ? "true" : "false"}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
