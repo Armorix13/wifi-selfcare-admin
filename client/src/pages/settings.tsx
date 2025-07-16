@@ -150,10 +150,10 @@ export default function Settings() {
                 <div className="flex justify-end">
                   <Button
                     type="submit"
-                    disabled={saveSettingsMutation.isPending}
+                    disabled={isLoading}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
-                    {saveSettingsMutation.isPending ? "Saving..." : "Save Settings"}
+                    {isLoading ? "Saving..." : "Save Settings"}
                   </Button>
                 </div>
               </form>
