@@ -13,7 +13,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { insertEngineerSchema, type InsertEngineer } from "@shared/schema";
+import { z } from "zod";
+
+// Local type definitions
+const insertEngineerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  location: z.string().min(1, "Location is required"),
+  specialization: z.string().min(1, "Specialization is required"),
+  isActive: z.boolean().default(true),
+});
+
+type InsertEngineer = z.infer<typeof insertEngineerSchema>;
 
 // Engineer data type
 type EngineerData = {

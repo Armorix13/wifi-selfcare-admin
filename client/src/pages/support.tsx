@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { DataTable, StatusBadge } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -6,45 +6,92 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 export default function Support() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery({
-    queryKey: ["/api/support-tickets"],
-  });
+  // Dummy support tickets data
+  const [supportTickets, setSupportTickets] = useState([
+    {
+      id: 1,
+      title: "Internet Speed Issue",
+      description: "Customer experiencing slow internet speeds during peak hours",
+      customerName: "Rajesh Kumar",
+      email: "rajesh@email.com",
+      phone: "+91 98765 43210",
+      status: "open",
+      priority: "high",
+      category: "technical",
+      rating: null,
+      createdAt: "2024-01-15T10:30:00Z",
+      updatedAt: "2024-01-15T10:30:00Z"
+    },
+    {
+      id: 2,
+      title: "Billing Inquiry",
+      description: "Question about monthly charges and plan details",
+      customerName: "Priya Sharma",
+      email: "priya@email.com", 
+      phone: "+91 87654 32109",
+      status: "resolved",
+      priority: "medium",
+      category: "billing",
+      rating: 5,
+      createdAt: "2024-01-14T09:15:00Z",
+      updatedAt: "2024-01-14T14:20:00Z"
+    },
+    {
+      id: 3,
+      title: "Connection Drops Frequently",
+      description: "Internet connection drops every few hours, needs technical assistance",
+      customerName: "Amit Patel",
+      email: "amit@email.com",
+      phone: "+91 76543 21098",
+      status: "in-progress",
+      priority: "urgent",
+      category: "technical",
+      rating: null,
+      createdAt: "2024-01-16T08:45:00Z",
+      updatedAt: "2024-01-16T11:30:00Z"
+    }
+  ]);
 
-  const { data: complaints = [], isLoading: complaintsLoading } = useQuery({
-    queryKey: ["/api/complaints"],
-  });
+  // Dummy complaints data
+  const complaints = [
+    {
+      id: 1,
+      customerName: "Rajesh Kumar",
+      email: "rajesh@email.com",
+      description: "Internet speed is very slow",
+      status: "resolved",
+      priority: "high",
+      rating: 4
+    },
+    {
+      id: 2,
+      customerName: "Priya Sharma", 
+      email: "priya@email.com",
+      description: "Billing issue with last month charges",
+      status: "pending",
+      priority: "medium",
+      rating: null
+    }
+  ];
 
-  const updateTicketMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await apiRequest("PUT", `/api/support-tickets/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/support-tickets"] });
-      toast({
-        title: "Success",
-        description: "Support ticket updated successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update support ticket",
-        variant: "destructive",
-      });
-    },
-  });
+  const ticketsLoading = false;
+  const complaintsLoading = false;
 
   const handleStatusChange = (ticketId: number, newStatus: string) => {
-    updateTicketMutation.mutate({
-      id: ticketId,
-      data: { status: newStatus },
+    setSupportTickets(prev => 
+      prev.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, status: newStatus, updatedAt: new Date().toISOString() }
+          : ticket
+      )
+    );
+    toast({
+      title: "Success",
+      description: "Support ticket updated successfully",
     });
   };
 

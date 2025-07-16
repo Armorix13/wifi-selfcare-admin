@@ -55,7 +55,20 @@ import {
   Star,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { insertComplaintSchema, type InsertComplaint } from "@shared/schema";
+import { z } from "zod";
+
+// Local type definitions
+const insertComplaintSchema = z.object({
+  customerName: z.string().min(1, "Customer name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  location: z.string().min(1, "Location is required"),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  category: z.string().min(1, "Category is required"),
+});
+
+type InsertComplaint = z.infer<typeof insertComplaintSchema>;
 
 export default function Complaints() {
   const [statusFilter, setStatusFilter] = useState("all");

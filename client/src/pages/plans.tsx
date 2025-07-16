@@ -9,8 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { insertServicePlanSchema, type InsertServicePlan } from "@shared/schema";
 import { Wifi, Star, Users, Trash2, Edit, CheckCircle, Zap, Shield, Globe, TrendingUp, Award, Crown } from "lucide-react";
+import { z } from "zod";
+
+// Local type definitions
+const insertServicePlanSchema = z.object({
+  name: z.string().min(1, "Plan name is required"),
+  provider: z.string().min(1, "Provider is required"),
+  speed: z.string().min(1, "Speed is required"),
+  price: z.number().min(1, "Price must be greater than 0"),
+  validity: z.number().min(1, "Validity must be greater than 0"),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+type InsertServicePlan = z.infer<typeof insertServicePlanSchema>;
 
 export default function Plans() {
   const { toast } = useToast();

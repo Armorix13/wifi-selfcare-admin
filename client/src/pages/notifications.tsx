@@ -11,7 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { insertNotificationSchema, type InsertNotification } from "@shared/schema";
+import { z } from "zod";
+
+// Local type definitions
+const insertNotificationSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  message: z.string().min(1, "Message is required"),
+  type: z.enum(["info", "warning", "error", "success"]),
+  priority: z.enum(["low", "medium", "high"]),
+  targetAudience: z.string().min(1, "Target audience is required"),
+});
+
+type InsertNotification = z.infer<typeof insertNotificationSchema>;
 
 export default function Notifications() {
   const { toast } = useToast();
