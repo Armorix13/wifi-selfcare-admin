@@ -237,10 +237,9 @@ export default function Plans() {
               <div className="flex items-end">
                 <Button
                   type="submit"
-                  disabled={createPlanMutation.isPending}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {createPlanMutation.isPending ? "Adding..." : "Add Plan"}
+                  Add Plan
                 </Button>
               </div>
             </form>
