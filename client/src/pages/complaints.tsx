@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -56,7 +55,6 @@ import {
   Star,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { insertComplaintSchema, type InsertComplaint } from "@shared/schema";
 
 export default function Complaints() {
@@ -75,7 +73,97 @@ export default function Complaints() {
   const itemsPerPage = 5;
 
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  // Dummy data
+  const [complaints, setComplaints] = useState([
+    {
+      id: 1,
+      title: "Internet Connection Down",
+      description: "No internet connection for 2 hours in Building A",
+      priority: "high",
+      status: "pending",
+      location: "New York",
+      customerId: 1,
+      customerName: "John Smith",
+      engineerId: null,
+      engineerName: null,
+      createdAt: "2024-01-15T10:30:00Z",
+      updatedAt: "2024-01-15T10:30:00Z"
+    },
+    {
+      id: 2,
+      title: "Slow WiFi Speed",
+      description: "WiFi speed is very slow in conference room",
+      priority: "medium",
+      status: "assigned",
+      location: "Los Angeles",
+      customerId: 2,
+      customerName: "Jane Doe",
+      engineerId: 1,
+      engineerName: "Mike Johnson",
+      createdAt: "2024-01-14T14:20:00Z",
+      updatedAt: "2024-01-15T09:15:00Z"
+    },
+    {
+      id: 3,
+      title: "Router Blinking Red",
+      description: "Router status light is blinking red constantly",
+      priority: "high",
+      status: "in_progress",
+      location: "Chicago",
+      customerId: 3,
+      customerName: "Bob Wilson",
+      engineerId: 2,
+      engineerName: "Sarah Davis",
+      createdAt: "2024-01-13T16:45:00Z",
+      updatedAt: "2024-01-14T11:30:00Z"
+    },
+    {
+      id: 4,
+      title: "WiFi Password Issues",
+      description: "Unable to connect devices with provided password",
+      priority: "low",
+      status: "resolved",
+      location: "Miami",
+      customerId: 4,
+      customerName: "Alice Brown",
+      engineerId: 3,
+      engineerName: "Tom Wilson",
+      createdAt: "2024-01-12T09:15:00Z",
+      updatedAt: "2024-01-13T15:20:00Z"
+    },
+    {
+      id: 5,
+      title: "Network Outage",
+      description: "Complete network outage affecting entire floor",
+      priority: "critical",
+      status: "pending",
+      location: "Seattle",
+      customerId: 5,
+      customerName: "Chris Johnson",
+      engineerId: null,
+      engineerName: null,
+      createdAt: "2024-01-15T08:00:00Z",
+      updatedAt: "2024-01-15T08:00:00Z"
+    }
+  ]);
+
+  const engineers = [
+    { id: 1, name: "Mike Johnson", specialization: "Network Setup" },
+    { id: 2, name: "Sarah Davis", specialization: "Hardware Repair" },
+    { id: 3, name: "Tom Wilson", specialization: "WiFi Configuration" },
+    { id: 4, name: "Lisa Garcia", specialization: "Network Security" }
+  ];
+
+  const customers = [
+    { id: 1, name: "John Smith" },
+    { id: 2, name: "Jane Doe" },
+    { id: 3, name: "Bob Wilson" },
+    { id: 4, name: "Alice Brown" },
+    { id: 5, name: "Chris Johnson" }
+  ];
+
+  const isLoading = false;
 
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
@@ -94,109 +182,75 @@ export default function Complaints() {
     resolver: zodResolver(insertComplaintSchema),
   });
 
-  const { data: complaints = [], isLoading } = useQuery({
-    queryKey: ["/api/complaints"],
-  });
+  // Simple state management functions (no API calls)
+  const onSubmit = (data: InsertComplaint) => {
+    const newComplaint = {
+      id: Math.max(...complaints.map(c => c.id)) + 1,
+      ...data,
+      customerName: customers.find(c => c.id === data.customerId)?.name || "Unknown",
+      engineerName: data.engineerId ? engineers.find(e => e.id === data.engineerId)?.name || null : null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setComplaints([...complaints, newComplaint]);
+    toast({
+      title: "Success",
+      description: "Complaint created successfully",
+    });
+    setIsAddDialogOpen(false);
+    form.reset();
+  };
 
-  const { data: engineers = [] } = useQuery({
-    queryKey: ["/api/engineers"],
-  });
+  const onEditSubmit = (data: InsertComplaint) => {
+    const updatedComplaints = complaints.map(complaint => 
+      complaint.id === selectedComplaint.id 
+        ? { 
+            ...complaint, 
+            ...data,
+            customerName: customers.find(c => c.id === data.customerId)?.name || "Unknown",
+            engineerName: data.engineerId ? engineers.find(e => e.id === data.engineerId)?.name || null : null,
+            updatedAt: new Date().toISOString()
+          }
+        : complaint
+    );
+    setComplaints(updatedComplaints);
+    toast({
+      title: "Success",
+      description: "Complaint updated successfully",
+    });
+    setIsEditDialogOpen(false);
+  };
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ["/api/customers"],
-  });
+  const handleDelete = (complaint: any) => {
+    setComplaints(complaints.filter(c => c.id !== complaint.id));
+    toast({
+      title: "Success",
+      description: "Complaint deleted successfully",
+    });
+  };
 
-  const createComplaintMutation = useMutation({
-    mutationFn: async (data: InsertComplaint) => {
-      const response = await apiRequest("POST", "/api/complaints", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
-      toast({
-        title: "Success",
-        description: "Complaint created successfully",
-      });
-      setIsAddDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create complaint",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateComplaintMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const response = await apiRequest("PUT", `/api/complaints/${id}`, data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
-      toast({
-        title: "Success",
-        description: "Complaint updated successfully",
-      });
-      setIsEditDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update complaint",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteComplaintMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/complaints/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
-      toast({
-        title: "Success",
-        description: "Complaint deleted successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete complaint",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const assignComplaintMutation = useMutation({
-    mutationFn: async ({ id, engineerId }: { id: number; engineerId: number }) => {
-      const response = await apiRequest("PUT", `/api/complaints/${id}`, {
-        engineerId,
-        status: "assigned",
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/complaints"] });
-      toast({
-        title: "Success",
-        description: "Complaint assigned successfully",
-      });
-      setIsAssignDialogOpen(false);
-      setSelectedEngineerId("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to assign complaint",
-        variant: "destructive",
-      });
-    },
-  });
+  const handleAssignEngineer = () => {
+    if (!selectedEngineerId || !selectedComplaint) return;
+    
+    const updatedComplaints = complaints.map(complaint => 
+      complaint.id === selectedComplaint.id 
+        ? { 
+            ...complaint, 
+            engineerId: parseInt(selectedEngineerId),
+            engineerName: engineers.find(e => e.id === parseInt(selectedEngineerId))?.name || null,
+            status: "assigned",
+            updatedAt: new Date().toISOString()
+          }
+        : complaint
+    );
+    setComplaints(updatedComplaints);
+    toast({
+      title: "Success",
+      description: "Complaint assigned successfully",
+    });
+    setIsAssignDialogOpen(false);
+    setSelectedEngineerId("");
+  };
 
   const handleView = (complaint: any) => {
     setSelectedComplaint(complaint);
@@ -217,36 +271,10 @@ export default function Complaints() {
     setIsEditDialogOpen(true);
   };
 
-  const handleDelete = (complaint: any) => {
-    deleteComplaintMutation.mutate(complaint.id);
-  };
-
   const handleAssign = (complaint: any) => {
     setSelectedComplaint(complaint);
     setSelectedEngineerId("");
     setIsAssignDialogOpen(true);
-  };
-
-  const onAssignSubmit = () => {
-    if (selectedComplaint && selectedEngineerId) {
-      assignComplaintMutation.mutate({
-        id: selectedComplaint.id,
-        engineerId: parseInt(selectedEngineerId),
-      });
-    }
-  };
-
-  const onSubmit = (data: InsertComplaint) => {
-    createComplaintMutation.mutate(data);
-  };
-
-  const onEditSubmit = (data: InsertComplaint) => {
-    if (selectedComplaint) {
-      updateComplaintMutation.mutate({
-        id: selectedComplaint.id,
-        data,
-      });
-    }
   };
 
   const getCustomerName = (customerId: number) => {
