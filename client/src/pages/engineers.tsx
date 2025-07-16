@@ -238,7 +238,7 @@ export default function Engineers() {
   };
 
   const renderStars = (rating: number) => {
-    const stars = Math.floor(rating / 10); // Convert to 5-star scale
+    const stars = Math.floor(rating); // Use rating directly (already in 5-star scale)
     return (
       <div className="flex">
         {[...Array(5)].map((_, i) => (
@@ -304,7 +304,7 @@ export default function Engineers() {
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium text-foreground">
-              {(row.rating / 10).toFixed(1)}
+              {row.rating.toFixed(1)}
             </span>
             {renderStars(row.rating)}
           </div>
@@ -590,7 +590,7 @@ export default function Engineers() {
                           {renderStars(engineer.rating)}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {(engineer.rating / 10).toFixed(1)} • {engineer.completedJobs} jobs
+                          {engineer.rating.toFixed(1)} • {engineer.completedJobs} jobs
                         </span>
                       </div>
                     </div>
@@ -989,7 +989,7 @@ export default function Engineers() {
                             <span className="text-muted-foreground">Rating:</span>
                             <div className="flex items-center">
                               <span className="font-medium text-foreground mr-1">
-                                {(engineer.rating / 10).toFixed(1)}
+                                {engineer.rating.toFixed(1)}
                               </span>
                               {renderStars(engineer.rating)}
                             </div>
@@ -1152,7 +1152,7 @@ export default function Engineers() {
                 <Label className="text-sm font-medium text-muted-foreground">Rating</Label>
                 <div className="flex items-center mt-1">
                   <span className="text-sm font-medium mr-2">
-                    {(selectedEngineer.rating / 10).toFixed(1)}
+                    {selectedEngineer.rating.toFixed(1)}
                   </span>
                   {renderStars(selectedEngineer.rating)}
                 </div>
