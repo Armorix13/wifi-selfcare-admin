@@ -822,10 +822,9 @@ export default function Complaints() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createComplaintMutation.isPending}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
-                    {createComplaintMutation.isPending ? "Creating..." : "Create Complaint"}
+                    Create Complaint
                   </Button>
                 </div>
               </form>
@@ -1335,10 +1334,9 @@ export default function Complaints() {
               </Button>
               <Button
                 type="submit"
-                disabled={updateComplaintMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {updateComplaintMutation.isPending ? "Updating..." : "Update Complaint"}
+                Update Complaint
               </Button>
             </div>
           </form>
@@ -1404,11 +1402,11 @@ export default function Complaints() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={onAssignSubmit}
-                  disabled={!selectedEngineerId || assignComplaintMutation.isPending}
+                  onClick={handleAssignEngineer}
+                  disabled={!selectedEngineerId}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
-                  {assignComplaintMutation.isPending ? "Assigning..." : "Assign Engineer"}
+                  Assign Engineer
                 </Button>
               </div>
             </div>
