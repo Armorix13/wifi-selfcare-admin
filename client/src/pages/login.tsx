@@ -64,7 +64,7 @@ export default function Login() {
   const onSubmit = (data: LoginData) => {
     setIsLoading(true);
     
-    // Completely client-side login - no API calls
+    // Completely local dummy login - no API calls needed
     setTimeout(() => {
       const user = dummyUsers[data.email as keyof typeof dummyUsers];
       
