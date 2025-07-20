@@ -670,6 +670,60 @@
   background: hsl(var(--muted) / 0.8);
 }
 
+/* Enhanced animations for login page */
+@layer components {
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  .animate-float-delay-1 {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  
+  .animate-float-delay-2 {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+  
+  .animate-pulse-delay-1 {
+    animation: pulse 2s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  
+  .animate-pulse-delay-2 {
+    animation: pulse 2s ease-in-out infinite;
+    animation-delay: 2s;
+  }
+  
+  .shadow-3xl {
+    box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
+  }
+  
+  .login-card {
+    @apply backdrop-blur-2xl bg-card/90 border border-border/50 shadow-2xl rounded-2xl lg:rounded-3xl;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .login-card::before {
+    content: '';
+    @apply absolute inset-0 rounded-2xl lg:rounded-3xl opacity-0 transition-opacity duration-500;
+    background: linear-gradient(135deg, 
+      hsl(var(--primary) / 0.1) 0%, 
+      transparent 50%,
+      hsl(var(--accent) / 0.1) 100%
+    );
+  }
+  
+  .login-card:hover::before {
+    @apply opacity-100;
+  }
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
   .mobile-stack {
@@ -682,5 +736,9 @@
   
   .mobile-text-sm {
     @apply text-sm;
+  }
+  
+  .bg-grid-pattern {
+    background-size: 30px 30px;
   }
 }
