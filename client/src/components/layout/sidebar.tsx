@@ -19,6 +19,7 @@ import {
   Moon,
   Zap,
   Sparkles,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,13 +41,25 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings, permission: "system-settings" },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const [location] = useLocation();
   const { user, logout, hasPermission } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleNavClick = () => {
+    // Auto-close sidebar on mobile when navigation item is clicked
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
   };
 
   const themeIcons = {
@@ -59,7 +72,11 @@ export function Sidebar() {
   const ThemeIcon = themeIcons[theme];
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient border-r border-[var(--sidebar-border)] shadow-2xl">
+    <div className={cn(
+      "fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient border-r border-[var(--sidebar-border)] shadow-2xl transition-transform duration-300 ease-in-out",
+      "lg:translate-x-0",
+      isOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       <div className="flex flex-col h-full">
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-[var(--sidebar-border)]">
@@ -70,13 +87,23 @@ export function Sidebar() {
             <span className="text-[var(--sidebar-item)] font-bold text-xl tracking-tight">WiFiCare</span>
           </div>
           
-          {/* Theme Switcher */}
+          {/* Mobile close button */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="lg:hidden h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)]"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          
+          {/* Theme Switcher - Hidden on mobile to save space */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)]"
+                className="hidden lg:flex h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)]"
               >
                 <ThemeIcon className="h-4 w-4" />
               </Button>
@@ -127,6 +154,7 @@ export function Sidebar() {
             return (
               <Link key={item.name} href={item.href}>
                 <div
+                  onClick={handleNavClick}
                   className={cn(
                     "group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer",
                     isActive
@@ -178,6 +206,57 @@ export function Sidebar() {
             >
               <LogOut className="h-4 w-4" />
             </Button>
+          </div>
+          
+          {/* Mobile Theme Switcher */}
+          <div className="mt-3 lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between text-[var(--sidebar-item)] border-[var(--sidebar-border)] hover:bg-[var(--sidebar-item-hover)]"
+                >
+                  <span className="flex items-center">
+                    <ThemeIcon className="h-4 w-4 mr-2" />
+                    Theme
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="theme-dropdown w-40">
+                <DropdownMenuItem 
+                  onClick={() => setTheme("light")}
+                  className="theme-dropdown-item flex items-center"
+                >
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Light</span>
+                  {theme === "light" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTheme("dark")}
+                  className="theme-dropdown-item flex items-center"
+                >
+                  <Moon className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Dark</span>
+                  {theme === "dark" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTheme("crypto")}
+                  className="theme-dropdown-item flex items-center"
+                >
+                  <Zap className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Crypto</span>
+                  {theme === "crypto" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTheme("neon")}
+                  className="theme-dropdown-item flex items-center"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Neon</span>
+                  {theme === "neon" && <div className="ml-auto w-2 h-2 bg-primary rounded-full" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
