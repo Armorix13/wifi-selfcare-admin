@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { generateDummyComplaints, generateDummyEngineers, generateDummyCustomers, type Complaint } from "@/lib/dummyData";
 
 // Local type definitions
 const insertComplaintSchema = z.object({
@@ -87,107 +88,23 @@ export default function Complaints() {
 
   const { toast } = useToast();
 
-  // Dummy data
-  const [complaints, setComplaints] = useState([
-    {
-      id: 1,
-      title: "Internet Connection Down",
-      description: "No internet connection for 2 hours in Building A",
-      priority: "high",
-      status: "pending",
-      location: "New York",
-      customerId: 1,
-      customerName: "John Smith",
-      engineerId: null,
-      engineerName: null,
-      createdAt: "2024-01-15T10:30:00Z",
-      updatedAt: "2024-01-15T10:30:00Z"
-    },
-    {
-      id: 2,
-      title: "Slow WiFi Speed",
-      description: "WiFi speed is very slow in conference room",
-      priority: "medium",
-      status: "assigned",
-      location: "Los Angeles",
-      customerId: 2,
-      customerName: "Jane Doe",
-      engineerId: 1,
-      engineerName: "Mike Johnson",
-      createdAt: "2024-01-14T14:20:00Z",
-      updatedAt: "2024-01-15T09:15:00Z"
-    },
-    {
-      id: 3,
-      title: "Router Blinking Red",
-      description: "Router status light is blinking red constantly",
-      priority: "high",
-      status: "in_progress",
-      location: "Chicago",
-      customerId: 3,
-      customerName: "Bob Wilson",
-      engineerId: 2,
-      engineerName: "Sarah Davis",
-      createdAt: "2024-01-13T16:45:00Z",
-      updatedAt: "2024-01-14T11:30:00Z"
-    },
-    {
-      id: 4,
-      title: "WiFi Password Issues",
-      description: "Unable to connect devices with provided password",
-      priority: "low",
-      status: "resolved",
-      location: "Miami",
-      customerId: 4,
-      customerName: "Alice Brown",
-      engineerId: 3,
-      engineerName: "Tom Wilson",
-      createdAt: "2024-01-12T09:15:00Z",
-      updatedAt: "2024-01-13T15:20:00Z"
-    },
-    {
-      id: 5,
-      title: "Network Outage",
-      description: "Complete network outage affecting entire floor",
-      priority: "critical",
-      status: "pending",
-      location: "Seattle",
-      customerId: 5,
-      customerName: "Chris Johnson",
-      engineerId: null,
-      engineerName: null,
-      createdAt: "2024-01-15T08:00:00Z",
-      updatedAt: "2024-01-15T08:00:00Z"
-    }
-  ]);
-
-  const engineers = [
-    { id: 1, name: "Mike Johnson", specialization: "Network Setup", isActive: true, location: "New York" },
-    { id: 2, name: "Sarah Davis", specialization: "Hardware Repair", isActive: true, location: "Los Angeles" },
-    { id: 3, name: "Tom Wilson", specialization: "WiFi Configuration", isActive: true, location: "Chicago" },
-    { id: 4, name: "Lisa Garcia", specialization: "Network Security", isActive: true, location: "Miami" }
-  ];
-
-  const customers = [
-    { id: 1, name: "John Smith" },
-    { id: 2, name: "Jane Doe" },
-    { id: 3, name: "Bob Wilson" },
-    { id: 4, name: "Alice Brown" },
-    { id: 5, name: "Chris Johnson" }
-  ];
+  // Load dummy data
+  const [complaints, setComplaints] = useState(generateDummyComplaints());
+  const engineers = generateDummyEngineers();
+  const customers = generateDummyCustomers();
 
   const isLoading = false;
 
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
     defaultValues: {
-      title: "",
+      customerName: "",
+      email: "",
+      phone: "",
       description: "",
       priority: "medium",
       location: "",
-      customerId: 1,
-      engineerId: null,
-      status: "pending",
+      category: "technical",
     },
   });
 
@@ -197,11 +114,17 @@ export default function Complaints() {
 
   // Simple state management functions (no API calls)
   const onSubmit = (data: InsertComplaint) => {
-    const newComplaint = {
+    const newComplaint: Complaint = {
       id: Math.max(...complaints.map(c => c.id)) + 1,
-      ...data,
-      customerName: customers.find(c => c.id === data.customerId)?.name || "Unknown",
-      engineerName: data.engineerId ? engineers.find(e => e.id === data.engineerId)?.name || null : null,
+      title: data.category + " Issue",
+      customerId: customers.length + 1,
+      customerName: data.customerName,
+      description: data.description,
+      priority: data.priority,
+      status: "pending",
+      location: data.location,
+      engineerId: null,
+      engineerName: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

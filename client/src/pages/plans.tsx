@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Wifi, Star, Users, Trash2, Edit, CheckCircle, Zap, Shield, Globe, TrendingUp, Award, Crown } from "lucide-react";
 import { z } from "zod";
+import { generateDummyServicePlans, type ServicePlan } from "@/lib/dummyData";
 
 // Local type definitions
 const insertServicePlanSchema = z.object({
@@ -28,153 +29,8 @@ type InsertServicePlan = z.infer<typeof insertServicePlanSchema>;
 export default function Plans() {
   const { toast } = useToast();
 
-  // Enhanced service plans data with more realistic options
-  const [plans, setPlans] = useState([
-    // Jio Fiber Plans
-    {
-      id: 1,
-      name: "JioFiber Basic",
-      provider: "jio",
-      speed: "30 Mbps",
-      price: 399,
-      validity: 30,
-      description: "Perfect for browsing, video calls, and light streaming",
-      isActive: true,
-      features: ["100 GB FUP", "Free Router", "Jio Apps"],
-      subscribers: 1250,
-      rating: 4.2,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 2,
-      name: "JioFiber Premium",
-      provider: "jio",
-      speed: "100 Mbps",
-      price: 699,
-      validity: 30,
-      description: "High-speed internet for streaming and gaming",
-      isActive: true,
-      features: ["Unlimited Data", "Netflix Basic", "Disney+ Hotstar", "Free Router"],
-      subscribers: 2100,
-      rating: 4.5,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 3,
-      name: "JioFiber Ultra",
-      provider: "jio",
-      speed: "200 Mbps",
-      price: 999,
-      validity: 30,
-      description: "Ultra-fast speeds for heavy usage and multiple devices",
-      isActive: true,
-      features: ["Unlimited Data", "Netflix Premium", "Amazon Prime", "Free Router"],
-      subscribers: 1800,
-      rating: 4.7,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    // Airtel Plans
-    {
-      id: 4,
-      name: "Airtel Xstream Essential",
-      provider: "airtel",
-      speed: "40 Mbps",
-      price: 499,
-      validity: 30,
-      description: "Reliable connectivity for home and work",
-      isActive: true,
-      features: ["Unlimited Data", "Airtel Xstream App", "Free Installation"],
-      subscribers: 950,
-      rating: 4.3,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 5,
-      name: "Airtel Xstream Entertainment",
-      provider: "airtel",
-      speed: "100 Mbps",
-      price: 799,
-      validity: 30,
-      description: "Entertainment-focused plan with OTT benefits",
-      isActive: true,
-      features: ["Unlimited Data", "Netflix", "Amazon Prime", "Disney+ Hotstar"],
-      subscribers: 1600,
-      rating: 4.6,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 6,
-      name: "Airtel Xstream VIP",
-      provider: "airtel",
-      speed: "200 Mbps",
-      price: 1199,
-      validity: 30,
-      description: "Premium experience with fastest speeds",
-      isActive: true,
-      features: ["Unlimited Data", "All OTT Apps", "Priority Support", "Free Router"],
-      subscribers: 1200,
-      rating: 4.8,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    // BSNL Plans
-    {
-      id: 7,
-      name: "BSNL Fiber Basic",
-      provider: "bsnl",
-      speed: "25 Mbps",
-      price: 329,
-      validity: 30,
-      description: "Budget-friendly option for basic browsing",
-      isActive: true,
-      features: ["50 GB FUP", "Email Support", "Local Calling"],
-      subscribers: 800,
-      rating: 3.8,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 8,
-      name: "BSNL Fiber Standard",
-      provider: "bsnl",
-      speed: "50 Mbps",
-      price: 449,
-      validity: 30,
-      description: "Reliable government broadband service",
-      isActive: true,
-      features: ["Unlimited Data", "Email Support", "Government Backing"],
-      subscribers: 1100,
-      rating: 4.0,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    // My Internet Plans
-    {
-      id: 9,
-      name: "My Internet Pro",
-      provider: "my-internet",
-      speed: "150 Mbps",
-      price: 899,
-      validity: 30,
-      description: "Local ISP with personalized service",
-      isActive: true,
-      features: ["Unlimited Data", "24/7 Support", "Static IP Optional"],
-      subscribers: 450,
-      rating: 4.4,
-      createdAt: "2024-01-15T10:00:00Z"
-    },
-    {
-      id: 10,
-      name: "My Internet Business",
-      provider: "my-internet",
-      speed: "500 Mbps",
-      price: 2499,
-      validity: 30,
-      description: "Enterprise-grade connectivity for businesses",
-      isActive: true,
-      features: ["Unlimited Data", "Dedicated Support", "Static IP", "99.9% Uptime"],
-      subscribers: 180,
-      rating: 4.9,
-      createdAt: "2024-01-15T10:00:00Z"
-    }
-  ]);
+  // Load dummy data
+  const [plans, setPlans] = useState(generateDummyServicePlans());
 
   const isLoading = false;
 

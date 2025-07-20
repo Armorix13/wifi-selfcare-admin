@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/ui/stats-card";
 import { ComplaintChart } from "@/components/charts/complaint-chart";
 import { StatusChart } from "@/components/charts/status-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { generateDashboardStats } from "@/lib/dummyData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -49,22 +50,7 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  // Dummy dashboard data
-  const stats = {
-    totalComplaints: 24,
-    resolvedIssues: 18,
-    activeEngineers: 8,
-    totalCustomers: 156,
-    complaintsByMonth: [
-      { month: "Jan", complaints: 12, resolved: 10 },
-      { month: "Feb", complaints: 18, resolved: 15 },
-      { month: "Mar", complaints: 24, resolved: 18 },
-      { month: "Apr", complaints: 20, resolved: 17 },
-      { month: "May", complaints: 16, resolved: 14 },
-      { month: "Jun", complaints: 22, resolved: 19 }
-    ]
-  };
-  
+  const stats = generateDashboardStats();
   const isLoading = false;
 
   if (isLoading) {
