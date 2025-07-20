@@ -3,6 +3,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { SupportAnalytics } from "@/components/support/support-analytics";
 import { TicketManagement } from "@/components/support/ticket-management";
 import { RatingSystem } from "@/components/support/rating-system";
+import { SettingsPanel } from "@/components/support/settings-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -459,11 +460,14 @@ export default function Support() {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <Settings className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold mb-2">Settings Coming Soon</h3>
-              <p>Support configuration and customization options will be available here.</p>
-            </div>
+            <SettingsPanel 
+              onSettingsUpdate={(settings) => {
+                toast({
+                  title: "Settings Updated",
+                  description: "Support system settings have been saved successfully",
+                });
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>
