@@ -465,15 +465,48 @@ export default function Users() {
                         label: "Actions",
                         render: (_, user) => (
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setIsViewDialogOpen(true);
+                              }}
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                form.reset(user);
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this user? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         )
                       }
@@ -619,6 +652,201 @@ export default function Users() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div>
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  {...form.register("name")}
+                  defaultValue={selectedUser?.name}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  {...form.register("email")}
+                  type="email"
+                  defaultValue={selectedUser?.email}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input
+                  id="edit-phone"
+                  {...form.register("phone")}
+                  defaultValue={selectedUser?.phone}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-location">Location</Label>
+                <Input
+                  id="edit-location"
+                  {...form.register("location")}
+                  defaultValue={selectedUser?.location}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-address">Address</Label>
+                <Input
+                  id="edit-address"
+                  {...form.register("address")}
+                  defaultValue={selectedUser?.address}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-provider">Service Provider</Label>
+                <Input
+                  id="edit-provider"
+                  {...form.register("serviceProvider")}
+                  defaultValue={selectedUser?.serviceProvider}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select 
+                  value={form.watch("status")} 
+                  onValueChange={(value) => form.setValue("status", value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-area">Area</Label>
+                <Select 
+                  value={form.watch("area")} 
+                  onValueChange={(value) => form.setValue("area", value as any)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="urban">Urban</SelectItem>
+                    <SelectItem value="rural">Rural</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={form.handleSubmit(handleEditUser)}>
+                Update User
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View User Dialog */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>User Details</DialogTitle>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
+                    <p className="text-muted-foreground">{selectedUser.email}</p>
+                    <div className="mt-2">
+                      {getStatusBadge(selectedUser.status)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-muted-foreground">Contact Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedUser.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedUser.email}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedUser.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-muted-foreground">Service Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Wifi className="w-4 h-4 text-muted-foreground" />
+                        <span>{selectedUser.serviceProvider || 'No Provider'}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Activity className="w-4 h-4 text-muted-foreground" />
+                        <span className="capitalize">{selectedUser.mode}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span>Area: {selectedUser.area}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedUser.address && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-muted-foreground">Address</h4>
+                    <p>{selectedUser.address}</p>
+                  </div>
+                )}
+
+                {selectedUser.planName && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-muted-foreground">Current Plan</h4>
+                    <p>{selectedUser.planName}</p>
+                  </div>
+                )}
+
+                {selectedUser.balanceDue !== undefined && selectedUser.balanceDue > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-muted-foreground">Balance Due</h4>
+                    <p className="text-red-600">${selectedUser.balanceDue}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Created: {new Date(selectedUser.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
