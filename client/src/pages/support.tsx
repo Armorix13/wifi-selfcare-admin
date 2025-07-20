@@ -1,191 +1,379 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
-import { DataTable, StatusBadge } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SupportAnalytics } from "@/components/support/support-analytics";
+import { TicketManagement } from "@/components/support/ticket-management";
+import { RatingSystem } from "@/components/support/rating-system";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  MessageSquare, 
+  Star, 
+  BarChart3, 
+  Settings,
+  Headphones,
+  ThumbsUp
+} from "lucide-react";
+
+// Enhanced support ticket interface
+interface SupportTicket {
+  id: number;
+  title: string;
+  description: string;
+  customerName: string;
+  email: string;
+  phone: string;
+  status: "open" | "in-progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "urgent";
+  category: "technical" | "billing" | "general" | "installation";
+  assignedTo?: string;
+  rating?: number;
+  feedback?: string;
+  createdAt: string;
+  updatedAt: string;
+  responses?: {
+    id: number;
+    message: string;
+    sender: string;
+    timestamp: string;
+    isCustomer: boolean;
+  }[];
+}
+
+// Enhanced rating interface
+interface Rating {
+  id: number;
+  ticketId: number;
+  customerName: string;
+  customerEmail: string;
+  rating: number;
+  feedback: string;
+  category: string;
+  engineerName?: string;
+  createdAt: string;
+  helpful: number;
+  notHelpful: number;
+  tags: string[];
+}
 
 export default function Support() {
   const { toast } = useToast();
 
-  // Dummy support tickets data
-  const [supportTickets, setSupportTickets] = useState([
+  // Comprehensive dummy data for support tickets
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([
     {
       id: 1,
-      title: "Internet Speed Issue",
-      description: "Customer experiencing slow internet speeds during peak hours",
+      title: "Internet Speed Significantly Slower Than Advertised",
+      description: "Customer reports consistent slow internet speeds during peak hours (7-9 PM). Speed tests show 15 Mbps instead of promised 100 Mbps. Issue has persisted for 2 weeks.",
       customerName: "Rajesh Kumar",
-      email: "rajesh@email.com",
+      email: "rajesh.kumar@email.com",
       phone: "+91 98765 43210",
-      status: "open",
+      status: "in-progress",
       priority: "high",
       category: "technical",
-      rating: null,
-      createdAt: "2024-01-15T10:30:00Z",
-      updatedAt: "2024-01-15T10:30:00Z"
+      assignedTo: "Alex Rodriguez",
+      createdAt: "2025-01-20T10:30:00Z",
+      updatedAt: "2025-01-20T14:45:00Z",
+      responses: [
+        {
+          id: 1,
+          message: "Thank you for contacting us. We've escalated this to our technical team and will run diagnostics on your line.",
+          sender: "Support Agent",
+          timestamp: "2025-01-20T11:00:00Z",
+          isCustomer: false
+        },
+        {
+          id: 2,
+          message: "I've been having this issue for weeks now. When can I expect a resolution?",
+          sender: "Rajesh Kumar",
+          timestamp: "2025-01-20T14:30:00Z",
+          isCustomer: true
+        }
+      ]
     },
     {
       id: 2,
-      title: "Billing Inquiry",
-      description: "Question about monthly charges and plan details",
+      title: "Billing Discrepancy - Charged for Cancelled Service",
+      description: "Customer was charged for premium TV package that was cancelled 2 months ago. Requesting refund and correction of billing records.",
       customerName: "Priya Sharma",
-      email: "priya@email.com", 
+      email: "priya.sharma@email.com",
       phone: "+91 87654 32109",
       status: "resolved",
       priority: "medium",
       category: "billing",
+      assignedTo: "Jennifer White",
       rating: 5,
-      createdAt: "2024-01-14T09:15:00Z",
-      updatedAt: "2024-01-14T14:20:00Z"
+      feedback: "Excellent service! The billing team resolved my issue quickly and provided a full refund. Very satisfied with the support.",
+      createdAt: "2025-01-19T09:15:00Z",
+      updatedAt: "2025-01-19T16:20:00Z",
+      responses: [
+        {
+          id: 1,
+          message: "We've reviewed your account and confirmed the billing error. A refund of $45.99 has been processed and will appear in 3-5 business days.",
+          sender: "Billing Specialist",
+          timestamp: "2025-01-19T12:00:00Z",
+          isCustomer: false
+        }
+      ]
     },
     {
       id: 3,
-      title: "Connection Drops Frequently",
-      description: "Internet connection drops every few hours, needs technical assistance",
+      title: "Frequent Connection Drops and Service Interruptions",
+      description: "Internet connection drops every 2-3 hours requiring router restart. Customer works from home and this affects productivity significantly.",
       customerName: "Amit Patel",
-      email: "amit@email.com",
+      email: "amit.patel@email.com",
       phone: "+91 76543 21098",
-      status: "in-progress",
+      status: "open",
       priority: "urgent",
       category: "technical",
-      rating: null,
-      createdAt: "2024-01-16T08:45:00Z",
-      updatedAt: "2024-01-16T11:30:00Z"
+      createdAt: "2025-01-20T08:45:00Z",
+      updatedAt: "2025-01-20T08:45:00Z"
+    },
+    {
+      id: 4,
+      title: "Installation Appointment Scheduling",
+      description: "New customer requesting installation appointment for fiber optic service at new address. Prefers weekend slot.",
+      customerName: "Sarah Chen",
+      email: "sarah.chen@email.com",
+      phone: "+91 65432 10987",
+      status: "in-progress",
+      priority: "medium",
+      category: "installation",
+      assignedTo: "Installation Team",
+      createdAt: "2025-01-18T14:20:00Z",
+      updatedAt: "2025-01-19T10:15:00Z",
+      responses: [
+        {
+          id: 1,
+          message: "We have availability this Saturday between 9 AM - 12 PM. Would this work for you?",
+          sender: "Installation Coordinator",
+          timestamp: "2025-01-19T10:15:00Z",
+          isCustomer: false
+        }
+      ]
+    },
+    {
+      id: 5,
+      title: "Router Configuration Issues After Recent Update",
+      description: "Customer unable to connect devices after automatic router firmware update. WiFi network visible but authentication fails.",
+      customerName: "Michael Johnson",
+      email: "michael.johnson@email.com",
+      phone: "+91 54321 09876",
+      status: "resolved",
+      priority: "high",
+      category: "technical",
+      assignedTo: "Tech Support",
+      rating: 4,
+      feedback: "Good support but took longer than expected to resolve. The technician was knowledgeable and patient.",
+      createdAt: "2025-01-17T16:30:00Z",
+      updatedAt: "2025-01-18T11:45:00Z"
+    },
+    {
+      id: 6,
+      title: "Data Usage Inquiry and Plan Upgrade",
+      description: "Customer consistently exceeding data limits and wants to understand usage patterns and available upgrade options.",
+      customerName: "Lisa Wang",
+      email: "lisa.wang@email.com",
+      phone: "+91 43210 98765",
+      status: "closed",
+      priority: "low",
+      category: "general",
+      assignedTo: "Customer Service",
+      rating: 5,
+      feedback: "Very helpful! The representative explained everything clearly and helped me find the perfect plan for my needs.",
+      createdAt: "2025-01-16T13:10:00Z",
+      updatedAt: "2025-01-17T09:30:00Z"
+    },
+    {
+      id: 7,
+      title: "Service Outage Compensation Request",
+      description: "Customer experienced 8-hour service outage last week and is requesting service credit as per SLA agreement.",
+      customerName: "David Thompson",
+      email: "david.thompson@email.com",
+      phone: "+91 32109 87654",
+      status: "in-progress",
+      priority: "medium",
+      category: "billing",
+      assignedTo: "Customer Relations",
+      createdAt: "2025-01-15T10:45:00Z",
+      updatedAt: "2025-01-16T14:20:00Z"
     }
   ]);
 
-  // Dummy complaints data
-  const complaints = [
+  // Comprehensive dummy data for ratings
+  const [ratings] = useState<Rating[]>([
     {
       id: 1,
-      customerName: "Rajesh Kumar",
-      email: "rajesh@email.com",
-      description: "Internet speed is very slow",
-      status: "resolved",
-      priority: "high",
-      rating: 4
+      ticketId: 2,
+      customerName: "Priya Sharma",
+      customerEmail: "priya.sharma@email.com",
+      rating: 5,
+      feedback: "Excellent service! The billing team resolved my issue quickly and provided a full refund. Very satisfied with the support.",
+      category: "billing",
+      engineerName: "Jennifer White",
+      createdAt: "2025-01-19T16:30:00Z",
+      helpful: 12,
+      notHelpful: 1,
+      tags: ["quick-resolution", "billing-expert", "professional"]
     },
     {
       id: 2,
-      customerName: "Priya Sharma", 
-      email: "priya@email.com",
-      description: "Billing issue with last month charges",
-      status: "pending",
-      priority: "medium",
-      rating: null
+      ticketId: 5,
+      customerName: "Michael Johnson",
+      customerEmail: "michael.johnson@email.com",
+      rating: 4,
+      feedback: "Good support but took longer than expected to resolve. The technician was knowledgeable and patient, walked me through each step.",
+      category: "technical",
+      engineerName: "Alex Rodriguez",
+      createdAt: "2025-01-18T12:00:00Z",
+      helpful: 8,
+      notHelpful: 2,
+      tags: ["knowledgeable", "patient", "technical-expertise"]
+    },
+    {
+      id: 3,
+      ticketId: 6,
+      customerName: "Lisa Wang",
+      customerEmail: "lisa.wang@email.com",
+      rating: 5,
+      feedback: "Very helpful! The representative explained everything clearly and helped me find the perfect plan for my needs. Saved me money too!",
+      category: "general",
+      engineerName: "Customer Service Team",
+      createdAt: "2025-01-17T10:15:00Z",
+      helpful: 15,
+      notHelpful: 0,
+      tags: ["clear-explanation", "helpful", "cost-effective"]
+    },
+    {
+      id: 4,
+      ticketId: 1,
+      customerName: "Rajesh Kumar",
+      customerEmail: "rajesh.kumar@email.com",
+      rating: 3,
+      feedback: "The issue was eventually resolved but it took multiple follow-ups. The team could have been more proactive in communication.",
+      category: "technical",
+      engineerName: "Alex Rodriguez",
+      createdAt: "2025-01-16T14:45:00Z",
+      helpful: 6,
+      notHelpful: 3,
+      tags: ["resolved", "communication-needed", "follow-up-required"]
+    },
+    {
+      id: 5,
+      ticketId: 8,
+      customerName: "Amanda Foster",
+      customerEmail: "amanda.foster@email.com",
+      rating: 5,
+      feedback: "Outstanding customer service! The representative went above and beyond to ensure my internet was restored quickly. Highly recommend!",
+      category: "technical",
+      engineerName: "Lisa Chen",
+      createdAt: "2025-01-15T16:20:00Z",
+      helpful: 20,
+      notHelpful: 0,
+      tags: ["outstanding", "above-beyond", "quick-restoration"]
+    },
+    {
+      id: 6,
+      ticketId: 9,
+      customerName: "Robert Martinez",
+      customerEmail: "robert.martinez@email.com",
+      rating: 2,
+      feedback: "Support was slow to respond and the initial solution didn't work. Had to call back multiple times. Room for improvement.",
+      category: "technical",
+      engineerName: "James Park",
+      createdAt: "2025-01-14T11:30:00Z",
+      helpful: 4,
+      notHelpful: 8,
+      tags: ["slow-response", "multiple-calls", "improvement-needed"]
+    },
+    {
+      id: 7,
+      ticketId: 10,
+      customerName: "Emily Rodriguez",
+      customerEmail: "emily.rodriguez@email.com",
+      rating: 4,
+      feedback: "Good technical knowledge and friendly service. The engineer explained the problem clearly and provided tips to prevent future issues.",
+      category: "technical",
+      engineerName: "Kevin Lee",
+      createdAt: "2025-01-13T09:45:00Z",
+      helpful: 11,
+      notHelpful: 1,
+      tags: ["technical-knowledge", "friendly", "preventive-tips"]
+    },
+    {
+      id: 8,
+      ticketId: 11,
+      customerName: "Thomas Wilson",
+      customerEmail: "thomas.wilson@email.com",
+      rating: 5,
+      feedback: "Fantastic experience! The installation team was punctual, professional, and cleaned up after themselves. Perfect service!",
+      category: "installation",
+      engineerName: "Installation Team",
+      createdAt: "2025-01-12T15:30:00Z",
+      helpful: 18,
+      notHelpful: 0,
+      tags: ["punctual", "professional", "clean-installation"]
     }
-  ];
+  ]);
 
-  const ticketsLoading = false;
-  const complaintsLoading = false;
+  // Pagination state
+  const [ticketsPage, setTicketsPage] = useState(1);
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const ticketsPerPage = 5;
+  const ratingsPerPage = 6;
 
-  const handleStatusChange = (ticketId: number, newStatus: string) => {
+  const ticketsTotalPages = Math.ceil(supportTickets.length / ticketsPerPage);
+  const ratingsTotalPages = Math.ceil(ratings.length / ratingsPerPage);
+
+  const isLoading = false;
+
+  const handleUpdateTicket = (id: number, updates: Partial<SupportTicket>) => {
     setSupportTickets(prev => 
       prev.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, status: newStatus, updatedAt: new Date().toISOString() }
+        ticket.id === id 
+          ? { ...ticket, ...updates, updatedAt: new Date().toISOString() }
           : ticket
       )
     );
+  };
+
+  const handleDeleteTicket = (id: number) => {
+    setSupportTickets(prev => prev.filter(ticket => ticket.id !== id));
     toast({
-      title: "Success",
-      description: "Support ticket updated successfully",
+      title: "Ticket Deleted",
+      description: "Support ticket has been removed successfully",
     });
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase();
+  const handleCreateTicket = (ticketData: Omit<SupportTicket, "id" | "createdAt" | "updatedAt">) => {
+    const newTicket: SupportTicket = {
+      ...ticketData,
+      id: Math.max(...supportTickets.map(t => t.id)) + 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setSupportTickets(prev => [newTicket, ...prev]);
   };
 
-  const getAvatarColor = (index: number) => {
-    const colors = ["bg-blue-600", "bg-purple-600", "bg-green-600", "bg-yellow-600", "bg-red-600"];
-    return colors[index % colors.length];
-  };
+  // Calculate key metrics
+  const totalTickets = supportTickets.length;
+  const openTickets = supportTickets.filter(t => t.status === "open").length;
+  const resolvedTickets = supportTickets.filter(t => t.status === "resolved").length;
+  const avgRating = ratings.length > 0 
+    ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
+    : 0;
 
-  const renderStars = (rating: number) => {
+  if (isLoading) {
     return (
-      <div className="flex">
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            className={`h-4 w-4 ${
-              i < rating ? "text-yellow-400 fill-current" : "text-gray-300"
-            }`}
-          />
-        ))}
-      </div>
-    );
-  };
-
-  const supportTicketColumns = [
-    {
-      key: "id",
-      label: "Ticket ID",
-      sortable: true,
-      render: (value: number) => `#SUP${value.toString().padStart(3, '0')}`,
-    },
-    {
-      key: "customer",
-      label: "User",
-      render: (value: any, row: any) => row.customer?.name || "Unknown",
-    },
-    {
-      key: "subject",
-      label: "Subject",
-    },
-    {
-      key: "priority",
-      label: "Priority",
-      render: (value: string) => <StatusBadge status={value} />,
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (value: string) => <StatusBadge status={value} />,
-    },
-    {
-      key: "createdAt",
-      label: "Created",
-      render: (value: string) => new Date(value).toLocaleDateString(),
-    },
-    {
-      key: "actions",
-      label: "Actions",
-      render: (value: any, row: any) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-blue-600 hover:text-blue-900"
-          onClick={() => handleStatusChange(row.id, "resolved")}
-        >
-          Reply
-        </Button>
-      ),
-    },
-  ];
-
-  // Get complaints with ratings for reviews section
-  const complaintsWithRatings = complaints.filter((complaint: any) => 
-    complaint.rating && complaint.feedback
-  );
-
-  if (ticketsLoading || complaintsLoading) {
-    return (
-      <MainLayout title="Support & Rating">
-        <div className="animate-pulse space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
-            <div className="h-8 bg-slate-200 rounded mb-4"></div>
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 bg-slate-200 rounded"></div>
-              ))}
-            </div>
+      <MainLayout title="Support & Rating Center">
+        <div className="animate-pulse space-y-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-xl shadow-sm p-6 border">
+                <div className="h-6 bg-muted rounded mb-2"></div>
+                <div className="h-8 bg-muted rounded"></div>
+              </div>
+            ))}
           </div>
         </div>
       </MainLayout>
@@ -193,81 +381,91 @@ export default function Support() {
   }
 
   return (
-    <MainLayout title="Support & Rating">
-      <div className="space-y-6">
-        {/* Support Tickets */}
-        <Card className="border border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Support Tickets
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <DataTable
-              data={supportTickets}
-              columns={supportTicketColumns}
-              searchPlaceholder="Search support tickets..."
-            />
-          </CardContent>
-        </Card>
+    <MainLayout title="Support & Rating Center">
+      <div className="space-y-8 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Support & Rating Center</h1>
+            <p className="text-muted-foreground mt-1">Comprehensive customer support management and feedback analysis</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Badge variant="outline" className="text-sm">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              {totalTickets} total tickets
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              <Star className="h-4 w-4 mr-2" />
+              {avgRating.toFixed(1)} avg rating
+            </Badge>
+          </div>
+        </div>
 
-        {/* Ratings Overview */}
-        <Card className="border border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Recent Ratings & Reviews
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {complaintsWithRatings.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No ratings and reviews yet
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {complaintsWithRatings.slice(0, 10).map((complaint: any, index: number) => (
-                  <div
-                    key={complaint.id}
-                    className="border border-slate-200 rounded-lg p-4"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <div className={`h-8 w-8 ${getAvatarColor(index)} rounded-full flex items-center justify-center`}>
-                          <span className="text-white font-medium text-sm">
-                            {complaint.customer ? getInitials(complaint.customer.name) : "U"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {complaint.customer?.name || "Unknown User"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Complaint #{complaint.id}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        {renderStars(complaint.rating)}
-                        <span className="text-sm font-medium text-gray-900 ml-1">
-                          {complaint.rating}.0
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      "{complaint.feedback}"
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>
-                        Engineer: {complaint.engineer?.name || "Unknown"}
-                      </span>
-                      <span>{new Date(complaint.updatedAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Main Content */}
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Analytics</span>
+            </TabsTrigger>
+            <TabsTrigger value="tickets" className="flex items-center space-x-2">
+              <Headphones className="h-4 w-4" />
+              <span>Support Tickets</span>
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {openTickets}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="ratings" className="flex items-center space-x-2">
+              <ThumbsUp className="h-4 w-4" />
+              <span>Ratings & Reviews</span>
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {ratings.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analytics" className="space-y-6">
+            <SupportAnalytics 
+              supportTickets={supportTickets}
+              ratings={ratings}
+            />
+          </TabsContent>
+
+          <TabsContent value="tickets" className="space-y-6">
+            <TicketManagement
+              tickets={supportTickets}
+              onUpdateTicket={handleUpdateTicket}
+              onDeleteTicket={handleDeleteTicket}
+              onCreateTicket={handleCreateTicket}
+              currentPage={ticketsPage}
+              totalPages={ticketsTotalPages}
+              onPageChange={setTicketsPage}
+              itemsPerPage={ticketsPerPage}
+            />
+          </TabsContent>
+
+          <TabsContent value="ratings" className="space-y-6">
+            <RatingSystem
+              ratings={ratings}
+              currentPage={ratingsPage}
+              totalPages={ratingsTotalPages}
+              onPageChange={setRatingsPage}
+              itemsPerPage={ratingsPerPage}
+            />
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <div className="text-center py-12 text-muted-foreground">
+              <Settings className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold mb-2">Settings Coming Soon</h3>
+              <p>Support configuration and customization options will be available here.</p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
