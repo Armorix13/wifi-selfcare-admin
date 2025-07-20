@@ -432,6 +432,102 @@
   }
 }
 
+/* Login Page Specific Theme Enhancements */
+.login-bg-light {
+  background: linear-gradient(135deg, 
+    hsl(210, 40%, 98%) 0%, 
+    hsl(220, 14%, 96%) 25%, 
+    hsl(240, 20%, 99%) 50%, 
+    hsl(210, 25%, 97%) 75%, 
+    hsl(200, 30%, 95%) 100%
+  );
+}
+
+.dark .login-bg-dark {
+  background: linear-gradient(135deg, 
+    hsl(222, 47%, 11%) 0%, 
+    hsl(215, 25%, 15%) 25%, 
+    hsl(220, 30%, 8%) 50%, 
+    hsl(217, 33%, 12%) 75%, 
+    hsl(222, 47%, 11%) 100%
+  );
+}
+
+.crypto .login-bg-crypto {
+  background: linear-gradient(135deg, 
+    hsl(234, 52%, 8%) 0%, 
+    hsl(220, 40%, 6%) 25%, 
+    hsl(210, 50%, 4%) 50%, 
+    hsl(233, 35%, 10%) 75%, 
+    hsl(234, 52%, 8%) 100%
+  );
+}
+
+.neon .login-bg-neon {
+  background: linear-gradient(135deg, 
+    hsl(270, 100%, 3%) 0%, 
+    hsl(280, 80%, 5%) 25%, 
+    hsl(260, 90%, 2%) 50%, 
+    hsl(270, 70%, 6%) 75%, 
+    hsl(270, 100%, 3%) 100%
+  );
+}
+
+/* Perfect text contrast for all themes */
+:root {
+  --login-text: hsl(20, 14.3%, 4.1%);
+  --login-text-muted: hsl(25, 5.3%, 44.7%);
+  --login-card-bg: hsl(0, 0%, 100%);
+  --login-card-border: hsl(20, 5.9%, 90%);
+}
+
+.dark {
+  --login-text: hsl(210, 40%, 98%);
+  --login-text-muted: hsl(215, 20.2%, 65.1%);
+  --login-card-bg: hsl(217, 33%, 17%);
+  --login-card-border: hsl(217.2, 32.6%, 17.5%);
+}
+
+.crypto {
+  --login-text: hsl(48, 100%, 96%);
+  --login-text-muted: hsl(213, 27%, 84%);
+  --login-card-bg: hsl(234, 40%, 12%);
+  --login-card-border: hsl(179, 82%, 51%, 0.2);
+}
+
+.neon {
+  --login-text: hsl(300, 100%, 95%);
+  --login-text-muted: hsl(270, 30%, 60%);
+  --login-card-bg: hsl(270, 80%, 8%);
+  --login-card-border: hsl(300, 100%, 50%, 0.3);
+}
+
+/* Enhanced neon glow effects for themes */
+.neon .neon-glow {
+  box-shadow: 
+    0 0 20px hsl(300, 100%, 50%, 0.4),
+    0 0 40px hsl(300, 100%, 50%, 0.3),
+    0 0 60px hsl(300, 100%, 50%, 0.2);
+}
+
+.crypto .neon-glow {
+  box-shadow: 
+    0 0 20px hsl(179, 82%, 51%, 0.4),
+    0 0 40px hsl(179, 82%, 51%, 0.3);
+}
+
+.dark .neon-glow {
+  box-shadow: 
+    0 0 20px hsl(179, 82%, 51%, 0.3),
+    0 0 40px hsl(179, 82%, 51%, 0.2);
+}
+
+.light .neon-glow {
+  box-shadow: 
+    0 0 20px hsl(221, 83%, 53%, 0.3),
+    0 0 40px hsl(221, 83%, 53%, 0.2);
+}
+
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 6px;
@@ -439,16 +535,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(210, 40%, 96%);
+  background: hsl(var(--muted));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(213, 27%, 84%);
+  background: hsl(var(--muted-foreground));
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(212, 23%, 69%);
+  background: hsl(var(--foreground));
 }
 
 /* Admin panel specific styles */
