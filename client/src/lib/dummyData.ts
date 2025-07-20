@@ -588,3 +588,13 @@ export const generateDashboardStats = (): DashboardStats => ({
   customerSatisfaction: 4.3,
   monthlyRevenue: 2847650
 });
+
+// Export data arrays for easy access
+export const dummyUsers = generateDummyUsers();
+export const dummyCustomers = generateDummyCustomers();
+export const dummyEngineers = generateDummyEngineers();
+export const dummyServicePlans = generateDummyServicePlans();
+export const dummyComplaints = generateDummyComplaints();
+export const dummySupportTickets = generateDummySupportTickets();
+export const dummyNotifications = generateDummyNotifications();
+export const dashboardStats = generateDashboardStats();

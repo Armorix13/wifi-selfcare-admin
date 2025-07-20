@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { Link } from "wouter";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 
 interface HeaderProps {
   title: string;
@@ -114,17 +115,9 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           </Button>
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gradient tracking-tight mr-4">{title}</h1>
           
-          {/* Search Bar - Hidden on small screens */}
+          {/* Global Search - Hidden on small screens */}
           <div className="hidden md:flex items-center flex-1 max-w-md ml-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search complaints, users, engineers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background/50 border-border/50 focus:bg-background"
-              />
-            </div>
+            <GlobalSearch />
           </div>
         </div>
 

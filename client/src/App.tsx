@@ -19,6 +19,9 @@ import Analytics from "@/pages/analytics";
 import Notifications from "@/pages/notifications";
 import Support from "@/pages/support";
 import Settings from "@/pages/settings";
+import UserDetail from "@/pages/user-detail";
+import EngineerDetail from "@/pages/engineer-detail";
+import ComplaintDetail from "@/pages/complaint-detail";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -94,6 +97,25 @@ function Router() {
       <Route path="/settings">
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Detail Pages */}
+      <Route path="/users/:id">
+        <ProtectedRoute>
+          <UserDetail />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/engineers/:id">
+        <ProtectedRoute>
+          <EngineerDetail />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/complaints/:id">
+        <ProtectedRoute>
+          <ComplaintDetail />
         </ProtectedRoute>
       </Route>
       
