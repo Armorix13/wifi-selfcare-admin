@@ -446,15 +446,48 @@ export default function Engineers() {
                     label: "Actions",
                     render: (_, engineer) => (
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEngineer(engineer);
+                            setIsViewDialogOpen(true);
+                          }}
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedEngineer(engineer);
+                            editForm.reset(engineer);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Engineer</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this engineer? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteEngineer(engineer.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     )
                   }
@@ -493,6 +526,200 @@ export default function Engineers() {
           </div>
         )}
       </div>
+
+      {/* Edit Engineer Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Engineer</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div>
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                {...editForm.register("name")}
+                defaultValue={selectedEngineer?.name}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                {...editForm.register("email")}
+                type="email"
+                defaultValue={selectedEngineer?.email}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-phone">Phone</Label>
+              <Input
+                id="edit-phone"
+                {...editForm.register("phone")}
+                defaultValue={selectedEngineer?.phone}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-location">Location</Label>
+              <Input
+                id="edit-location"
+                {...editForm.register("location")}
+                defaultValue={selectedEngineer?.location}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-specialization">Specialization</Label>
+              <Select 
+                value={editForm.watch("specialization")} 
+                onValueChange={(value) => editForm.setValue("specialization", value as any)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Network">Network</SelectItem>
+                  <SelectItem value="Hardware">Hardware</SelectItem>
+                  <SelectItem value="Software">Software</SelectItem>
+                  <SelectItem value="Installation">Installation</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-rating">Rating</Label>
+              <Input
+                id="edit-rating"
+                {...editForm.register("rating", { valueAsNumber: true })}
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                defaultValue={selectedEngineer?.rating}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-completed">Completed Jobs</Label>
+              <Input
+                id="edit-completed"
+                {...editForm.register("completedJobs", { valueAsNumber: true })}
+                type="number"
+                min="0"
+                defaultValue={selectedEngineer?.completedJobs}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-active">Active Jobs</Label>
+              <Input
+                id="edit-active"
+                {...editForm.register("activeJobs", { valueAsNumber: true })}
+                type="number"
+                min="0"
+                defaultValue={selectedEngineer?.activeJobs}
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="edit-is-active"
+              {...editForm.register("isActive")}
+              defaultChecked={selectedEngineer?.isActive}
+              className="rounded border-gray-300"
+            />
+            <Label htmlFor="edit-is-active">Active Status</Label>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={editForm.handleSubmit(handleEditEngineer)}>
+              Update Engineer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Engineer Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Engineer Details</DialogTitle>
+          </DialogHeader>
+          {selectedEngineer && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedEngineer.name}</h3>
+                  <p className="text-muted-foreground">{selectedEngineer.email}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {getStatusBadge(selectedEngineer.isActive)}
+                    <Badge variant="outline">
+                      {selectedEngineer.specialization}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-muted-foreground">Contact Information</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEngineer.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEngineer.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-4 h-4 text-muted-foreground" />
+                      <span>{selectedEngineer.location}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium text-muted-foreground">Performance Metrics</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Star className="w-4 h-4 text-yellow-500" />
+                      <span>{getRatingStars(selectedEngineer.rating)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>{selectedEngineer.completedJobs} completed jobs</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Activity className="w-4 h-4 text-blue-500" />
+                      <span>{selectedEngineer.activeJobs} active jobs</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-medium text-muted-foreground">Specialization</h4>
+                <p>{selectedEngineer.specialization}</p>
+              </div>
+
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Created: {new Date(selectedEngineer.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }
