@@ -50,13 +50,18 @@ export interface ServicePlan {
   provider: 'jio' | 'airtel' | 'bsnl' | 'my-internet';
   speed: string;
   price: number;
-  validity: number;
+  validity: number | string;
   description: string;
   features: string[];
   subscribers: number;
   rating: number;
   isActive: boolean;
   createdAt: string;
+  title?: string;
+  dataLimit?: string;
+  logo?: string;
+  benefits?: string;
+  planType?: 'Basic' | 'Premium' | 'Enterprise' | 'Gold';
 }
 
 export interface Complaint {
@@ -339,27 +344,35 @@ export const generateDummyEngineers = (): Engineer[] => [
 export const generateDummyServicePlans = (): ServicePlan[] => [
   {
     id: 1,
-    name: "JioFiber Basic",
+    name: "JioFiber Gold Plan",
+    title: "JioFiber Gold Plan - 1 Year",
     provider: "jio",
-    speed: "30 Mbps",
-    price: 399,
-    validity: 30,
-    description: "Perfect for browsing, video calls, and light streaming",
-    features: ["100 GB FUP", "Free Router", "Jio Apps"],
-    subscribers: 1250,
-    rating: 4.2,
+    speed: "300 Mbps",
+    price: 8499,
+    validity: "12 Months",
+    dataLimit: "Unlimited",
+    description: "JioFiber Gold Plan offers blazing 300 Mbps speed with unlimited data, making it ideal for large families or work-from-home setups. Includes major OTT subscriptions.",
+    benefits: "Netflix + Prime + Disney+ Hotstar",
+    planType: "Premium",
+    features: ["Unlimited Data", "Netflix Premium", "Amazon Prime", "Disney+ Hotstar", "Free Router", "24/7 Support"],
+    subscribers: 3250,
+    rating: 4.8,
     isActive: true,
     createdAt: "2024-01-15T10:00:00Z"
   },
   {
     id: 2,
     name: "JioFiber Premium",
+    title: "JioFiber Premium - 6 Months",
     provider: "jio",
     speed: "100 Mbps",
-    price: 699,
-    validity: 30,
-    description: "High-speed internet for streaming and gaming",
-    features: ["Unlimited Data", "Netflix Basic", "Disney+ Hotstar", "Free Router"],
+    price: 3999,
+    validity: "6 Months",
+    dataLimit: "Unlimited",
+    description: "High-speed internet perfect for streaming, gaming, and work from home requirements",
+    benefits: "Netflix Basic + Disney+ Hotstar",
+    planType: "Premium",
+    features: ["Unlimited Data", "Netflix Basic", "Disney+ Hotstar", "Free Router", "Installation Support"],
     subscribers: 2100,
     rating: 4.5,
     isActive: true,
@@ -367,29 +380,109 @@ export const generateDummyServicePlans = (): ServicePlan[] => [
   },
   {
     id: 3,
-    name: "Airtel Xstream Essential",
+    name: "Airtel Xstream Fiber",
+    title: "Airtel Xstream Fiber - Premium",
     provider: "airtel",
-    speed: "40 Mbps",
-    price: 499,
-    validity: 30,
-    description: "Reliable connectivity for home and work",
-    features: ["Unlimited Data", "Airtel Xstream App", "Free Installation"],
-    subscribers: 950,
-    rating: 4.3,
+    speed: "200 Mbps",
+    price: 5999,
+    validity: "12 Months",
+    dataLimit: "Unlimited",
+    description: "Ultra-fast fiber connection with premium OTT benefits and superior customer service",
+    benefits: "Airtel Xstream + Netflix + Amazon Prime",
+    planType: "Premium",
+    features: ["Unlimited Data", "Airtel Xstream Premium", "Netflix", "Amazon Prime", "Free Installation", "Wi-Fi 6 Router"],
+    subscribers: 1850,
+    rating: 4.6,
     isActive: true,
     createdAt: "2024-01-15T10:00:00Z"
   },
   {
     id: 4,
-    name: "BSNL Fiber Basic",
+    name: "BSNL Fiber Enterprise",
+    title: "BSNL Fiber Enterprise - Business",
+    provider: "bsnl",
+    speed: "500 Mbps",
+    price: 12999,
+    validity: "12 Months",
+    dataLimit: "Unlimited",
+    description: "Enterprise-grade fiber solution with dedicated support and guaranteed uptime for businesses",
+    benefits: "Dedicated Support + Static IP + Business Email",
+    planType: "Enterprise",
+    features: ["Unlimited Data", "Static IP", "Dedicated Support", "99.9% Uptime SLA", "Business Email", "Advanced Router"],
+    subscribers: 450,
+    rating: 4.4,
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z"
+  },
+  {
+    id: 5,
+    name: "Airtel Basic",
+    title: "Airtel Basic - Starter Pack",
+    provider: "airtel",
+    speed: "40 Mbps",
+    price: 599,
+    validity: 30,
+    dataLimit: "500 GB",
+    description: "Perfect starter plan for basic internet needs with essential OTT benefits",
+    benefits: "Airtel Xstream App",
+    planType: "Basic",
+    features: ["500 GB Data", "Airtel Xstream App", "Free Installation", "Email Support"],
+    subscribers: 950,
+    rating: 4.1,
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z"
+  },
+  {
+    id: 6,
+    name: "My Internet Pro",
+    title: "My Internet Pro - Ultimate",
+    provider: "my-internet",
+    speed: "1 Gbps",
+    price: 15999,
+    validity: "12 Months",
+    dataLimit: "Unlimited",
+    description: "Ultra-premium gigabit connection for power users, content creators, and tech enthusiasts",
+    benefits: "All OTT Apps + Gaming Server Access",
+    planType: "Enterprise",
+    features: ["1 Gbps Speed", "All OTT Subscriptions", "Gaming Server Access", "Priority Support", "Wi-Fi 6E Router", "Free Setup"],
+    subscribers: 125,
+    rating: 4.9,
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z"
+  },
+  {
+    id: 7,
+    name: "BSNL Basic",
+    title: "BSNL Basic - Economic",
     provider: "bsnl",
     speed: "25 Mbps",
-    price: 329,
+    price: 299,
     validity: 30,
-    description: "Budget-friendly option for basic browsing",
-    features: ["500 GB FUP", "Email Support", "Basic Router"],
+    dataLimit: "200 GB",
+    description: "Most affordable option for basic browsing and essential connectivity needs",
+    benefits: "Email Support",
+    planType: "Basic",
+    features: ["200 GB Data", "Basic Router", "Email Support", "Standard Installation"],
     subscribers: 680,
     rating: 3.8,
+    isActive: true,
+    createdAt: "2024-01-15T10:00:00Z"
+  },
+  {
+    id: 8,
+    name: "JioFiber Entertainment",
+    title: "JioFiber Entertainment - Family Pack",
+    provider: "jio",
+    speed: "150 Mbps",
+    price: 1299,
+    validity: 90,
+    dataLimit: "Unlimited",
+    description: "Perfect family entertainment package with multiple OTT subscriptions and high-speed internet",
+    benefits: "Netflix + Prime + 10 OTT Apps",
+    planType: "Gold",
+    features: ["Unlimited Data", "Netflix Standard", "Amazon Prime", "Disney+ Hotstar", "Sony LIV", "ZEE5", "Family Router"],
+    subscribers: 1650,
+    rating: 4.7,
     isActive: true,
     createdAt: "2024-01-15T10:00:00Z"
   }

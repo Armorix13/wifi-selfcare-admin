@@ -8,10 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Wifi, Star, Users, Trash2, Edit, CheckCircle, Zap, Shield, Globe, TrendingUp, Award, Crown } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Wifi, Star, Users, Trash2, Edit, CheckCircle, Zap, Shield, Globe, TrendingUp, Award, Crown, 
+  Eye, Plus, Search, Filter, BarChart3, DollarSign, Calendar, Activity, ChevronLeft, ChevronRight,
+  Package, Sparkles, Target, Clock, ThumbsUp, Building2, Home, Smartphone, MonitorSpeaker
+} from "lucide-react";
 import { z } from "zod";
-import { generateDummyServicePlans, type ServicePlan } from "@/lib/dummyData";
+import { dummyServicePlans, type ServicePlan } from "@/lib/dummyData";
 
 // Local type definitions
 const insertServicePlanSchema = z.object({
@@ -30,13 +38,56 @@ export default function Plans() {
   const { toast } = useToast();
 
   // Load dummy data
-  const [plans, setPlans] = useState(generateDummyServicePlans());
-
+  const [plans, setPlans] = useState(dummyServicePlans);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState<string>("all");
+  const [selectedPlanType, setSelectedPlanType] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ServicePlan | null>(null);
+  const [viewPlan, setViewPlan] = useState<ServicePlan | null>(null);
+  
+  const itemsPerPage = 6;
   const isLoading = false;
+
+  // Calculate analytics
+  const analyticsData = {
+    totalPlans: plans.length,
+    totalSubscribers: plans.reduce((sum, plan) => sum + plan.subscribers, 0),
+    averageRating: (plans.reduce((sum, plan) => sum + plan.rating, 0) / plans.length).toFixed(1),
+    totalRevenue: plans.reduce((sum, plan) => sum + (plan.price * plan.subscribers), 0),
+    activePlans: plans.filter(plan => plan.isActive).length,
+    premiumPlans: plans.filter(plan => plan.planType === 'Premium' || plan.planType === 'Gold').length,
+    providers: [...new Set(plans.map(plan => plan.provider))].length,
+    averagePrice: Math.round(plans.reduce((sum, plan) => sum + plan.price, 0) / plans.length)
+  };
+
+  // Filter plans
+  const filteredPlans = plans.filter(plan => {
+    const matchesSearch = plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.provider.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesProvider = selectedProvider === "all" || plan.provider === selectedProvider;
+    const matchesPlanType = selectedPlanType === "all" || plan.planType === selectedPlanType;
+    
+    return matchesSearch && matchesProvider && matchesPlanType;
+  });
+
+  // Paginate results
+  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
+  const paginatedPlans = filteredPlans.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const form = useForm<InsertServicePlan>({
     resolver: zodResolver(insertServicePlanSchema),
-    defaultValues: {
+    defaultValues: editingPlan ? {
+      name: editingPlan.name,
+      provider: editingPlan.provider,
+      speed: editingPlan.speed,
+      price: editingPlan.price,
+      validity: typeof editingPlan.validity === 'string' ? 30 : editingPlan.validity,
+      description: editingPlan.description,
+      isActive: editingPlan.isActive,
+    } : {
       name: "",
       provider: "jio",
       speed: "",
@@ -48,19 +99,40 @@ export default function Plans() {
   });
 
   const onSubmit = (data: InsertServicePlan) => {
-    const newPlan = {
-      id: Math.max(...plans.map(p => p.id)) + 1,
-      ...data,
-      features: ["Unlimited Data", "24/7 Support"],
-      subscribers: 0,
-      rating: 4.0,
-      createdAt: new Date().toISOString()
-    };
-    setPlans([...plans, newPlan]);
-    toast({
-      title: "Success",
-      description: "Service plan added successfully",
-    });
+    if (editingPlan) {
+      // Update existing plan
+      const updatedPlan = {
+        ...editingPlan,
+        ...data,
+        validity: data.validity,
+      };
+      setPlans(plans.map(p => p.id === editingPlan.id ? updatedPlan : p));
+      toast({
+        title: "Success",
+        description: "Service plan updated successfully",
+      });
+      setEditingPlan(null);
+    } else {
+      // Create new plan
+      const newPlan = {
+        id: Math.max(...plans.map(p => p.id)) + 1,
+        ...data,
+        title: data.name,
+        planType: 'Basic' as const,
+        dataLimit: 'Unlimited',
+        benefits: '24/7 Support',
+        features: ["Unlimited Data", "24/7 Support"],
+        subscribers: 0,
+        rating: 4.0,
+        createdAt: new Date().toISOString()
+      };
+      setPlans([...plans, newPlan]);
+      toast({
+        title: "Success",
+        description: "Service plan created successfully",
+      });
+    }
+    setIsCreateOpen(false);
     form.reset();
   };
 
@@ -171,202 +243,367 @@ export default function Plans() {
   return (
     <MainLayout title="Service Plans">
       <div className="space-y-6">
-        {/* Add Plan Form */}
-        <Card className="border border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Add New Service Plan
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Analytics Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="provider">Service Provider</Label>
-                <Select
-                  value={form.watch("provider")}
-                  onValueChange={(value) => form.setValue("provider", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="jio">Jio Fiber</SelectItem>
-                    <SelectItem value="airtel">Airtel Xstream</SelectItem>
-                    <SelectItem value="bsnl">BSNL Broadband</SelectItem>
-                    <SelectItem value="my-internet">My Internet</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.formState.errors.provider && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.provider.message}</p>
-                )}
+                <p className="text-blue-600 text-sm font-medium">Total Plans</p>
+                <p className="text-2xl font-bold text-blue-900">{analyticsData.totalPlans}</p>
+                <p className="text-blue-600 text-xs">{analyticsData.activePlans} active</p>
               </div>
-              
+              <Package className="w-8 h-8 text-blue-600" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="name">Plan Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter plan name"
-                  {...form.register("name")}
-                />
-                {form.formState.errors.name && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.name.message}</p>
-                )}
+                <p className="text-green-600 text-sm font-medium">Total Subscribers</p>
+                <p className="text-2xl font-bold text-green-900">{analyticsData.totalSubscribers.toLocaleString()}</p>
+                <p className="text-green-600 text-xs">Across all plans</p>
               </div>
-              
+              <Users className="w-8 h-8 text-green-600" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="speed">Speed</Label>
-                <Input
-                  id="speed"
-                  placeholder="e.g., 100 Mbps"
-                  {...form.register("speed")}
-                />
-                {form.formState.errors.speed && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.speed.message}</p>
-                )}
+                <p className="text-purple-600 text-sm font-medium">Total Revenue</p>
+                <p className="text-2xl font-bold text-purple-900">{formatPrice(analyticsData.totalRevenue)}</p>
+                <p className="text-purple-600 text-xs">Monthly estimated</p>
               </div>
-              
+              <DollarSign className="w-8 h-8 text-purple-600" />
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200">
+            <div className="flex items-center justify-between">
               <div>
-                <Label htmlFor="price">Price (₹)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  placeholder="Enter price"
-                  {...form.register("price", { valueAsNumber: true })}
-                />
-                {form.formState.errors.price && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.price.message}</p>
-                )}
+                <p className="text-yellow-600 text-sm font-medium">Avg Rating</p>
+                <p className="text-2xl font-bold text-yellow-900">{analyticsData.averageRating}</p>
+                <p className="text-yellow-600 text-xs">Customer satisfaction</p>
               </div>
-              
-              <div>
-                <Label htmlFor="validity">Validity (Days)</Label>
-                <Input
-                  id="validity"
-                  type="number"
-                  placeholder="e.g., 30"
-                  {...form.register("validity", { valueAsNumber: true })}
-                />
-                {form.formState.errors.validity && (
-                  <p className="text-sm text-red-600 mt-1">{form.formState.errors.validity.message}</p>
-                )}
+              <Star className="w-8 h-8 text-yellow-600" />
+            </div>
+          </Card>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <Card className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
+                <Crown className="w-6 h-6 text-blue-600" />
               </div>
-              
-              <div className="flex items-end">
-                <Button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  Add Plan
-                </Button>
+              <p className="text-sm text-gray-600">Premium Plans</p>
+              <p className="text-xl font-bold">{analyticsData.premiumPlans}</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
+                <Building2 className="w-6 h-6 text-green-600" />
               </div>
-            </form>
-          </CardContent>
+              <p className="text-sm text-gray-600">Providers</p>
+              <p className="text-xl font-bold">{analyticsData.providers}</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
+                <Target className="w-6 h-6 text-purple-600" />
+              </div>
+              <p className="text-sm text-gray-600">Avg Price</p>
+              <p className="text-xl font-bold">{formatPrice(analyticsData.averagePrice)}</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mx-auto mb-3">
+                <Activity className="w-6 h-6 text-orange-600" />
+              </div>
+              <p className="text-sm text-gray-600">Active Rate</p>
+              <p className="text-xl font-bold">{Math.round((analyticsData.activePlans / analyticsData.totalPlans) * 100)}%</p>
+            </div>
+          </div>
         </Card>
 
-        {/* Modern Plans Grid */}
+        {/* Controls Bar */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+            {/* Search */}
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search plans..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filters */}
+            <div className="flex gap-2">
+              <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Providers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Providers</SelectItem>
+                  <SelectItem value="jio">Jio Fiber</SelectItem>
+                  <SelectItem value="airtel">Airtel Xstream</SelectItem>
+                  <SelectItem value="bsnl">BSNL</SelectItem>
+                  <SelectItem value="my-internet">My Internet</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedPlanType} onValueChange={setSelectedPlanType}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Basic">Basic</SelectItem>
+                  <SelectItem value="Premium">Premium</SelectItem>
+                  <SelectItem value="Gold">Gold</SelectItem>
+                  <SelectItem value="Enterprise">Enterprise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Add Plan Button */}
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Plan
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{editingPlan ? 'Edit Plan' : 'Create New Plan'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Plan Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter plan name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="provider"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Provider</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select provider" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="jio">Jio Fiber</SelectItem>
+                              <SelectItem value="airtel">Airtel Xstream</SelectItem>
+                              <SelectItem value="bsnl">BSNL</SelectItem>
+                              <SelectItem value="my-internet">My Internet</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="speed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Speed</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., 100 Mbps" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price (₹)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="Enter price" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="validity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Validity (Days)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="e.g., 30" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Plan description..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end gap-3">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      {editingPlan ? 'Update Plan' : 'Create Plan'}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan: any) => {
+          {paginatedPlans.map((plan: ServicePlan) => {
             const providerInfo = getProviderInfo(plan.provider);
             return (
-              <Card key={plan.id} className="group hover:shadow-xl transition-all duration-300 border border-slate-200 overflow-hidden">
+              <Card key={plan.id} className="group hover:shadow-xl transition-all duration-300 border border-slate-200 overflow-hidden relative">
+                {/* Plan Type Badge */}
+                {plan.planType && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <Badge 
+                      className={`
+                        ${plan.planType === 'Enterprise' ? 'bg-purple-600 text-white' : ''}
+                        ${plan.planType === 'Premium' ? 'bg-blue-600 text-white' : ''}
+                        ${plan.planType === 'Gold' ? 'bg-yellow-600 text-white' : ''}
+                        ${plan.planType === 'Basic' ? 'bg-gray-600 text-white' : ''}
+                      `}
+                    >
+                      {plan.planType}
+                    </Badge>
+                  </div>
+                )}
+
                 {/* Provider Header */}
-                <div className={`bg-gradient-to-r ${providerInfo.gradientFrom} ${providerInfo.gradientTo} p-4`}>
+                <div className={`bg-gradient-to-r ${providerInfo.gradientFrom} ${providerInfo.gradientTo} p-6`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">{providerInfo.logo}</span>
+                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                        <span className="text-white font-bold">{providerInfo.logo}</span>
                       </div>
                       <div>
-                        <p className="text-white/90 text-sm font-medium">{providerInfo.name}</p>
+                        <p className="text-white font-medium">{providerInfo.name}</p>
                         <div className="flex items-center space-x-1">
-                          {getRatingBadge(plan.rating)}
-                          <span className="text-white/80 text-xs">{plan.rating}</span>
+                          <Star className="w-4 h-4 text-yellow-300 fill-current" />
+                          <span className="text-white/90 text-sm">{plan.rating}</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-white font-bold text-xl">{formatPrice(plan.price)}</p>
-                      <p className="text-white/80 text-xs">per month</p>
+                      <p className="text-white font-bold text-2xl">{formatPrice(plan.price)}</p>
+                      <p className="text-white/80 text-sm">{plan.validity}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Plan Details */}
+                {/* Plan Content */}
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     {/* Plan Name & Speed */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">{plan.name}</h3>
-                        <div className="flex items-center space-x-1">
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">{plan.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
                           {getSpeedIcon(plan.speed)}
-                          <span className="text-sm font-medium text-gray-600">{plan.speed}</span>
+                          <span className="font-semibold text-blue-600">{plan.speed}</span>
                         </div>
+                        <span className="text-sm text-gray-500">{plan.dataLimit}</span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
                     </div>
 
-                    {/* Features */}
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium text-gray-900 flex items-center">
-                        <CheckCircle className="w-4 h-4 text-green-500 mr-1" />
-                        Features
-                      </h4>
-                      <div className="grid grid-cols-1 gap-1">
-                        {plan.features?.map((feature: string, index: number) => (
-                          <div key={index} className="flex items-center text-sm text-gray-600">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></div>
-                            {feature}
-                          </div>
-                        ))}
+                    {/* Description */}
+                    <p className="text-gray-600 text-sm line-clamp-2">{plan.description}</p>
+
+                    {/* Benefits */}
+                    {plan.benefits && (
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <p className="text-green-700 text-sm font-medium">✨ {plan.benefits}</p>
                       </div>
-                    </div>
+                    )}
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                       <div className="text-center">
-                        <div className="flex items-center justify-center mb-1">
-                          <Users className="w-4 h-4 text-blue-500 mr-1" />
-                          <span className="text-xs text-gray-500">Subscribers</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {plan.subscribers?.toLocaleString() || '0'}
-                        </p>
+                        <p className="text-sm text-gray-500">Subscribers</p>
+                        <p className="font-bold text-lg">{plan.subscribers.toLocaleString()}</p>
                       </div>
                       <div className="text-center">
-                        <div className="flex items-center justify-center mb-1">
-                          <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                          <span className="text-xs text-gray-500">Rating</span>
+                        <p className="text-sm text-gray-500">Rating</p>
+                        <div className="flex items-center justify-center space-x-1">
+                          {getRatingBadge(plan.rating)}
+                          <span className="font-bold text-lg">{plan.rating}</span>
                         </div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {plan.rating || '4.0'}/5
-                        </p>
                       </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* Action Buttons */}
                     <div className="flex space-x-2 pt-4">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex-1 text-xs"
-                        onClick={() => {
-                          toast({
-                            title: "Edit Plan",
-                            description: "Edit functionality will be added soon",
-                          });
-                        }}
+                        className="flex-1"
+                        onClick={() => window.open(`/plans/${plan.id}`, '_blank')}
                       >
-                        <Edit className="w-3 h-3 mr-1" />
-                        Edit
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => handleDelete(plan.id)}
+                        onClick={() => {
+                          setEditingPlan(plan);
+                          setIsCreateOpen(true);
+                        }}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(plan.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
@@ -375,6 +612,111 @@ export default function Plans() {
             );
           })}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-700">
+              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredPlans.length)} of {filteredPlans.length} plans
+            </p>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* View Plan Modal */}
+        <Dialog open={viewPlan !== null} onOpenChange={() => setViewPlan(null)}>
+          <DialogContent className="max-w-2xl">
+            {viewPlan && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getProviderInfo(viewPlan.provider).color}`}>
+                      <span className="text-white font-bold text-sm">{getProviderInfo(viewPlan.provider).logo}</span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">{viewPlan.title || viewPlan.name}</h2>
+                      <p className="text-sm text-gray-500">{getProviderInfo(viewPlan.provider).name}</p>
+                    </div>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  {/* Key Details */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <Zap className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Speed</p>
+                      <p className="font-bold">{viewPlan.speed}</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-lg">
+                      <DollarSign className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Price</p>
+                      <p className="font-bold">{formatPrice(viewPlan.price)}</p>
+                    </div>
+                    <div className="text-center p-4 bg-purple-50 rounded-lg">
+                      <Calendar className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Validity</p>
+                      <p className="font-bold">{viewPlan.validity}</p>
+                    </div>
+                    <div className="text-center p-4 bg-orange-50 rounded-lg">
+                      <Users className="w-6 h-6 text-orange-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Subscribers</p>
+                      <p className="font-bold">{viewPlan.subscribers.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Description</h3>
+                    <p className="text-gray-600">{viewPlan.description}</p>
+                  </div>
+
+                  {/* Features */}
+                  <div>
+                    <h3 className="font-semibold mb-3">Features</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {viewPlan.features.map((feature, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Benefits */}
+                  {viewPlan.benefits && (
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
+                      <h3 className="font-semibold mb-2 text-green-700">Special Benefits</h3>
+                      <p className="text-green-600">{viewPlan.benefits}</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
