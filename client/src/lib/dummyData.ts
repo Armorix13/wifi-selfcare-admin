@@ -64,6 +64,52 @@ export interface ServicePlan {
   planType?: 'Basic' | 'Premium' | 'Enterprise' | 'Gold';
 }
 
+export interface NewInstallation {
+  id: number;
+  customerName: string;
+  email: string;
+  phone: string;
+  address: string;
+  location: string;
+  preferredPlan: string | null;
+  requestType: 'residential' | 'commercial';
+  status: 'pending' | 'confirmed' | 'rejected';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  estimatedCost: number | null;
+  notes: string | null;
+  assignedEngineerId: number | null;
+  assignedEngineerName: string | null;
+  scheduledDate: string | null;
+  installationDate: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Lead {
+  id: number;
+  name: string;
+  email: string | null;
+  phone: string;
+  location: string | null;
+  source: 'website' | 'ivr' | 'whatsapp' | 'referral' | 'social_media';
+  inquiryType: 'general' | 'pricing' | 'technical' | 'support';
+  message: string | null;
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  isContactedByManager: boolean;
+  assignedTo: number | null;
+  assignedToName: string | null;
+  followUpDate: string | null;
+  lastContactDate: string | null;
+  conversionProbability: number;
+  estimatedValue: number | null;
+  leadScore: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Complaint {
   id: number;
   customerId: number;
@@ -1137,6 +1183,257 @@ export const generateDummyProductFeedback = (): ProductFeedback[] => [
   }
 ];
 
+// Generate New Installations dummy data
+export const generateDummyNewInstallations = (): NewInstallation[] => [
+  {
+    id: 1,
+    customerName: "Rajesh Kumar",
+    email: "rajesh.kumar@gmail.com",
+    phone: "+91 98765 43210",
+    address: "123 Tech Park Road, Sector 5",
+    location: "Bangalore",
+    preferredPlan: "Jio Fiber 100 Mbps",
+    requestType: "residential",
+    status: "pending",
+    priority: "medium",
+    estimatedCost: 3500,
+    notes: "Customer requested evening installation between 4-6 PM",
+    assignedEngineerId: null,
+    assignedEngineerName: null,
+    scheduledDate: null,
+    installationDate: null,
+    rejectionReason: null,
+    createdAt: "2024-01-25T10:30:00Z",
+    updatedAt: "2024-01-25T10:30:00Z"
+  },
+  {
+    id: 2,
+    customerName: "Priya Sharma",
+    email: "priya.sharma@yahoo.com",
+    phone: "+91 87654 32109",
+    address: "456 Residential Complex, Phase 2",
+    location: "Mumbai",
+    preferredPlan: "BSNL Broadband 50 Mbps",
+    requestType: "residential",
+    status: "confirmed",
+    priority: "high",
+    estimatedCost: 2800,
+    notes: "Pre-wiring already done by customer",
+    assignedEngineerId: 1,
+    assignedEngineerName: "John Doe",
+    scheduledDate: "2024-02-05T09:00:00Z",
+    installationDate: null,
+    rejectionReason: null,
+    createdAt: "2024-01-22T14:15:00Z",
+    updatedAt: "2024-01-26T11:20:00Z"
+  },
+  {
+    id: 3,
+    customerName: "Amit Patel",
+    email: "amit.patel@company.co.in",
+    phone: "+91 76543 21098",
+    address: "789 Business Center, Commercial Zone",
+    location: "Delhi NCR",
+    preferredPlan: "Airtel Corporate 500 Mbps",
+    requestType: "commercial",
+    status: "rejected",
+    priority: "low",
+    estimatedCost: null,
+    notes: "Commercial installation requires additional approvals",
+    assignedEngineerId: null,
+    assignedEngineerName: null,
+    scheduledDate: null,
+    installationDate: null,
+    rejectionReason: "Infrastructure not suitable for high-speed connection",
+    createdAt: "2024-01-20T16:45:00Z",
+    updatedAt: "2024-01-24T09:30:00Z"
+  },
+  {
+    id: 4,
+    customerName: "Sunita Verma",
+    email: "sunita.verma@hotmail.com",
+    phone: "+91 91234 56789",
+    address: "321 Garden View Apartments",
+    location: "Chennai",
+    preferredPlan: "My Internet Premium 200 Mbps",
+    requestType: "residential",
+    status: "confirmed",
+    priority: "urgent",
+    estimatedCost: 4200,
+    notes: "Customer is relocating, needs urgent installation",
+    assignedEngineerId: 4,
+    assignedEngineerName: "Ravi Singh",
+    scheduledDate: "2024-02-01T08:00:00Z",
+    installationDate: null,
+    rejectionReason: null,
+    createdAt: "2024-01-28T11:20:00Z",
+    updatedAt: "2024-01-28T15:45:00Z"
+  },
+  {
+    id: 5,
+    customerName: "Vikram Singh",
+    email: "vikram.singh@gmail.com",
+    phone: "+91 98123 45678",
+    address: "654 IT Corridor, Tech City",
+    location: "Hyderabad",
+    preferredPlan: "Jio Fiber Business 300 Mbps",
+    requestType: "commercial",
+    status: "pending",
+    priority: "high",
+    estimatedCost: 6800,
+    notes: "Office setup for 20 employees, requires multiple access points",
+    assignedEngineerId: null,
+    assignedEngineerName: null,
+    scheduledDate: null,
+    installationDate: null,
+    rejectionReason: null,
+    createdAt: "2024-01-29T09:15:00Z",
+    updatedAt: "2024-01-29T09:15:00Z"
+  }
+];
+
+// Generate Leads dummy data
+export const generateDummyLeads = (): Lead[] => [
+  {
+    id: 1,
+    name: "Deepak Agarwal",
+    email: "deepak.agarwal@email.com",
+    phone: "+91 99887 66554",
+    location: "Pune",
+    source: "website",
+    inquiryType: "pricing",
+    message: "Looking for high-speed internet plans for home office",
+    status: "new",
+    priority: "medium",
+    isContactedByManager: false,
+    assignedTo: null,
+    assignedToName: null,
+    followUpDate: "2024-02-02T10:00:00Z",
+    lastContactDate: null,
+    conversionProbability: 60,
+    estimatedValue: 12000,
+    leadScore: 75,
+    notes: "Interested in 100+ Mbps plans",
+    createdAt: "2024-01-30T14:22:00Z",
+    updatedAt: "2024-01-30T14:22:00Z"
+  },
+  {
+    id: 2,
+    name: "Kavya Reddy",
+    email: "kavya.reddy@gmail.com",
+    phone: "+91 88776 65443",
+    location: "Bangalore",
+    source: "ivr",
+    inquiryType: "general",
+    message: null,
+    status: "contacted",
+    priority: "high",
+    isContactedByManager: true,
+    assignedTo: 1,
+    assignedToName: "Admin User",
+    followUpDate: "2024-02-05T15:30:00Z",
+    lastContactDate: "2024-01-29T16:45:00Z",
+    conversionProbability: 85,
+    estimatedValue: 18000,
+    leadScore: 90,
+    notes: "Very interested, comparing with competitors",
+    createdAt: "2024-01-28T11:30:00Z",
+    updatedAt: "2024-01-29T16:45:00Z"
+  },
+  {
+    id: 3,
+    name: "Mohit Gupta",
+    email: null,
+    phone: "+91 77665 54332",
+    location: "Gurgaon",
+    source: "whatsapp",
+    inquiryType: "technical",
+    message: "Need fiber connection for gaming, low latency required",
+    status: "qualified",
+    priority: "medium",
+    isContactedByManager: true,
+    assignedTo: 1,
+    assignedToName: "Admin User",
+    followUpDate: "2024-02-03T11:00:00Z",
+    lastContactDate: "2024-01-27T14:20:00Z",
+    conversionProbability: 70,
+    estimatedValue: 15000,
+    leadScore: 80,
+    notes: "Gaming enthusiast, prefers fiber over cable",
+    createdAt: "2024-01-26T09:45:00Z",
+    updatedAt: "2024-01-27T14:20:00Z"
+  },
+  {
+    id: 4,
+    name: "Ananya Joshi",
+    email: "ananya.joshi@company.com",
+    phone: "+91 66554 43321",
+    location: "Mumbai",
+    source: "referral",
+    inquiryType: "pricing",
+    message: "Referred by existing customer, need commercial plan",
+    status: "converted",
+    priority: "high",
+    isContactedByManager: true,
+    assignedTo: 1,
+    assignedToName: "Admin User",
+    followUpDate: null,
+    lastContactDate: "2024-01-25T10:15:00Z",
+    conversionProbability: 100,
+    estimatedValue: 25000,
+    leadScore: 100,
+    notes: "Successfully converted to commercial plan subscription",
+    createdAt: "2024-01-24T08:30:00Z",
+    updatedAt: "2024-01-25T10:15:00Z"
+  },
+  {
+    id: 5,
+    name: "Suresh Yadav",
+    email: "suresh.yadav@yahoo.com",
+    phone: "+91 55443 32210",
+    location: "Jaipur",
+    source: "social_media",
+    inquiryType: "support",
+    message: "Saw your Facebook ad, interested in rural connectivity",
+    status: "closed",
+    priority: "low",
+    isContactedByManager: false,
+    assignedTo: null,
+    assignedToName: null,
+    followUpDate: null,
+    lastContactDate: "2024-01-23T13:45:00Z",
+    conversionProbability: 20,
+    estimatedValue: null,
+    leadScore: 30,
+    notes: "Not in service area, closed after initial contact",
+    createdAt: "2024-01-22T16:20:00Z",
+    updatedAt: "2024-01-23T13:45:00Z"
+  },
+  {
+    id: 6,
+    name: "Ravi Kumar",
+    email: "ravi.kumar@tech.in",
+    phone: "+91 44332 21109",
+    location: "Chennai",
+    source: "website",
+    inquiryType: "technical",
+    message: "Need dedicated IP for server hosting",
+    status: "new",
+    priority: "urgent",
+    isContactedByManager: false,
+    assignedTo: null,
+    assignedToName: null,
+    followUpDate: "2024-02-01T09:00:00Z",
+    lastContactDate: null,
+    conversionProbability: 80,
+    estimatedValue: 35000,
+    leadScore: 85,
+    notes: "Requires technical consultation for server hosting setup",
+    createdAt: "2024-01-30T17:10:00Z",
+    updatedAt: "2024-01-30T17:10:00Z"
+  }
+];
+
 // Export data arrays for easy access
 export const dummyUsers = generateDummyUsers();
 export const dummyCustomers = generateDummyCustomers();
@@ -1149,3 +1446,5 @@ export const dashboardStats = generateDashboardStats();
 export const dummyProducts = generateDummyProducts();
 export const dummyOrders = generateDummyOrders();
 export const dummyProductFeedback = generateDummyProductFeedback();
+export const dummyNewInstallations = generateDummyNewInstallations();
+export const dummyLeads = generateDummyLeads();

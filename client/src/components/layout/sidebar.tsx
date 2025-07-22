@@ -21,6 +21,8 @@ import {
   Sparkles,
   X,
   Package,
+  HardHat,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +39,8 @@ const navigation = [
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
   { name: "Products", href: "/products", icon: Package, permission: "manage-products" },
   { name: "Service Plans", href: "/plans", icon: CreditCard, permission: "manage-plans" },
+  { name: "New Installation", href: "/installations", icon: HardHat, permission: "manage-installations" },
+  { name: "Leads", href: "/leads", icon: Phone, permission: "manage-leads" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permission: "view-analytics" },
   { name: "Notifications", href: "/notifications", icon: Bell, permission: "manage-notifications" },
   { name: "Support & Rating", href: "/support", icon: Headphones, permission: "manage-support" },

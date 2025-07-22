@@ -157,6 +157,55 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// New Installation Requests table
+export const newInstallations = pgTable("new_installations", {
+  id: serial("id").primaryKey(),
+  customerName: text("customer_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  address: text("address").notNull(),
+  location: text("location").notNull(),
+  preferredPlan: text("preferred_plan"),
+  planId: integer("plan_id"),
+  requestType: text("request_type").notNull().default("residential"), // residential, commercial
+  status: text("status").notNull().default("pending"), // pending, confirmed, rejected, installed
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  estimatedCost: integer("estimated_cost"),
+  notes: text("notes"),
+  assignedEngineerId: integer("assigned_engineer_id"),
+  scheduledDate: timestamp("scheduled_date"),
+  installationDate: timestamp("installation_date"),
+  rejectionReason: text("rejection_reason"),
+  documents: jsonb("documents"), // array of document URLs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Leads table for inquiries and prospects
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone").notNull(),
+  location: text("location"),
+  source: text("source").notNull().default("website"), // website, ivr, whatsapp, referral, social_media
+  inquiryType: text("inquiry_type").notNull().default("general"), // general, pricing, technical, support
+  message: text("message"),
+  status: text("status").notNull().default("new"), // new, contacted, qualified, converted, closed
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  isContactedByManager: boolean("is_contacted_by_manager").default(false),
+  assignedTo: integer("assigned_to"), // user id of assigned agent/manager
+  followUpDate: timestamp("follow_up_date"),
+  lastContactDate: timestamp("last_contact_date"),
+  conversionProbability: integer("conversion_probability").default(0), // 0-100%
+  estimatedValue: integer("estimated_value"),
+  tags: jsonb("tags"), // array of tags
+  notes: text("notes"),
+  leadScore: integer("lead_score").default(0), // calculated lead scoring
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -211,6 +260,18 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
   createdAt: true,
 });
 
+export const insertNewInstallationSchema = createInsertSchema(newInstallations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Auth schema
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -239,6 +300,10 @@ export type SystemSettings = typeof systemSettings.$inferSelect;
 export type InsertSystemSettings = z.infer<typeof insertSystemSettingsSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type NewInstallation = typeof newInstallations.$inferSelect;
+export type InsertNewInstallation = z.infer<typeof insertNewInstallationSchema>;
+export type Lead = typeof leads.$inferSelect;
+export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
 
 // Additional validation schemas for API endpoints
@@ -289,8 +354,56 @@ export const dashboardStatsSchema = z.object({
   monthlyRevenue: z.number(),
 });
 
+// Additional validation schemas for New Installation and Leads
+export const createNewInstallationSchema = insertNewInstallationSchema.extend({
+  customerName: z.string().min(1, "Customer name is required"),
+  email: z.string().email("Valid email is required"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  address: z.string().min(1, "Address is required"),
+  location: z.string().min(1, "Location is required"),
+  status: z.enum(["pending", "confirmed", "rejected", "installed"]),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+});
+
+export const updateNewInstallationSchema = z.object({
+  status: z.enum(["pending", "confirmed", "rejected", "installed"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  assignedEngineerId: z.number().optional(),
+  scheduledDate: z.date().optional(),
+  installationDate: z.date().optional(),
+  rejectionReason: z.string().optional(),
+  notes: z.string().optional(),
+  estimatedCost: z.number().optional(),
+});
+
+export const createLeadSchema = insertLeadSchema.extend({
+  name: z.string().min(1, "Name is required"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  source: z.enum(["website", "ivr", "whatsapp", "referral", "social_media"]),
+  inquiryType: z.enum(["general", "pricing", "technical", "support"]),
+  status: z.enum(["new", "contacted", "qualified", "converted", "closed"]),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+});
+
+export const updateLeadSchema = z.object({
+  status: z.enum(["new", "contacted", "qualified", "converted", "closed"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  isContactedByManager: z.boolean().optional(),
+  assignedTo: z.number().optional(),
+  followUpDate: z.date().optional(),
+  lastContactDate: z.date().optional(),
+  conversionProbability: z.number().min(0).max(100).optional(),
+  estimatedValue: z.number().optional(),
+  notes: z.string().optional(),
+  leadScore: z.number().min(0).max(100).optional(),
+});
+
 export type CreateComplaint = z.infer<typeof createComplaintSchema>;
 export type UpdateComplaint = z.infer<typeof updateComplaintSchema>;
 export type CreateEngineer = z.infer<typeof createEngineerSchema>;
 export type CreateSupportTicket = z.infer<typeof createSupportTicketSchema>;
+export type CreateNewInstallation = z.infer<typeof createNewInstallationSchema>;
+export type UpdateNewInstallation = z.infer<typeof updateNewInstallationSchema>;
+export type CreateLead = z.infer<typeof createLeadSchema>;
+export type UpdateLead = z.infer<typeof updateLeadSchema>;
 export type DashboardStats = z.infer<typeof dashboardStatsSchema>;

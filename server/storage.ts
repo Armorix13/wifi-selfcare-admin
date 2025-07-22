@@ -6,6 +6,8 @@ import {
   complaints,
   notifications,
   supportTickets,
+  newInstallations,
+  leads,
   type User,
   type InsertUser,
   type Customer,
@@ -20,6 +22,10 @@ import {
   type InsertNotification,
   type SupportTicket,
   type InsertSupportTicket,
+  type NewInstallation,
+  type InsertNewInstallation,
+  type Lead,
+  type InsertLead,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -74,6 +80,23 @@ export interface IStorage {
   updateSupportTicket(id: number, ticket: Partial<InsertSupportTicket>): Promise<SupportTicket | undefined>;
   getAllSupportTickets(): Promise<SupportTicket[]>;
 
+  // New Installations
+  getNewInstallation(id: number): Promise<NewInstallation | undefined>;
+  createNewInstallation(installation: InsertNewInstallation): Promise<NewInstallation>;
+  updateNewInstallation(id: number, installation: Partial<InsertNewInstallation>): Promise<NewInstallation | undefined>;
+  deleteNewInstallation(id: number): Promise<boolean>;
+  getAllNewInstallations(): Promise<NewInstallation[]>;
+  getNewInstallationsByStatus(status: string): Promise<NewInstallation[]>;
+
+  // Leads
+  getLead(id: number): Promise<Lead | undefined>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead | undefined>;
+  deleteLead(id: number): Promise<boolean>;
+  getAllLeads(): Promise<Lead[]>;
+  getLeadsByStatus(status: string): Promise<Lead[]>;
+  getLeadsBySource(source: string): Promise<Lead[]>;
+
   // Analytics
   getComplaintStats(): Promise<{
     total: number;
@@ -93,6 +116,8 @@ export class MemStorage implements IStorage {
   private complaints: Map<number, Complaint> = new Map();
   private notifications: Map<number, Notification> = new Map();
   private supportTickets: Map<number, SupportTicket> = new Map();
+  private newInstallations: Map<number, NewInstallation> = new Map();
+  private leads: Map<number, Lead> = new Map();
   
   private userIdCounter = 1;
   private customerIdCounter = 1;
@@ -101,6 +126,8 @@ export class MemStorage implements IStorage {
   private complaintIdCounter = 1;
   private notificationIdCounter = 1;
   private supportTicketIdCounter = 1;
+  private newInstallationIdCounter = 1;
+  private leadIdCounter = 1;
 
   constructor() {
     this.seedData();
