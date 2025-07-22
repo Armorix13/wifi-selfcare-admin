@@ -142,6 +142,72 @@ export interface DashboardStats {
   monthlyRevenue: number;
 }
 
+// Product Management Interfaces
+export interface Product {
+  id: number;
+  name: string;
+  model: string;
+  brand: string;
+  category: 'modem' | 'router' | 'cable' | 'antenna' | 'adapter' | 'switch' | 'extender' | 'fiber-cable' | 'power-supply';
+  productType: 'user-sale' | 'engineer-only';
+  description: string;
+  specifications: {
+    [key: string]: string;
+  };
+  price: number;
+  stock: number;
+  lowStockThreshold: number;
+  status: 'active' | 'inactive' | 'discontinued';
+  images: string[];
+  warranty: string;
+  supplier: string;
+  supplierContact: string;
+  location: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Order {
+  id: number;
+  orderNumber: string;
+  productId: number;
+  productName: string;
+  customerId?: number;
+  customerName?: string;
+  engineerId?: number;
+  engineerName?: string;
+  orderType: 'user-purchase' | 'engineer-request' | 'stock-replenishment';
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  status: 'pending' | 'approved' | 'shipped' | 'delivered' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  deliveryAddress: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  deliveredAt?: string;
+}
+
+export interface ProductFeedback {
+  id: number;
+  productId: number;
+  productName: string;
+  customerId?: number;
+  customerName?: string;
+  engineerId?: number;
+  engineerName?: string;
+  rating: number;
+  title: string;
+  comment: string;
+  pros: string[];
+  cons: string[];
+  wouldRecommend: boolean;
+  verifiedPurchase: boolean;
+  helpfulVotes: number;
+  createdAt: string;
+}
+
 // Dummy data generation functions
 export const generateDummyUsers = (): User[] => [
   {
@@ -685,6 +751,392 @@ export const generateDashboardStats = (): DashboardStats => ({
   monthlyRevenue: 2847650
 });
 
+// Product Management Dummy Data Generators
+export const generateDummyProducts = (): Product[] => [
+  {
+    id: 1,
+    name: "TP-Link Archer AX73 WiFi 6 Router",
+    model: "Archer AX73",
+    brand: "TP-Link",
+    category: "router",
+    productType: "user-sale",
+    description: "High-performance WiFi 6 router with 4804 Mbps + 574 Mbps dual-band speed, 6 high-gain antennas, and advanced security features.",
+    specifications: {
+      "WiFi Standard": "802.11ax (WiFi 6)",
+      "Speed": "AX5400 (4804 + 574 Mbps)",
+      "Antenna": "6 × high-gain antennas",
+      "Ports": "1 × Gigabit WAN, 4 × Gigabit LAN, 1 × USB 3.0",
+      "Processor": "1.5GHz Triple-Core CPU",
+      "Coverage": "Up to 2,500 sq ft"
+    },
+    price: 12999,
+    stock: 45,
+    lowStockThreshold: 10,
+    status: "active",
+    images: ["/products/tp-link-ax73-1.jpg", "/products/tp-link-ax73-2.jpg"],
+    warranty: "2 years",
+    supplier: "TP-Link India Pvt Ltd",
+    supplierContact: "+91 80 4017 9999",
+    location: "Mumbai Warehouse A",
+    createdAt: "2024-01-10T10:00:00Z",
+    updatedAt: "2024-01-20T15:30:00Z"
+  },
+  {
+    id: 2,
+    name: "D-Link DSL-2750U ADSL2+ Modem Router",
+    model: "DSL-2750U",
+    brand: "D-Link",
+    category: "modem",
+    productType: "user-sale",
+    description: "ADSL2+ wireless N300 modem router with 4-port switch, ideal for home and small office use.",
+    specifications: {
+      "Technology": "ADSL2+",
+      "WiFi Speed": "300 Mbps (2.4GHz)",
+      "Ports": "4 × 10/100 Ethernet LAN",
+      "Antenna": "2 × 5dBi detachable antennas",
+      "Features": "QoS, Firewall, VPN Pass-through"
+    },
+    price: 2999,
+    stock: 78,
+    lowStockThreshold: 15,
+    status: "active",
+    images: ["/products/dlink-2750u-1.jpg"],
+    warranty: "1 year",
+    supplier: "D-Link India Ltd",
+    supplierContact: "+91 11 4710 9200",
+    location: "Delhi Warehouse B",
+    createdAt: "2024-01-05T10:00:00Z",
+    updatedAt: "2024-01-18T12:45:00Z"
+  },
+  {
+    id: 3,
+    name: "Cat6 Ethernet Cable - 50 Meter",
+    model: "CAT6-50M",
+    brand: "AMP Netconnect",
+    category: "cable",
+    productType: "engineer-only",
+    description: "High-quality Category 6 UTP cable for professional networking installations. Supports Gigabit Ethernet.",
+    specifications: {
+      "Category": "Cat 6 UTP",
+      "Length": "50 meters",
+      "Speed": "Up to 1 Gbps",
+      "Bandwidth": "250 MHz",
+      "Conductor": "23 AWG solid copper",
+      "Jacket": "PVC, flame retardant"
+    },
+    price: 1899,
+    stock: 156,
+    lowStockThreshold: 25,
+    status: "active",
+    images: ["/products/cat6-cable-1.jpg"],
+    warranty: "5 years",
+    supplier: "AMP Netconnect India",
+    supplierContact: "+91 80 2665 8800",
+    location: "Bangalore Warehouse C",
+    createdAt: "2024-01-08T10:00:00Z",
+    updatedAt: "2024-01-22T09:15:00Z"
+  },
+  {
+    id: 4,
+    name: "Netgear Nighthawk X6S Tri-Band Router",
+    model: "R8000P",
+    brand: "Netgear",
+    category: "router",
+    productType: "user-sale",
+    description: "Premium tri-band WiFi router with MU-MIMO technology, Smart Connect, and dynamic QoS for ultimate performance.",
+    specifications: {
+      "WiFi Standard": "802.11ac",
+      "Speed": "AC4000 (750 + 1625 + 1625 Mbps)",
+      "Bands": "Tri-band (1 × 2.4GHz + 2 × 5GHz)",
+      "Antenna": "6 × high-performance antennas",
+      "Ports": "1 × Gigabit WAN, 4 × Gigabit LAN, 2 × USB 3.0",
+      "Processor": "1.8GHz Dual-Core"
+    },
+    price: 24999,
+    stock: 23,
+    lowStockThreshold: 5,
+    status: "active",
+    images: ["/products/netgear-r8000p-1.jpg", "/products/netgear-r8000p-2.jpg"],
+    warranty: "2 years",
+    supplier: "Netgear India",
+    supplierContact: "+91 80 4172 6400",
+    location: "Chennai Warehouse D",
+    createdAt: "2024-01-12T10:00:00Z",
+    updatedAt: "2024-01-25T14:20:00Z"
+  },
+  {
+    id: 5,
+    name: "Fiber Optic Patch Cord - SC to LC",
+    model: "FOC-SC-LC-3M",
+    brand: "Panduit",
+    category: "fiber-cable",
+    productType: "engineer-only",
+    description: "Single-mode fiber optic patch cord with SC and LC connectors. 3-meter length for professional installations.",
+    specifications: {
+      "Fiber Type": "Single-mode 9/125μm",
+      "Length": "3 meters",
+      "Connector A": "SC/UPC",
+      "Connector B": "LC/UPC",
+      "Insertion Loss": "≤ 0.3dB",
+      "Return Loss": "≥ 50dB"
+    },
+    price: 599,
+    stock: 234,
+    lowStockThreshold: 50,
+    status: "active",
+    images: ["/products/fiber-patch-cord-1.jpg"],
+    warranty: "1 year",
+    supplier: "Panduit India Pvt Ltd",
+    supplierContact: "+91 124 471 6000",
+    location: "Gurgaon Warehouse E",
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-01-26T11:30:00Z"
+  },
+  {
+    id: 6,
+    name: "24-Port Gigabit Ethernet Switch",
+    model: "TL-SG1024",
+    brand: "TP-Link",
+    category: "switch",
+    productType: "engineer-only",
+    description: "Unmanaged 24-port Gigabit Ethernet switch for expanding network capacity in professional environments.",
+    specifications: {
+      "Ports": "24 × 10/100/1000 Mbps Auto-Negotiation",
+      "Switching Capacity": "48 Gbps",
+      "MAC Address Table": "8K",
+      "Buffer Memory": "4.1 Mb",
+      "Power Consumption": "16.5W maximum",
+      "Mounting": "Desktop/Rack mountable"
+    },
+    price: 8999,
+    stock: 34,
+    lowStockThreshold: 8,
+    status: "active",
+    images: ["/products/tp-link-sg1024-1.jpg"],
+    warranty: "Lifetime",
+    supplier: "TP-Link India Pvt Ltd",
+    supplierContact: "+91 80 4017 9999",
+    location: "Hyderabad Warehouse F",
+    createdAt: "2024-01-18T10:00:00Z",
+    updatedAt: "2024-01-27T16:45:00Z"
+  },
+  {
+    id: 7,
+    name: "WiFi Range Extender AC1200",
+    model: "RE315",
+    brand: "TP-Link",
+    category: "extender",
+    productType: "user-sale",
+    description: "Dual-band WiFi range extender that boosts WiFi coverage up to 1200 Mbps with OneMesh technology.",
+    specifications: {
+      "WiFi Speed": "AC1200 (300 + 867 Mbps)",
+      "Coverage": "Up to 1,500 sq ft",
+      "Antenna": "2 × dual-band antennas",
+      "Ethernet Port": "1 × Gigabit Ethernet",
+      "Features": "OneMesh, AP Mode, High-Speed Mode"
+    },
+    price: 2499,
+    stock: 67,
+    lowStockThreshold: 12,
+    status: "active",
+    images: ["/products/tp-link-re315-1.jpg"],
+    warranty: "1 year",
+    supplier: "TP-Link India Pvt Ltd",
+    supplierContact: "+91 80 4017 9999",
+    location: "Pune Warehouse G",
+    createdAt: "2024-01-20T10:00:00Z",
+    updatedAt: "2024-01-28T13:15:00Z"
+  },
+  {
+    id: 8,
+    name: "12V 2A Power Adapter",
+    model: "PSU-12V2A",
+    brand: "Generic",
+    category: "power-supply",
+    productType: "engineer-only",
+    description: "Universal 12V 2A switching power adapter for routers, modems, and networking equipment.",
+    specifications: {
+      "Input": "100-240V AC, 50/60Hz",
+      "Output": "12V DC, 2A",
+      "Connector": "5.5mm × 2.1mm DC jack",
+      "Cable Length": "1.5 meters",
+      "Protection": "Over-current, Over-voltage, Short-circuit",
+      "Efficiency": ">80%"
+    },
+    price: 399,
+    stock: 189,
+    lowStockThreshold: 30,
+    status: "active",
+    images: ["/products/power-adapter-12v-1.jpg"],
+    warranty: "6 months",
+    supplier: "Power Solutions India",
+    supplierContact: "+91 22 2834 5600",
+    location: "Mumbai Warehouse A",
+    createdAt: "2024-01-22T10:00:00Z",
+    updatedAt: "2024-01-29T10:00:00Z"
+  }
+];
+
+export const generateDummyOrders = (): Order[] => [
+  {
+    id: 1,
+    orderNumber: "ORD-2024-001",
+    productId: 1,
+    productName: "TP-Link Archer AX73 WiFi 6 Router",
+    customerId: 1,
+    customerName: "Rajesh Kumar",
+    orderType: "user-purchase",
+    quantity: 1,
+    unitPrice: 12999,
+    totalAmount: 12999,
+    status: "delivered",
+    priority: "medium",
+    deliveryAddress: "123 Main St, Mumbai Central",
+    notes: "Delivered to security guard",
+    createdAt: "2024-01-20T10:00:00Z",
+    updatedAt: "2024-01-25T16:30:00Z",
+    deliveredAt: "2024-01-25T16:30:00Z"
+  },
+  {
+    id: 2,
+    orderNumber: "ORD-2024-002",
+    productId: 3,
+    productName: "Cat6 Ethernet Cable - 50 Meter",
+    engineerId: 1,
+    engineerName: "Mike Johnson",
+    orderType: "engineer-request",
+    quantity: 3,
+    unitPrice: 1899,
+    totalAmount: 5697,
+    status: "approved",
+    priority: "high",
+    deliveryAddress: "Field Service Location - Mumbai Central",
+    notes: "Required for customer installation",
+    createdAt: "2024-01-22T09:15:00Z",
+    updatedAt: "2024-01-22T14:20:00Z"
+  },
+  {
+    id: 3,
+    orderNumber: "ORD-2024-003",
+    productId: 4,
+    productName: "Netgear Nighthawk X6S Tri-Band Router",
+    customerId: 3,
+    customerName: "Amit Patel",
+    orderType: "user-purchase",
+    quantity: 1,
+    unitPrice: 24999,
+    totalAmount: 24999,
+    status: "shipped",
+    priority: "medium",
+    deliveryAddress: "789 Tech Park, Bangalore",
+    createdAt: "2024-01-24T11:30:00Z",
+    updatedAt: "2024-01-26T09:45:00Z"
+  },
+  {
+    id: 4,
+    orderNumber: "ORD-2024-004",
+    productId: 6,
+    productName: "24-Port Gigabit Ethernet Switch",
+    engineerId: 2,
+    engineerName: "Sarah Davis",
+    orderType: "engineer-request",
+    quantity: 1,
+    unitPrice: 8999,
+    totalAmount: 8999,
+    status: "pending",
+    priority: "urgent",
+    deliveryAddress: "Corporate Office - Delhi NCR",
+    notes: "Urgent replacement needed for network outage",
+    createdAt: "2024-01-26T14:00:00Z",
+    updatedAt: "2024-01-26T14:00:00Z"
+  },
+  {
+    id: 5,
+    orderNumber: "ORD-2024-005",
+    productId: 7,
+    productName: "WiFi Range Extender AC1200",
+    customerId: 4,
+    customerName: "Sunita Verma",
+    orderType: "user-purchase",
+    quantity: 2,
+    unitPrice: 2499,
+    totalAmount: 4998,
+    status: "delivered",
+    priority: "low",
+    deliveryAddress: "321 Rural Lane, Patna",
+    createdAt: "2024-01-25T16:20:00Z",
+    updatedAt: "2024-01-28T11:15:00Z",
+    deliveredAt: "2024-01-28T11:15:00Z"
+  }
+];
+
+export const generateDummyProductFeedback = (): ProductFeedback[] => [
+  {
+    id: 1,
+    productId: 1,
+    productName: "TP-Link Archer AX73 WiFi 6 Router",
+    customerId: 1,
+    customerName: "Rajesh Kumar",
+    rating: 5,
+    title: "Excellent WiFi 6 Performance",
+    comment: "Amazing speed and coverage. WiFi 6 makes a huge difference for streaming and gaming.",
+    pros: ["Fast WiFi 6 speeds", "Great coverage", "Easy setup", "Stable connection"],
+    cons: ["Slightly expensive", "Large size"],
+    wouldRecommend: true,
+    verifiedPurchase: true,
+    helpfulVotes: 12,
+    createdAt: "2024-01-28T10:30:00Z"
+  },
+  {
+    id: 2,
+    productId: 2,
+    productName: "D-Link DSL-2750U ADSL2+ Modem Router",
+    customerId: 2,
+    customerName: "Priya Sharma",
+    rating: 4,
+    title: "Good value for money",
+    comment: "Works well for basic internet needs. Setup was straightforward and it's been reliable.",
+    pros: ["Affordable", "Easy setup", "Reliable for basic use"],
+    cons: ["Limited range", "Only 2.4GHz"],
+    wouldRecommend: true,
+    verifiedPurchase: true,
+    helpfulVotes: 8,
+    createdAt: "2024-01-26T14:20:00Z"
+  },
+  {
+    id: 3,
+    productId: 4,
+    productName: "Netgear Nighthawk X6S Tri-Band Router",
+    customerId: 3,
+    customerName: "Amit Patel",
+    rating: 5,
+    title: "Premium Performance Router",
+    comment: "Outstanding tri-band performance. Perfect for heavy usage with multiple devices.",
+    pros: ["Tri-band technology", "Excellent speed", "Advanced features", "Great app control"],
+    cons: ["Expensive", "Complex for beginners"],
+    wouldRecommend: true,
+    verifiedPurchase: true,
+    helpfulVotes: 15,
+    createdAt: "2024-01-29T16:45:00Z"
+  },
+  {
+    id: 4,
+    productId: 7,
+    productName: "WiFi Range Extender AC1200",
+    customerId: 4,
+    customerName: "Sunita Verma",
+    rating: 4,
+    title: "Great range extension",
+    comment: "Solved my WiFi dead zones perfectly. Easy to install and works seamlessly.",
+    pros: ["Easy installation", "Good range extension", "OneMesh compatibility"],
+    cons: ["Speed reduction in extended areas"],
+    wouldRecommend: true,
+    verifiedPurchase: true,
+    helpfulVotes: 6,
+    createdAt: "2024-01-30T09:10:00Z"
+  }
+];
+
 // Export data arrays for easy access
 export const dummyUsers = generateDummyUsers();
 export const dummyCustomers = generateDummyCustomers();
@@ -694,3 +1146,6 @@ export const dummyComplaints = generateDummyComplaints();
 export const dummySupportTickets = generateDummySupportTickets();
 export const dummyNotifications = generateDummyNotifications();
 export const dashboardStats = generateDashboardStats();
+export const dummyProducts = generateDummyProducts();
+export const dummyOrders = generateDummyOrders();
+export const dummyProductFeedback = generateDummyProductFeedback();

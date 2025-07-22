@@ -14,6 +14,7 @@ import Dashboard from "@/pages/dashboard";
 import Complaints from "@/pages/complaints";
 import Engineers from "@/pages/engineers";
 import Users from "@/pages/users";
+import { Products } from "@/pages/products";
 import Plans from "@/pages/plans";
 import Analytics from "@/pages/analytics";
 import Notifications from "@/pages/notifications";
@@ -68,6 +69,12 @@ function Router() {
       <Route path="/users">
         <ProtectedRoute>
           <Users />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/products">
+        <ProtectedRoute>
+          <Products />
         </ProtectedRoute>
       </Route>
       
