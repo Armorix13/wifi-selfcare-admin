@@ -132,6 +132,7 @@ Preferred communication style: Simple, everyday language.
 - ✓ Built lead tracking with manager contact status and conversion metrics
 - ✓ Added comprehensive grid-based data display with sorting and pagination
 - ✓ Integrated real-time analytics with success rates and performance indicators
+- ✓ Fixed permission system to include manage-installations and manage-leads permissions
 - ✓ All features fully functional with responsive design and dummy data integration
 
 **January 2025 - Complete API Migration to Dummy Data**

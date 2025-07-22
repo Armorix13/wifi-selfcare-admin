@@ -25,6 +25,8 @@ const permissions = {
     'manage-users',
     'manage-products',
     'manage-plans',
+    'manage-installations',
+    'manage-leads',
     'manage-notifications',
     'view-analytics',
     'system-settings',
@@ -37,6 +39,8 @@ const permissions = {
     'manage-users',
     'manage-products',
     'manage-plans',
+    'manage-installations',
+    'manage-leads',
     'manage-notifications',
     'view-analytics',
     'manage-support',
@@ -44,6 +48,8 @@ const permissions = {
   'manager': [
     'view-dashboard',
     'assign-complaints',
+    'manage-installations',
+    'manage-leads',
     'view-analytics',
   ],
 };
