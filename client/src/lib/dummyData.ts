@@ -69,8 +69,12 @@ export interface NewInstallation {
   customerName: string;
   email: string;
   phone: string;
+  alternatePhone?: string;
   address: string;
   location: string;
+  aadharFront?: string; // File path/URL for Aadhar front
+  aadharBack?: string;  // File path/URL for Aadhar back
+  passportPhoto?: string; // File path/URL for passport size photo
   preferredPlan: string | null;
   requestType: 'residential' | 'commercial';
   status: 'pending' | 'confirmed' | 'rejected';
@@ -91,6 +95,7 @@ export interface Lead {
   name: string;
   email: string | null;
   phone: string;
+  address: string; // Added address field
   location: string | null;
   source: 'website' | 'ivr' | 'whatsapp' | 'referral' | 'social_media';
   inquiryType: 'general' | 'pricing' | 'technical' | 'support';
@@ -104,7 +109,6 @@ export interface Lead {
   lastContactDate: string | null;
   conversionProbability: number;
   estimatedValue: number | null;
-  leadScore: number;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1190,8 +1194,12 @@ export const generateDummyNewInstallations = (): NewInstallation[] => [
     customerName: "Rajesh Kumar",
     email: "rajesh.kumar@gmail.com",
     phone: "+91 98765 43210",
+    alternatePhone: "+91 98765 43211",
     address: "123 Tech Park Road, Sector 5",
     location: "Bangalore",
+    aadharFront: "/uploads/aadhar-front-1.jpg",
+    aadharBack: "/uploads/aadhar-back-1.jpg",
+    passportPhoto: "/uploads/passport-1.jpg",
     preferredPlan: "Jio Fiber 100 Mbps",
     requestType: "residential",
     status: "pending",
@@ -1211,8 +1219,12 @@ export const generateDummyNewInstallations = (): NewInstallation[] => [
     customerName: "Priya Sharma",
     email: "priya.sharma@yahoo.com",
     phone: "+91 87654 32109",
+    alternatePhone: "+91 87654 32110",
     address: "456 Residential Complex, Phase 2",
     location: "Mumbai",
+    aadharFront: "/uploads/aadhar-front-2.jpg",
+    aadharBack: "/uploads/aadhar-back-2.jpg",
+    passportPhoto: "/uploads/passport-2.jpg",
     preferredPlan: "BSNL Broadband 50 Mbps",
     requestType: "residential",
     status: "confirmed",
@@ -1299,6 +1311,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Deepak Agarwal",
     email: "deepak.agarwal@email.com",
     phone: "+91 99887 66554",
+    address: "45 IT Park, Hinjewadi Phase 1, Pune",
     location: "Pune",
     source: "website",
     inquiryType: "pricing",
@@ -1312,7 +1325,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: null,
     conversionProbability: 60,
     estimatedValue: 12000,
-    leadScore: 75,
+
     notes: "Interested in 100+ Mbps plans",
     createdAt: "2024-01-30T14:22:00Z",
     updatedAt: "2024-01-30T14:22:00Z"
@@ -1322,6 +1335,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Kavya Reddy",
     email: "kavya.reddy@gmail.com",
     phone: "+91 88776 65443",
+    address: "78 Software Layout, Electronic City",
     location: "Bangalore",
     source: "ivr",
     inquiryType: "general",
@@ -1335,7 +1349,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: "2024-01-29T16:45:00Z",
     conversionProbability: 85,
     estimatedValue: 18000,
-    leadScore: 90,
+
     notes: "Very interested, comparing with competitors",
     createdAt: "2024-01-28T11:30:00Z",
     updatedAt: "2024-01-29T16:45:00Z"
@@ -1345,6 +1359,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Mohit Gupta",
     email: null,
     phone: "+91 77665 54332",
+    address: "12 Cyber Hub, Sector 15, Gurgaon",
     location: "Gurgaon",
     source: "whatsapp",
     inquiryType: "technical",
@@ -1358,7 +1373,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: "2024-01-27T14:20:00Z",
     conversionProbability: 70,
     estimatedValue: 15000,
-    leadScore: 80,
+
     notes: "Gaming enthusiast, prefers fiber over cable",
     createdAt: "2024-01-26T09:45:00Z",
     updatedAt: "2024-01-27T14:20:00Z"
@@ -1368,6 +1383,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Ananya Joshi",
     email: "ananya.joshi@company.com",
     phone: "+91 66554 43321",
+    address: "34 Business District, Bandra East",
     location: "Mumbai",
     source: "referral",
     inquiryType: "pricing",
@@ -1381,7 +1397,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: "2024-01-25T10:15:00Z",
     conversionProbability: 100,
     estimatedValue: 25000,
-    leadScore: 100,
+
     notes: "Successfully converted to commercial plan subscription",
     createdAt: "2024-01-24T08:30:00Z",
     updatedAt: "2024-01-25T10:15:00Z"
@@ -1391,6 +1407,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Suresh Yadav",
     email: "suresh.yadav@yahoo.com",
     phone: "+91 55443 32210",
+    address: "56 Pink City Area, Civil Lines",
     location: "Jaipur",
     source: "social_media",
     inquiryType: "support",
@@ -1404,7 +1421,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: "2024-01-23T13:45:00Z",
     conversionProbability: 20,
     estimatedValue: null,
-    leadScore: 30,
+
     notes: "Not in service area, closed after initial contact",
     createdAt: "2024-01-22T16:20:00Z",
     updatedAt: "2024-01-23T13:45:00Z"
@@ -1414,6 +1431,7 @@ export const generateDummyLeads = (): Lead[] => [
     name: "Ravi Kumar",
     email: "ravi.kumar@tech.in",
     phone: "+91 44332 21109",
+    address: "89 Tech Park, OMR Road",
     location: "Chennai",
     source: "website",
     inquiryType: "technical",
@@ -1427,7 +1445,7 @@ export const generateDummyLeads = (): Lead[] => [
     lastContactDate: null,
     conversionProbability: 80,
     estimatedValue: 35000,
-    leadScore: 85,
+
     notes: "Requires technical consultation for server hosting setup",
     createdAt: "2024-01-30T17:10:00Z",
     updatedAt: "2024-01-30T17:10:00Z"

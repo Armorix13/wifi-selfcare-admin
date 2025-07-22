@@ -51,10 +51,32 @@ export default function InstallationsLeads() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
   const [priorityFilter, setPriorityFilter] = useState("all");
+  const [installations, setInstallations] = useState(dummyNewInstallations);
+  const [leads, setLeads] = useState(dummyLeads);
+  const [showNewInstallationForm, setShowNewInstallationForm] = useState(false);
+  const [showNewLeadForm, setShowNewLeadForm] = useState(false);
+
+  // Action handlers for installations
+  const updateInstallationStatus = (id: number, status: 'pending' | 'confirmed' | 'rejected') => {
+    setInstallations(prev => prev.map(installation => 
+      installation.id === id 
+        ? { ...installation, status, updatedAt: new Date().toISOString() }
+        : installation
+    ));
+  };
+
+  // Action handlers for leads
+  const updateLeadStatus = (id: number, status: 'new' | 'contacted' | 'qualified' | 'converted' | 'closed') => {
+    setLeads(prev => prev.map(lead => 
+      lead.id === id 
+        ? { ...lead, status, updatedAt: new Date().toISOString() }
+        : lead
+    ));
+  };
 
   // Filter installations
   const filteredInstallations = useMemo(() => {
-    return dummyNewInstallations.filter((installation) => {
+    return installations.filter((installation) => {
       const matchesSearch = 
         installation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         installation.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,7 +100,7 @@ export default function InstallationsLeads() {
 
   // Filter leads
   const filteredLeads = useMemo(() => {
-    return dummyLeads.filter((lead) => {
+    return leads.filter((lead) => {
       const matchesSearch = 
         lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.phone.includes(searchTerm) ||
@@ -162,7 +184,7 @@ export default function InstallationsLeads() {
   };
 
   const exportLeadsToExcel = () => {
-    const headers = ["ID", "Name", "Phone", "Email", "Location", "Source", "Status", "Priority", "Inquiry Type", "Contacted by Manager", "Lead Score", "Created Date"];
+    const headers = ["ID", "Name", "Phone", "Email", "Address", "Location", "Source", "Status", "Priority", "Inquiry Type", "Contacted by Manager", "Created Date"];
     const csvContent = [
       headers.join(","),
       ...filteredLeads.map(lead => [
@@ -170,13 +192,13 @@ export default function InstallationsLeads() {
         `"${lead.name}"`,
         lead.phone,
         lead.email || "N/A",
+        `"${lead.address}"`,
         lead.location || "N/A",
         lead.source,
         lead.status,
         lead.priority,
         lead.inquiryType,
         lead.isContactedByManager ? "Yes" : "No",
-        lead.leadScore,
         lead.createdAt
       ].join(","))
     ].join("\n");
@@ -402,10 +424,92 @@ export default function InstallationsLeads() {
                     <CardTitle>New Installation Requests</CardTitle>
                     <CardDescription>Manage customer installation applications</CardDescription>
                   </div>
-                  <Button onClick={exportInstallationsToExcel} className="bg-green-600 hover:bg-green-700">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Excel
-                  </Button>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="bg-blue-600 hover:bg-blue-700">
+                          <HardHat className="mr-2 h-4 w-4" />
+                          New Installation
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>New Installation Request</DialogTitle>
+                          <DialogDescription>
+                            Fill in customer details and upload required documents
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Customer Name</Label>
+                            <Input placeholder="Enter full name" />
+                          </div>
+                          <div>
+                            <Label>Email</Label>
+                            <Input type="email" placeholder="customer@email.com" />
+                          </div>
+                          <div>
+                            <Label>Phone Number (with country code)</Label>
+                            <Input placeholder="+91 98765 43210" />
+                          </div>
+                          <div>
+                            <Label>Alternate Phone Number</Label>
+                            <Input placeholder="+91 98765 43211" />
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Address</Label>
+                            <Input placeholder="Complete address with area and city" />
+                          </div>
+                          <div>
+                            <Label>Aadhar Card - Front Side</Label>
+                            <Input type="file" accept="image/*" />
+                          </div>
+                          <div>
+                            <Label>Aadhar Card - Back Side</Label>
+                            <Input type="file" accept="image/*" />
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Passport Size Photo</Label>
+                            <Input type="file" accept="image/*" />
+                          </div>
+                          <div>
+                            <Label>Request Type</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="residential">Residential</SelectItem>
+                                <SelectItem value="commercial">Commercial</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Priority</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <Button variant="outline">Cancel</Button>
+                          <Button className="bg-blue-600 hover:bg-blue-700">Submit Request</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Button onClick={exportInstallationsToExcel} className="bg-green-600 hover:bg-green-700">
+                      <Download className="mr-2 h-4 w-4" />
+                      Export Excel
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -490,9 +594,96 @@ export default function InstallationsLeads() {
                             {format(parseISO(installation.createdAt), "MMM dd, yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Installation Details - {installation.customerName}</DialogTitle>
+                                    <DialogDescription>
+                                      View installation request details and update status
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <Label>Customer Name</Label>
+                                      <p className="text-sm">{installation.customerName}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Email</Label>
+                                      <p className="text-sm">{installation.email}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Phone</Label>
+                                      <p className="text-sm">{installation.phone}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Alternate Phone</Label>
+                                      <p className="text-sm">{installation.alternatePhone || "Not provided"}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <Label>Address</Label>
+                                      <p className="text-sm">{installation.address}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Request Type</Label>
+                                      <p className="text-sm capitalize">{installation.requestType}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Current Status</Label>
+                                      <div className="text-sm">{getStatusBadge(installation.status, "installation")}</div>
+                                    </div>
+                                    {installation.aadharFront && (
+                                      <div>
+                                        <Label>Aadhar Front</Label>
+                                        <p className="text-sm text-blue-600">Document uploaded</p>
+                                      </div>
+                                    )}
+                                    {installation.aadharBack && (
+                                      <div>
+                                        <Label>Aadhar Back</Label>
+                                        <p className="text-sm text-blue-600">Document uploaded</p>
+                                      </div>
+                                    )}
+                                    {installation.passportPhoto && (
+                                      <div>
+                                        <Label>Passport Photo</Label>
+                                        <p className="text-sm text-blue-600">Photo uploaded</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2 pt-4">
+                                    <Button 
+                                      onClick={() => updateInstallationStatus(installation.id, 'confirmed')}
+                                      variant={installation.status === 'confirmed' ? 'default' : 'outline'}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Confirm
+                                    </Button>
+                                    <Button 
+                                      onClick={() => updateInstallationStatus(installation.id, 'rejected')}
+                                      variant={installation.status === 'rejected' ? 'destructive' : 'outline'}
+                                      className="bg-red-600 hover:bg-red-700 text-white"
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Reject
+                                    </Button>
+                                    <Button 
+                                      onClick={() => updateInstallationStatus(installation.id, 'pending')}
+                                      variant={installation.status === 'pending' ? 'default' : 'outline'}
+                                    >
+                                      <Clock className="h-4 w-4 mr-2" />
+                                      Set Pending
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -511,10 +702,97 @@ export default function InstallationsLeads() {
                     <CardTitle>Lead Management</CardTitle>
                     <CardDescription>Track customer inquiries from various sources</CardDescription>
                   </div>
-                  <Button onClick={exportLeadsToExcel} className="bg-green-600 hover:bg-green-700">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Excel
-                  </Button>
+                  <div className="flex gap-2">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button className="bg-purple-600 hover:bg-purple-700">
+                          <Users className="mr-2 h-4 w-4" />
+                          New Lead
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Add New Lead</DialogTitle>
+                          <DialogDescription>
+                            Register a new customer inquiry
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Full Name</Label>
+                            <Input placeholder="Enter customer name" />
+                          </div>
+                          <div>
+                            <Label>Phone Number</Label>
+                            <Input placeholder="+91 98765 43210" />
+                          </div>
+                          <div>
+                            <Label>Email (Optional)</Label>
+                            <Input type="email" placeholder="customer@email.com" />
+                          </div>
+                          <div>
+                            <Label>Source</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select source" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="website">Website</SelectItem>
+                                <SelectItem value="ivr">IVR Call</SelectItem>
+                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                <SelectItem value="referral">Referral</SelectItem>
+                                <SelectItem value="social_media">Social Media</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Address</Label>
+                            <Input placeholder="Complete address" />
+                          </div>
+                          <div>
+                            <Label>Inquiry Type</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="general">General</SelectItem>
+                                <SelectItem value="pricing">Pricing</SelectItem>
+                                <SelectItem value="technical">Technical</SelectItem>
+                                <SelectItem value="support">Support</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Priority</Label>
+                            <Select>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-2">
+                            <Label>Message (Optional)</Label>
+                            <Input placeholder="Customer inquiry or message" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <Button variant="outline">Cancel</Button>
+                          <Button className="bg-purple-600 hover:bg-purple-700">Add Lead</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Button onClick={exportLeadsToExcel} className="bg-green-600 hover:bg-green-700">
+                      <Download className="mr-2 h-4 w-4" />
+                      Export Excel
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -565,7 +843,7 @@ export default function InstallationsLeads() {
                         <TableHead>Status</TableHead>
                         <TableHead>Priority</TableHead>
                         <TableHead>Manager Contact</TableHead>
-                        <TableHead>Score</TableHead>
+                        <TableHead>Address</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -603,18 +881,87 @@ export default function InstallationsLeads() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center">
-                              <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                              {lead.leadScore}/100
+                            <div className="text-sm text-gray-600">
+                              {lead.address}
                             </div>
                           </TableCell>
                           <TableCell>
                             {format(parseISO(lead.createdAt), "MMM dd, yyyy")}
                           </TableCell>
                           <TableCell>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Lead Details - {lead.name}</DialogTitle>
+                                    <DialogDescription>
+                                      View and manage lead information
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <Label>Name</Label>
+                                      <p className="text-sm">{lead.name}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Phone</Label>
+                                      <p className="text-sm">{lead.phone}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Email</Label>
+                                      <p className="text-sm">{lead.email || "Not provided"}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Address</Label>
+                                      <p className="text-sm">{lead.address}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Source</Label>
+                                      <p className="text-sm capitalize">{lead.source.replace('_', ' ')}</p>
+                                    </div>
+                                    <div>
+                                      <Label>Status</Label>
+                                      <p className="text-sm">{lead.status}</p>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <Label>Message</Label>
+                                      <p className="text-sm">{lead.message || "No message provided"}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2 pt-4">
+                                    <Button 
+                                      onClick={() => updateLeadStatus(lead.id, 'contacted')}
+                                      variant={lead.status === 'contacted' ? 'default' : 'outline'}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      <Phone className="h-4 w-4 mr-2" />
+                                      Mark Contacted
+                                    </Button>
+                                    <Button 
+                                      onClick={() => updateLeadStatus(lead.id, 'qualified')}
+                                      variant={lead.status === 'qualified' ? 'default' : 'outline'}
+                                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Mark Qualified
+                                    </Button>
+                                    <Button 
+                                      onClick={() => updateLeadStatus(lead.id, 'converted')}
+                                      variant={lead.status === 'converted' ? 'default' : 'outline'}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      <Star className="h-4 w-4 mr-2" />
+                                      Convert
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
