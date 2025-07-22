@@ -89,14 +89,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="h-9 w-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg animate-pulse-slow">
               <Wifi className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-[var(--sidebar-item)] font-bold text-xl tracking-tight">WiFiCare</span>
+            <span className="text-[var(--sidebar-text)] font-bold text-xl tracking-tight">WiFiCare</span>
           </div>
           
           {/* Mobile close button */}
           <Button 
             variant="ghost" 
             size="sm" 
-            className="lg:hidden h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)]"
+            className="lg:hidden h-8 w-8 p-0 text-[var(--sidebar-icon)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--sidebar-item-active)]"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -108,7 +108,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="hidden lg:flex h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)]"
+                className="hidden lg:flex h-8 w-8 p-0 text-[var(--sidebar-icon)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--sidebar-item-active)]"
               >
                 <ThemeIcon className="h-4 w-4" />
               </Button>
@@ -161,27 +161,43 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <div
                   onClick={handleNavClick}
                   className={cn(
-                    "group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer",
+                    "group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 cursor-pointer relative overflow-hidden",
                     isActive
-                      ? "bg-[var(--sidebar-item-active-bg)] text-[var(--sidebar-item-active)] shadow-lg transform scale-105"
-                      : "text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-hover)] hover:transform hover:scale-102"
+                      ? "bg-[var(--sidebar-item-active-bg)] shadow-lg transform scale-105"
+                      : "hover:bg-[var(--sidebar-item-hover)] hover:transform hover:scale-102"
                   )}
                   style={{
                     animationDelay: `${index * 50}ms`
                   }}
                 >
                   <div className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-lg mr-3 transition-all duration-200",
+                    "flex items-center justify-center w-9 h-9 rounded-lg mr-3 transition-all duration-200 backdrop-blur-sm",
                     isActive 
-                      ? "bg-[var(--sidebar-item-active)] text-[var(--sidebar-item-active-bg)]" 
-                      : "group-hover:bg-[var(--sidebar-item-active)] group-hover:text-[var(--sidebar-item-active-bg)]"
+                      ? "bg-[var(--sidebar-item-active)] text-white shadow-md" 
+                      : "bg-transparent group-hover:bg-[var(--sidebar-item-active)]/20"
                   )}>
-                    <item.icon className="h-4 w-4" />
+                    <item.icon 
+                      className={cn(
+                        "h-4 w-4 transition-all duration-200",
+                        isActive 
+                          ? "text-white" 
+                          : "text-[var(--sidebar-icon)] group-hover:text-[var(--sidebar-item-active)]"
+                      )} 
+                    />
                   </div>
-                  <span className="tracking-wide">{item.name}</span>
+                  <span className={cn(
+                    "tracking-wide font-medium transition-all duration-200",
+                    isActive 
+                      ? "text-[var(--sidebar-text-active)]" 
+                      : "text-[var(--sidebar-text)] group-hover:text-[var(--sidebar-item-active)]"
+                  )}>
+                    {item.name}
+                  </span>
                   {isActive && (
-                    <div className="ml-auto w-1 h-8 bg-[var(--sidebar-item-active)] rounded-full animate-pulse-slow" />
+                    <div className="ml-auto w-1 h-8 bg-[var(--sidebar-item-active)] rounded-full animate-pulse-slow shadow-md" />
                   )}
+                  {/* Subtle hover effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[var(--sidebar-item-active)]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>
               </Link>
             );
@@ -197,17 +213,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </span>
             </div>
             <div className="ml-3 flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--sidebar-item)] truncate">
+              <p className="text-sm font-semibold text-[var(--sidebar-text)] truncate">
                 {user?.role === "super-admin" ? "Super Admin" : 
                  user?.role === "admin" ? "Admin" : "Manager"}
               </p>
-              <p className="text-xs text-[var(--sidebar-item)] opacity-70 truncate">{user?.email}</p>
+              <p className="text-xs text-[var(--sidebar-text)] opacity-70 truncate">{user?.email}</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="h-8 w-8 p-0 text-[var(--sidebar-item)] hover:bg-[var(--sidebar-item-active)] hover:text-[var(--sidebar-item-active-bg)] transition-all duration-200"
+              className="h-8 w-8 p-0 text-[var(--sidebar-icon)] hover:bg-[var(--sidebar-item-active)] hover:text-white transition-all duration-200"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -219,7 +235,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-between text-[var(--sidebar-item)] border-[var(--sidebar-border)] hover:bg-[var(--sidebar-item-hover)]"
+                  className="w-full justify-between text-[var(--sidebar-text)] border-[var(--sidebar-border)] hover:bg-[var(--sidebar-item-hover)]"
                 >
                   <span className="flex items-center">
                     <ThemeIcon className="h-4 w-4 mr-2" />
