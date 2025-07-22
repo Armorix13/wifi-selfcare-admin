@@ -1149,3 +1149,398 @@ export const dashboardStats = generateDashboardStats();
 export const dummyProducts = generateDummyProducts();
 export const dummyOrders = generateDummyOrders();
 export const dummyProductFeedback = generateDummyProductFeedback();
+
+// Installation/Lead Management Interfaces
+export interface NewInstallation {
+  id: number;
+  applicationNumber: string;
+  applicantName: string;
+  fatherName: string;
+  email: string;
+  phone: string;
+  alternatePhone?: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  aadhaarNumber: string;
+  aadhaarFrontImage: string;
+  aadhaarBackImage: string;
+  title: string;
+  description: string;
+  preferredPlan?: string;
+  installationType: 'residential' | 'commercial' | 'industrial';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'document-verification' | 'site-survey' | 'approved' | 'installation-scheduled' | 'completed' | 'rejected';
+  assignedEngineer?: number;
+  assignedEngineerName?: string;
+  estimatedCost?: number;
+  surveyDate?: string;
+  installationDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Lead {
+  id: number;
+  leadNumber: string;
+  customerName: string;
+  email?: string;
+  phone: string;
+  address?: string;
+  city?: string;
+  source: 'inbound-call' | 'mobile-app' | 'whatsapp-bot' | 'website' | 'social-media' | 'referral' | 'field-marketing';
+  sourceDetails?: string;
+  interestedService: 'new-connection' | 'plan-upgrade' | 'support' | 'corporate-solution';
+  leadScore: number;
+  priority: 'cold' | 'warm' | 'hot' | 'qualified';
+  status: 'new' | 'contacted' | 'interested' | 'not-interested' | 'follow-up' | 'converted' | 'closed' | 'qualified';
+  assignedTo?: number;
+  assignedToName?: string;
+  lastContactDate?: string;
+  nextFollowUpDate?: string;
+  notes?: string;
+  conversationHistory: {
+    date: string;
+    type: 'call' | 'email' | 'whatsapp' | 'sms' | 'meeting';
+    summary: string;
+    outcome: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Installation/Lead Dummy Data Generators
+export const generateDummyInstallations = (): NewInstallation[] => [
+  {
+    id: 1,
+    applicationNumber: "INST-2024-001",
+    applicantName: "Arjun Sharma",
+    fatherName: "Ramesh Sharma",
+    email: "arjun.sharma@email.com",
+    phone: "+91 98765 43210",
+    alternatePhone: "+91 87654 32109",
+    address: "Plot 245, Sector 18, Dwarka",
+    city: "New Delhi",
+    state: "Delhi",
+    pincode: "110078",
+    aadhaarNumber: "1234 5678 9012",
+    aadhaarFrontImage: "/documents/aadhaar-front-1.jpg",
+    aadhaarBackImage: "/documents/aadhaar-back-1.jpg",
+    title: "High-Speed Fiber Connection for Home Office",
+    description: "Need reliable high-speed internet for work from home setup with multiple video conferences daily.",
+    preferredPlan: "JioFiber Gold Plan",
+    installationType: "residential",
+    priority: "high",
+    status: "site-survey",
+    assignedEngineer: 1,
+    assignedEngineerName: "Mike Johnson",
+    estimatedCost: 15500,
+    surveyDate: "2024-02-05T10:00:00Z",
+    notes: "Customer prefers evening installation slot. Ground floor apartment with easy cable routing.",
+    createdAt: "2024-02-01T09:30:00Z",
+    updatedAt: "2024-02-04T16:20:00Z"
+  },
+  {
+    id: 2,
+    applicationNumber: "INST-2024-002",
+    applicantName: "Priya Patel",
+    fatherName: "Suresh Patel",
+    email: "priya.patel@business.com",
+    phone: "+91 91234 56789",
+    address: "Shop 15, Commercial Complex, MG Road",
+    city: "Bangalore",
+    state: "Karnataka",
+    pincode: "560001",
+    aadhaarNumber: "2345 6789 0123",
+    aadhaarFrontImage: "/documents/aadhaar-front-2.jpg",
+    aadhaarBackImage: "/documents/aadhaar-back-2.jpg",
+    title: "Business Internet Connection for Retail Store",
+    description: "Need stable internet for POS systems, inventory management, and customer WiFi.",
+    preferredPlan: "BSNL Fiber Enterprise",
+    installationType: "commercial",
+    priority: "medium",
+    status: "approved",
+    assignedEngineer: 2,
+    assignedEngineerName: "Sarah Davis",
+    estimatedCost: 8900,
+    surveyDate: "2024-02-03T14:30:00Z",
+    installationDate: "2024-02-08T11:00:00Z",
+    notes: "Commercial installation requires minimal disruption during business hours.",
+    createdAt: "2024-01-28T11:15:00Z",
+    updatedAt: "2024-02-04T09:45:00Z"
+  },
+  {
+    id: 3,
+    applicationNumber: "INST-2024-003",
+    applicantName: "Rajesh Kumar",
+    fatherName: "Mahesh Kumar",
+    email: "rajesh.kumar@factory.com",
+    phone: "+91 87654 32109",
+    address: "Industrial Plot 45, Phase 2, RIICO Industrial Area",
+    city: "Jaipur",
+    state: "Rajasthan",
+    pincode: "302013",
+    aadhaarNumber: "3456 7890 1234",
+    aadhaarFrontImage: "/documents/aadhaar-front-3.jpg",
+    aadhaarBackImage: "/documents/aadhaar-back-3.jpg",
+    title: "Industrial Internet for Manufacturing Unit",
+    description: "Dedicated leased line for manufacturing operations, ERP systems, and IoT connectivity.",
+    preferredPlan: "My Internet Pro",
+    installationType: "industrial",
+    priority: "urgent",
+    status: "installation-scheduled",
+    assignedEngineer: 3,
+    assignedEngineerName: "Tom Wilson",
+    estimatedCost: 45000,
+    surveyDate: "2024-02-02T09:00:00Z",
+    installationDate: "2024-02-06T08:00:00Z",
+    notes: "Industrial setup requires fiber routing through factory premises. Power backup available on-site.",
+    createdAt: "2024-01-30T14:20:00Z",
+    updatedAt: "2024-02-04T17:30:00Z"
+  },
+  {
+    id: 4,
+    applicationNumber: "INST-2024-004",
+    applicantName: "Sunita Verma",
+    fatherName: "Om Prakash Verma",
+    email: "sunita.verma@email.com",
+    phone: "+91 76543 21098",
+    address: "House 78, Gandhi Nagar Colony",
+    city: "Patna",
+    state: "Bihar",
+    pincode: "800001",
+    aadhaarNumber: "4567 8901 2345",
+    aadhaarFrontImage: "/documents/aadhaar-front-4.jpg",
+    aadhaarBackImage: "/documents/aadhaar-back-4.jpg",
+    title: "Home Internet for Online Classes",
+    description: "Reliable internet connection needed for children's online education and streaming.",
+    preferredPlan: "Airtel Xstream Fiber",
+    installationType: "residential",
+    priority: "medium",
+    status: "document-verification",
+    notes: "Customer documents under review. Address verification pending.",
+    createdAt: "2024-02-03T16:45:00Z",
+    updatedAt: "2024-02-04T10:15:00Z"
+  },
+  {
+    id: 5,
+    applicationNumber: "INST-2024-005",
+    applicantName: "Vikram Singh",
+    fatherName: "Jaswant Singh",
+    email: "vikram.singh@startup.com",
+    phone: "+91 98123 45678",
+    address: "Office 302, Tech Hub, Cyber City",
+    city: "Gurgaon",
+    state: "Haryana",
+    pincode: "122002",
+    aadhaarNumber: "5678 9012 3456",
+    aadhaarFrontImage: "/documents/aadhaar-front-5.jpg",
+    aadhaarBackImage: "/documents/aadhaar-back-5.jpg",
+    title: "Startup Office Internet Connection",
+    description: "High-speed internet for tech startup with cloud applications and video conferencing needs.",
+    preferredPlan: "My Internet Pro",
+    installationType: "commercial",
+    priority: "high",
+    status: "completed",
+    assignedEngineer: 4,
+    assignedEngineerName: "Jennifer Lee",
+    estimatedCost: 18500,
+    surveyDate: "2024-01-25T11:30:00Z",
+    installationDate: "2024-01-30T09:00:00Z",
+    notes: "Installation completed successfully. Customer satisfied with speed and service quality.",
+    createdAt: "2024-01-20T12:00:00Z",
+    updatedAt: "2024-01-30T15:45:00Z"
+  }
+];
+
+export const generateDummyLeads = (): Lead[] => [
+  {
+    id: 1,
+    leadNumber: "LEAD-2024-001",
+    customerName: "Amit Gupta",
+    email: "amit.gupta@email.com",
+    phone: "+91 99887 76543",
+    address: "Sec 45, Noida",
+    city: "Noida",
+    source: "inbound-call",
+    sourceDetails: "Called customer service for new connection inquiry",
+    interestedService: "new-connection",
+    leadScore: 85,
+    priority: "hot",
+    status: "interested",
+    assignedTo: 1,
+    assignedToName: "Sales Rep 1",
+    lastContactDate: "2024-02-04T14:30:00Z",
+    nextFollowUpDate: "2024-02-06T10:00:00Z",
+    notes: "Interested in high-speed plan. Moving to new apartment next week.",
+    conversationHistory: [
+      {
+        date: "2024-02-01T10:15:00Z",
+        type: "call",
+        summary: "Initial inquiry call",
+        outcome: "Interested in fiber plans, requested quote"
+      },
+      {
+        date: "2024-02-04T14:30:00Z",
+        type: "call",
+        summary: "Follow-up call with plan details",
+        outcome: "Customer comparing options, will decide by weekend"
+      }
+    ],
+    createdAt: "2024-02-01T10:15:00Z",
+    updatedAt: "2024-02-04T14:30:00Z"
+  },
+  {
+    id: 2,
+    leadNumber: "LEAD-2024-002",
+    customerName: "Neha Sharma",
+    phone: "+91 88776 65432",
+    address: "Koramangala, Bangalore",
+    city: "Bangalore",
+    source: "mobile-app",
+    sourceDetails: "Downloaded app and requested callback",
+    interestedService: "new-connection",
+    leadScore: 70,
+    priority: "warm",
+    status: "follow-up",
+    assignedTo: 2,
+    assignedToName: "Sales Rep 2",
+    lastContactDate: "2024-02-03T16:20:00Z",
+    nextFollowUpDate: "2024-02-07T11:30:00Z",
+    notes: "Young professional, price-conscious. Interested in basic plans.",
+    conversationHistory: [
+      {
+        date: "2024-02-02T09:45:00Z",
+        type: "call",
+        summary: "App-generated lead callback",
+        outcome: "Requested more information about affordable plans"
+      },
+      {
+        date: "2024-02-03T16:20:00Z",
+        type: "whatsapp",
+        summary: "Sent plan brochure via WhatsApp",
+        outcome: "Customer acknowledged receipt, needs time to decide"
+      }
+    ],
+    createdAt: "2024-02-02T09:30:00Z",
+    updatedAt: "2024-02-03T16:20:00Z"
+  },
+  {
+    id: 3,
+    leadNumber: "LEAD-2024-003",
+    customerName: "Rohit Patel",
+    email: "rohit.patel@business.com",
+    phone: "+91 77665 54321",
+    address: "Commercial Complex, Pune",
+    city: "Pune",
+    source: "whatsapp-bot",
+    sourceDetails: "Inquiry through WhatsApp business bot",
+    interestedService: "corporate-solution",
+    leadScore: 90,
+    priority: "hot",
+    status: "qualified",
+    assignedTo: 3,
+    assignedToName: "Sales Rep 3",
+    lastContactDate: "2024-02-04T11:45:00Z",
+    nextFollowUpDate: "2024-02-05T14:00:00Z",
+    notes: "Business owner looking for dedicated leased line. High-value prospect.",
+    conversationHistory: [
+      {
+        date: "2024-01-30T15:20:00Z",
+        type: "whatsapp",
+        summary: "Initial WhatsApp bot inquiry",
+        outcome: "Business internet requirements captured"
+      },
+      {
+        date: "2024-02-01T10:30:00Z",
+        type: "call",
+        summary: "Detailed business requirements discussion",
+        outcome: "Scheduled site visit for assessment"
+      },
+      {
+        date: "2024-02-04T11:45:00Z",
+        type: "meeting",
+        summary: "On-site business assessment",
+        outcome: "Proposal preparation in progress"
+      }
+    ],
+    createdAt: "2024-01-30T15:20:00Z",
+    updatedAt: "2024-02-04T11:45:00Z"
+  },
+  {
+    id: 4,
+    leadNumber: "LEAD-2024-004",
+    customerName: "Kavya Reddy",
+    email: "kavya.reddy@email.com",
+    phone: "+91 66554 43210",
+    address: "Hitech City, Hyderabad",
+    city: "Hyderabad",
+    source: "website",
+    sourceDetails: "Contact form submission on company website",
+    interestedService: "plan-upgrade",
+    leadScore: 60,
+    priority: "warm",
+    status: "contacted",
+    assignedTo: 1,
+    assignedToName: "Sales Rep 1",
+    lastContactDate: "2024-02-03T13:15:00Z",
+    nextFollowUpDate: "2024-02-08T10:00:00Z",
+    notes: "Existing customer of competitor, looking to switch. Pricing sensitive.",
+    conversationHistory: [
+      {
+        date: "2024-02-02T12:00:00Z",
+        type: "email",
+        summary: "Website inquiry response",
+        outcome: "Sent plan comparison and pricing details"
+      },
+      {
+        date: "2024-02-03T13:15:00Z",
+        type: "call",
+        summary: "Discussion about switching from current provider",
+        outcome: "Customer considering our offer, will respond next week"
+      }
+    ],
+    createdAt: "2024-02-02T11:45:00Z",
+    updatedAt: "2024-02-03T13:15:00Z"
+  },
+  {
+    id: 5,
+    leadNumber: "LEAD-2024-005",
+    customerName: "Manish Agrawal",
+    phone: "+91 55443 32109",
+    address: "Vaishali Nagar, Jaipur",
+    city: "Jaipur",
+    source: "referral",
+    sourceDetails: "Referred by existing customer Rajesh Kumar",
+    interestedService: "new-connection",
+    leadScore: 75,
+    priority: "warm",
+    status: "converted",
+    assignedTo: 2,
+    assignedToName: "Sales Rep 2",
+    lastContactDate: "2024-02-01T17:30:00Z",
+    notes: "Referral lead successfully converted to installation application.",
+    conversationHistory: [
+      {
+        date: "2024-01-28T14:20:00Z",
+        type: "call",
+        summary: "Initial referral call",
+        outcome: "Strong interest due to referrer's recommendation"
+      },
+      {
+        date: "2024-02-01T17:30:00Z",
+        type: "meeting",
+        summary: "Plan selection and application process",
+        outcome: "Application submitted, converted to installation"
+      }
+    ],
+    createdAt: "2024-01-28T14:20:00Z",
+    updatedAt: "2024-02-01T17:30:00Z"
+  }
+];
+
+// Export new data arrays
+export const dummyInstallations = generateDummyInstallations();
+export const dummyLeads = generateDummyLeads();
