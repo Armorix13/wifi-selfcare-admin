@@ -142,7 +142,7 @@ export default function Installations() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout title="New Installation Management">
       <div className="flex-1 space-y-6 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">

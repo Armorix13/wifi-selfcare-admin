@@ -26,6 +26,7 @@ import ComplaintDetail from "@/pages/complaint-detail";
 import PlanDetail from "@/pages/plan-detail";
 import Installations from "@/pages/installations";
 import Leads from "@/pages/leads";
+import InstallationsLeads from "@/pages/installations-leads";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -119,6 +120,12 @@ function Router() {
       <Route path="/leads">
         <ProtectedRoute>
           <Leads />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/installations-leads">
+        <ProtectedRoute>
+          <InstallationsLeads />
         </ProtectedRoute>
       </Route>
       
