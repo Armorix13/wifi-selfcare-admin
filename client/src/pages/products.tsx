@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,15 +70,16 @@ export function Products() {
   const positiveReviews = dummyProductFeedback.filter(f => f.rating >= 4).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
-          <p className="text-muted-foreground">
-            Manage WiFi equipment inventory, orders, and customer feedback
-          </p>
+    <MainLayout title="Product Management">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Product Management</h1>
+            <p className="text-muted-foreground">
+              Manage WiFi equipment inventory, orders, and customer feedback
+            </p>
+          </div>
         </div>
-      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -622,6 +624,7 @@ export function Products() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
