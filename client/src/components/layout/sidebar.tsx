@@ -39,7 +39,7 @@ const navigation = [
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
   { name: "Products", href: "/products", icon: Package, permission: "manage-products" },
   { name: "Service Plans", href: "/plans", icon: CreditCard, permission: "manage-plans" },
-  { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
+  { name: "New Installation Management", href: "/installations", icon: HardHat, permission: "manage-installations" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permission: "view-analytics" },
   { name: "Notifications", href: "/notifications", icon: Bell, permission: "manage-notifications" },
   { name: "Support & Rating", href: "/support", icon: Headphones, permission: "manage-support" },

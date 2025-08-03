@@ -173,7 +173,153 @@ export default function Installations() {
 
   return (
     <MainLayout title="New Installation Management">
-      <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+      <div className="flex gap-6">
+        {/* Data Sidebar */}
+        <div className="w-80 space-y-6">
+          {/* Application Forms Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Application Forms
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                All submitted applications ({applicationForms.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-96 overflow-y-auto space-y-3">
+              {applicationForms.slice(0, 10).map((app) => (
+                <div 
+                  key={app.id} 
+                  className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  onClick={() => {
+                    setSelectedApplication(app);
+                    setIsApplicationDialogOpen(true);
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm dashboard-text">{app.applicationId}</h4>
+                    <Badge className={`${getStatusColor(app.status)} text-xs`}>
+                      {app.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted mb-1">{app.name}</p>
+                  <div className="flex items-center justify-between">
+                    <Badge className={`${getTypeColor(app.applicationType)} text-xs`}>
+                      {app.applicationType}
+                    </Badge>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(new Date(app.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {applicationForms.length > 10 && (
+                <div className="text-center">
+                  <Button variant="outline" size="sm" className="text-xs">
+                    View All {applicationForms.length} Applications
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Installation Requests Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <Wrench className="mr-2 h-5 w-5" />
+                Installation Requests
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                All installation requests ({installationRequests.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-96 overflow-y-auto space-y-3">
+              {installationRequests.slice(0, 10).map((req) => (
+                <div 
+                  key={req.id} 
+                  className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                  onClick={() => {
+                    setSelectedInstallation(req);
+                    setIsInstallationDialogOpen(true);
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-sm dashboard-text">#{req.id}</h4>
+                    <Badge className={`${getStatusColor(req.status)} text-xs`}>
+                      {req.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted mb-1">{req.name}</p>
+                  <div className="flex items-center justify-between">
+                    <Badge className={`${getTypeColor(req.installationType)} text-xs`}>
+                      {req.installationType}
+                    </Badge>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(new Date(req.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                  {req.assignedEngineer && (
+                    <div className="mt-1 text-xs dashboard-text-muted">
+                      Engineer: {getEngineerName(req.assignedEngineer)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {installationRequests.length > 10 && (
+                <div className="text-center">
+                  <Button variant="outline" size="sm" className="text-xs">
+                    View All {installationRequests.length} Requests
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <BarChart3 className="mr-2 h-5 w-5" />
+                Quick Stats
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{applicationStats.fibre}</div>
+                  <div className="text-xs dashboard-text-muted">Fibre</div>
+                </div>
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{applicationStats.ott}</div>
+                  <div className="text-xs dashboard-text-muted">OTT</div>
+                </div>
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{applicationStats.iptv}</div>
+                  <div className="text-xs dashboard-text-muted">IPTV</div>
+                </div>
+              </div>
+              <div className="pt-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span className="dashboard-text-muted">Conversion Rate</span>
+                  <span className="font-medium dashboard-text">
+                    {Math.round((installationStats.total / applicationStats.accepted) * 100)}%
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="dashboard-text-muted">Completion Rate</span>
+                  <span className="font-medium dashboard-text">
+                    {Math.round((installationStats.completed / installationStats.total) * 100)}%
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between space-y-2">
           <div>
@@ -1143,6 +1289,7 @@ export default function Installations() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </MainLayout>
   );
