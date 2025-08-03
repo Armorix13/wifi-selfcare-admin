@@ -33,7 +33,10 @@ import {
   TrendingUp,
   Settings,
   Search,
-  Filter
+  Filter,
+  Upload,
+  Image,
+  X
 } from "lucide-react";
 import { generateDummyIptvPlans, generateDummyOttPlans, generateDummyFibrePlans, type IptvPlan, type OttPlan, type FibrePlan } from "@/lib/dummyData";
 
@@ -47,6 +50,8 @@ export default function PlansPage() {
   const [editingPlan, setEditingPlan] = useState<any>(null);
   const [selectedPlanTypeForAdd, setSelectedPlanTypeForAdd] = useState("iptv");
   const [formData, setFormData] = useState<any>({});
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // Get dummy data
   const iptvPlans = generateDummyIptvPlans();
@@ -68,12 +73,14 @@ export default function PlansPage() {
   // Get unique providers for filter
   const getAllProviders = () => {
     const allPlans = [...iptvPlans, ...ottPlans, ...fibrePlans];
-    return [...new Set(allPlans.map(plan => plan.provider))];
+    return Array.from(new Set(allPlans.map(plan => plan.provider)));
   };
 
   const handleEdit = (plan: any) => {
     setEditingPlan(plan);
     setFormData(plan);
+    setLogoPreview(null);
+    setLogoFile(null);
     setShowEditDialog(true);
   };
 
@@ -98,10 +105,30 @@ export default function PlansPage() {
   const resetForm = () => {
     setFormData({});
     setSelectedPlanTypeForAdd("iptv");
+    setLogoFile(null);
+    setLogoPreview(null);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeUploadedFile = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setFormData({...formData, logo: ""});
   };
 
   return (
-    <MainLayout>
+    <MainLayout title="Service Plans Management">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -310,7 +337,7 @@ export default function PlansPage() {
                     <div className="space-y-2">
                       <p className="text-sm font-medium dashboard-welcome-text">Popular Channels:</p>
                       <div className="flex flex-wrap gap-1">
-                        {plan.channelList.slice(0, 3).map((channel, idx) => (
+                        {plan.channelList.slice(0, 3).map((channel: string, idx: number) => (
                           <Badge key={idx} variant="secondary" className="text-xs">
                             {channel}
                           </Badge>
@@ -396,7 +423,7 @@ export default function PlansPage() {
                     <div className="space-y-2">
                       <p className="text-sm font-medium dashboard-welcome-text">OTT Apps Included:</p>
                       <div className="flex flex-wrap gap-1">
-                        {plan.ottApps.slice(0, 3).map((app, idx) => (
+                        {plan.ottApps.slice(0, 3).map((app: string, idx: number) => (
                           <Badge key={idx} variant="secondary" className="text-xs">
                             {app}
                           </Badge>
@@ -836,14 +863,62 @@ export default function PlansPage() {
               </div>
 
               {/* Logo Upload */}
-              <div>
-                <Label className="dashboard-welcome-text">Logo URL</Label>
-                <Input 
-                  placeholder="https://yourcdn.com/logos/provider.png" 
-                  className="dashboard-welcome-input"
-                  value={formData.logo || ""}
-                  onChange={(e) => setFormData({...formData, logo: e.target.value})}
-                />
+              <div className="space-y-4">
+                <Label className="dashboard-welcome-text text-lg font-semibold">Provider Logo</Label>
+                
+                {!logoPreview ? (
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
+                        <Upload className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="dashboard-welcome-text font-medium">Upload provider logo</p>
+                        <p className="text-sm dashboard-welcome-muted">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                      <label className="cursor-pointer">
+                        <span className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                          <Image className="h-4 w-4 mr-2" />
+                          Choose File
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative inline-block">
+                    <div className="dashboard-stats-card rounded-lg p-4">
+                      <div className="flex items-center gap-4">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo preview" 
+                          className="h-16 w-16 object-cover rounded-lg border dashboard-welcome-muted"
+                        />
+                        <div className="flex-1">
+                          <p className="dashboard-welcome-text font-medium">
+                            {logoFile?.name}
+                          </p>
+                          <p className="text-sm dashboard-welcome-muted">
+                            {logoFile ? (logoFile.size / 1024 / 1024).toFixed(2) : '0'} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeUploadedFile}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-4">
@@ -1150,13 +1225,76 @@ export default function PlansPage() {
                   />
                 </div>
 
-                <div>
-                  <Label className="dashboard-welcome-text">Logo URL</Label>
-                  <Input 
-                    value={formData.logo || ""} 
-                    className="dashboard-welcome-input"
-                    onChange={(e) => setFormData({...formData, logo: e.target.value})}
-                  />
+                {/* Logo Upload for Edit */}
+                <div className="space-y-4">
+                  <Label className="dashboard-welcome-text text-lg font-semibold">Provider Logo</Label>
+                  
+                  {!logoPreview && !formData.logo ? (
+                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
+                          <Upload className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <p className="dashboard-welcome-text font-medium">Upload new logo</p>
+                          <p className="text-sm dashboard-welcome-muted">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                        <label className="cursor-pointer">
+                          <span className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                            <Image className="h-4 w-4 mr-2" />
+                            Choose File
+                          </span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleFileUpload}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative inline-block">
+                      <div className="dashboard-stats-card rounded-lg p-4">
+                        <div className="flex items-center gap-4">
+                          <img 
+                            src={logoPreview || formData.logo} 
+                            alt="Logo preview" 
+                            className="h-16 w-16 object-cover rounded-lg border dashboard-welcome-muted"
+                          />
+                          <div className="flex-1">
+                            <p className="dashboard-welcome-text font-medium">
+                              {logoFile?.name || 'Current logo'}
+                            </p>
+                            <p className="text-sm dashboard-welcome-muted">
+                              {logoFile ? (logoFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Existing file'}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <label className="cursor-pointer">
+                              <span className="inline-flex items-center px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm transition-colors">
+                                Change
+                              </span>
+                              <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                              />
+                            </label>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={removeUploadedFile}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
