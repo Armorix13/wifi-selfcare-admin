@@ -121,6 +121,54 @@ export interface FibrePlan {
   createdAt: string;
 }
 
+// Application Form Interface
+export interface ApplicationForm {
+  id: number;
+  userId: number;
+  applicationId: string;
+  applicationType: 'fibre' | 'ott' | 'iptv';
+  phoneNumber: string;
+  countryCode: string;
+  alternateCountryCode?: string;
+  alternatePhoneNumber?: string;
+  status: 'inreview' | 'accept' | 'reject';
+  planId: number;
+  pincode: string;
+  name: string;
+  village: string;
+  address: string;
+  rejectedAt?: string;
+  acceptedAt?: string;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// WiFi Installation Request Interface
+export interface WifiInstallationRequest {
+  id: number;
+  userId: number;
+  applicationId: number;
+  installationType: 'fibre' | 'ott' | 'iptv';
+  name: string;
+  email: string;
+  phoneNumber: string;
+  countryCode: string;
+  alternateCountryCode?: string;
+  alternatePhoneNumber?: string;
+  aadhaarFrontUrl?: string;
+  aadhaarBackUrl?: string;
+  passportPhotoUrl?: string;
+  status: 'inreview' | 'approved' | 'rejected';
+  approvedDate?: string;
+  remarks?: string;
+  assignedEngineer?: number;
+  installationDate?: string;
+  completedDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NewInstallation {
   id: number;
   customerName: string;
@@ -1703,3 +1751,206 @@ export const dummyOrders = generateDummyOrders();
 export const dummyProductFeedback = generateDummyProductFeedback();
 export const dummyNewInstallations = generateDummyNewInstallations();
 export const dummyLeads = generateDummyLeads();
+
+// Generate dummy application forms data
+export const generateDummyApplicationForms = (): ApplicationForm[] => [
+  {
+    id: 1,
+    userId: 1,
+    applicationId: "WIFI-0001",
+    applicationType: "fibre",
+    phoneNumber: "+91 98765 43210",
+    countryCode: "+91",
+    alternateCountryCode: "+91",
+    alternatePhoneNumber: "+91 87654 32109",
+    status: "accept",
+    planId: 1,
+    pincode: "400001",
+    name: "Rajesh Kumar",
+    village: "Andheri West",
+    address: "123, SV Road, Near Metro Station, Andheri West",
+    acceptedAt: "2024-01-25T10:30:00Z",
+    remarks: "All documents verified successfully",
+    createdAt: "2024-01-20T09:15:00Z",
+    updatedAt: "2024-01-25T10:30:00Z"
+  },
+  {
+    id: 2,
+    userId: 2,
+    applicationId: "WIFI-0002",
+    applicationType: "ott",
+    phoneNumber: "+91 76543 21098",
+    countryCode: "+91",
+    status: "inreview",
+    planId: 2,
+    pincode: "110001",
+    name: "Priya Sharma",
+    village: "Connaught Place",
+    address: "45, CP Market, Central Delhi",
+    createdAt: "2024-01-28T14:20:00Z",
+    updatedAt: "2024-01-28T14:20:00Z"
+  },
+  {
+    id: 3,
+    userId: 3,
+    applicationId: "WIFI-0003",
+    applicationType: "iptv",
+    phoneNumber: "+91 65432 10987",
+    countryCode: "+91",
+    status: "reject",
+    planId: 3,
+    pincode: "560001",
+    name: "Amit Patel",
+    village: "Koramangala",
+    address: "78, 1st Block, Koramangala, Bangalore",
+    rejectedAt: "2024-01-26T16:45:00Z",
+    remarks: "Incomplete documentation provided",
+    createdAt: "2024-01-22T11:30:00Z",
+    updatedAt: "2024-01-26T16:45:00Z"
+  },
+  {
+    id: 4,
+    userId: 4,
+    applicationId: "WIFI-0004",
+    applicationType: "fibre",
+    phoneNumber: "+91 54321 09876",
+    countryCode: "+91",
+    alternateCountryCode: "+91",
+    alternatePhoneNumber: "+91 43210 98765",
+    status: "accept",
+    planId: 4,
+    pincode: "600001",
+    name: "Sneha Reddy",
+    village: "T Nagar",
+    address: "56, Ranganathan Street, T Nagar, Chennai",
+    acceptedAt: "2024-01-27T12:15:00Z",
+    remarks: "Fast track processing approved",
+    createdAt: "2024-01-25T08:45:00Z",
+    updatedAt: "2024-01-27T12:15:00Z"
+  },
+  {
+    id: 5,
+    userId: 5,
+    applicationId: "WIFI-0005",
+    applicationType: "ott",
+    phoneNumber: "+91 43210 98765",
+    countryCode: "+91",
+    status: "inreview",
+    planId: 5,
+    pincode: "700001",
+    name: "Rohit Ghosh",
+    village: "Park Street",
+    address: "89, Park Street Area, Kolkata",
+    createdAt: "2024-01-29T15:30:00Z",
+    updatedAt: "2024-01-29T15:30:00Z"
+  }
+];
+
+// Generate dummy WiFi installation requests data
+export const generateDummyWifiInstallationRequests = (): WifiInstallationRequest[] => [
+  {
+    id: 1,
+    userId: 1,
+    applicationId: 1,
+    installationType: "fibre",
+    name: "Rajesh Kumar",
+    email: "rajesh.kumar@gmail.com",
+    phoneNumber: "+91 98765 43210",
+    countryCode: "+91",
+    alternateCountryCode: "+91",
+    alternatePhoneNumber: "+91 87654 32109",
+    aadhaarFrontUrl: "/documents/aadhaar-front-1.jpg",
+    aadhaarBackUrl: "/documents/aadhaar-back-1.jpg",
+    passportPhotoUrl: "/documents/passport-photo-1.jpg",
+    status: "approved",
+    approvedDate: "2024-01-26T09:30:00Z",
+    remarks: "All documents verified and installation approved",
+    assignedEngineer: 1,
+    installationDate: "2024-02-02T10:00:00Z",
+    createdAt: "2024-01-25T11:00:00Z",
+    updatedAt: "2024-01-26T09:30:00Z"
+  },
+  {
+    id: 2,
+    userId: 4,
+    applicationId: 4,
+    installationType: "fibre",
+    name: "Sneha Reddy",
+    email: "sneha.reddy@yahoo.com",
+    phoneNumber: "+91 54321 09876",
+    countryCode: "+91",
+    alternateCountryCode: "+91",
+    alternatePhoneNumber: "+91 43210 98765",
+    aadhaarFrontUrl: "/documents/aadhaar-front-2.jpg",
+    aadhaarBackUrl: "/documents/aadhaar-back-2.jpg",
+    passportPhotoUrl: "/documents/passport-photo-2.jpg",
+    status: "inreview",
+    remarks: "Documents under verification",
+    createdAt: "2024-01-27T13:00:00Z",
+    updatedAt: "2024-01-27T13:00:00Z"
+  },
+  {
+    id: 3,
+    userId: 6,
+    applicationId: 6,
+    installationType: "ott",
+    name: "Mohammed Ali",
+    email: "mohammed.ali@outlook.com",
+    phoneNumber: "+91 32109 87654",
+    countryCode: "+91",
+    aadhaarFrontUrl: "/documents/aadhaar-front-3.jpg",
+    aadhaarBackUrl: "/documents/aadhaar-back-3.jpg",
+    passportPhotoUrl: "/documents/passport-photo-3.jpg",
+    status: "approved",
+    approvedDate: "2024-01-28T14:15:00Z",
+    remarks: "Expedited processing for OTT installation",
+    assignedEngineer: 2,
+    installationDate: "2024-02-05T11:30:00Z",
+    createdAt: "2024-01-27T16:45:00Z",
+    updatedAt: "2024-01-28T14:15:00Z"
+  },
+  {
+    id: 4,
+    userId: 7,
+    applicationId: 7,
+    installationType: "iptv",
+    name: "Kavya Nair",
+    email: "kavya.nair@gmail.com",
+    phoneNumber: "+91 21098 76543",
+    countryCode: "+91",
+    aadhaarFrontUrl: "/documents/aadhaar-front-4.jpg",
+    aadhaarBackUrl: "/documents/aadhaar-back-4.jpg",
+    passportPhotoUrl: "/documents/passport-photo-4.jpg",
+    status: "rejected",
+    remarks: "Address verification failed",
+    createdAt: "2024-01-26T12:20:00Z",
+    updatedAt: "2024-01-29T10:45:00Z"
+  },
+  {
+    id: 5,
+    userId: 8,
+    applicationId: 8,
+    installationType: "fibre",
+    name: "Vikram Singh",
+    email: "vikram.singh@hotmail.com",
+    phoneNumber: "+91 10987 65432",
+    countryCode: "+91",
+    alternateCountryCode: "+91",
+    alternatePhoneNumber: "+91 09876 54321",
+    aadhaarFrontUrl: "/documents/aadhaar-front-5.jpg",
+    aadhaarBackUrl: "/documents/aadhaar-back-5.jpg",
+    passportPhotoUrl: "/documents/passport-photo-5.jpg",
+    status: "approved",
+    approvedDate: "2024-01-30T08:20:00Z",
+    remarks: "Priority installation for business use",
+    assignedEngineer: 3,
+    installationDate: "2024-02-03T09:00:00Z",
+    completedDate: "2024-02-03T15:30:00Z",
+    createdAt: "2024-01-28T17:30:00Z",
+    updatedAt: "2024-02-03T15:30:00Z"
+  }
+];
+
+// Export dummy data
+export const dummyApplicationForms = generateDummyApplicationForms();
+export const dummyWifiInstallationRequests = generateDummyWifiInstallationRequests();

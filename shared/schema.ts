@@ -206,6 +206,54 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Application Forms table - For Fibre, OTT, IPTV applications
+export const applicationForms = pgTable("application_forms", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  applicationId: text("application_id").unique(),
+  applicationType: text("application_type").notNull(), // fibre, ott, iptv
+  phoneNumber: text("phone_number").notNull(),
+  countryCode: text("country_code").notNull(),
+  alternateCountryCode: text("alternate_country_code"),
+  alternatePhoneNumber: text("alternate_phone_number"),
+  status: text("status").notNull().default("inreview"), // inreview, accept, reject
+  planId: integer("plan_id").notNull(),
+  pincode: text("pincode").notNull(),
+  name: text("name").notNull(),
+  village: text("village").notNull(),
+  address: text("address").notNull(),
+  rejectedAt: timestamp("rejected_at"),
+  acceptedAt: timestamp("accepted_at"),
+  remarks: text("remarks"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// WiFi Installation Requests table - After application acceptance
+export const wifiInstallationRequests = pgTable("wifi_installation_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  applicationId: integer("application_id").notNull(),
+  installationType: text("installation_type").notNull(), // fibre, ott, iptv
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  countryCode: text("country_code").notNull(),
+  alternateCountryCode: text("alternate_country_code"),
+  alternatePhoneNumber: text("alternate_phone_number"),
+  aadhaarFrontUrl: text("aadhaar_front_url"),
+  aadhaarBackUrl: text("aadhaar_back_url"),
+  passportPhotoUrl: text("passport_photo_url"),
+  status: text("status").notNull().default("inreview"), // inreview, approved, rejected
+  approvedDate: timestamp("approved_date"),
+  remarks: text("remarks"),
+  assignedEngineer: integer("assigned_engineer"),
+  installationDate: timestamp("installation_date"),
+  completedDate: timestamp("completed_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -267,6 +315,19 @@ export const insertNewInstallationSchema = createInsertSchema(newInstallations).
 });
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertApplicationFormSchema = createInsertSchema(applicationForms).omit({
+  id: true,
+  applicationId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWifiInstallationRequestSchema = createInsertSchema(wifiInstallationRequests).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -383,6 +444,10 @@ export type NewInstallation = typeof newInstallations.$inferSelect;
 export type InsertNewInstallation = z.infer<typeof insertNewInstallationSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type ApplicationForm = typeof applicationForms.$inferSelect;
+export type InsertApplicationForm = z.infer<typeof insertApplicationFormSchema>;
+export type WifiInstallationRequest = typeof wifiInstallationRequests.$inferSelect;
+export type InsertWifiInstallationRequest = z.infer<typeof insertWifiInstallationRequestSchema>;
 export type IptvPlan = typeof iptvPlans.$inferSelect;
 export type InsertIptvPlan = z.infer<typeof insertIptvPlanSchema>;
 export type OttPlan = typeof ottPlans.$inferSelect;
