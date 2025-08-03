@@ -45,6 +45,21 @@
   --dropdown-border: hsl(214, 13%, 91%);
   --dropdown-item: hsl(215, 25%, 25%);
   --dropdown-item-hover: hsl(210, 40%, 96%);
+  
+  /* Dashboard variables */
+  --dashboard-bg: hsl(0, 0%, 100%);
+  --dashboard-hero-bg: linear-gradient(135deg, hsl(221, 83%, 98%) 0%, hsl(210, 40%, 96%) 100%);
+  --dashboard-text: hsl(215, 25%, 25%);
+  --dashboard-text-muted: hsl(215, 16%, 47%);
+  --stats-card-bg: hsl(0, 0%, 100%);
+  --stats-card-border: hsl(214, 13%, 91%);
+  --stats-card-hover: hsl(210, 40%, 98%);
+  --badge-super-admin: hsl(45, 93%, 47%);
+  --badge-admin: hsl(221, 83%, 53%);
+  --badge-manager: hsl(142, 71%, 45%);
+  --welcome-icon: hsl(221, 83%, 53%);
+  --chart-bg: hsl(0, 0%, 100%);
+  --chart-border: hsl(214, 13%, 91%);
 }
 
 .dark {
@@ -90,6 +105,21 @@
   --dropdown-border: hsl(217.2, 32.6%, 17.5%);
   --dropdown-item: hsl(210, 40%, 90%);
   --dropdown-item-hover: hsl(217, 33%, 22%);
+  
+  /* Dark theme dashboard */
+  --dashboard-bg: hsl(222, 47%, 11%);
+  --dashboard-hero-bg: linear-gradient(135deg, hsl(215, 25%, 15%) 0%, hsl(217, 33%, 12%) 100%);
+  --dashboard-text: hsl(210, 40%, 98%);
+  --dashboard-text-muted: hsl(215, 20%, 65%);
+  --stats-card-bg: hsl(217, 33%, 17%);
+  --stats-card-border: hsl(217.2, 32.6%, 17.5%);
+  --stats-card-hover: hsl(217, 33%, 22%);
+  --badge-super-admin: hsl(45, 93%, 57%);
+  --badge-admin: hsl(179, 82%, 51%);
+  --badge-manager: hsl(142, 71%, 55%);
+  --welcome-icon: hsl(179, 82%, 51%);
+  --chart-bg: hsl(217, 33%, 17%);
+  --chart-border: hsl(217.2, 32.6%, 17.5%);
 }
 
 .crypto {
@@ -135,6 +165,21 @@
   --dropdown-border: hsla(179, 82%, 51%, 0.3);
   --dropdown-item: hsl(179, 40%, 90%);
   --dropdown-item-hover: hsla(179, 82%, 51%, 0.15);
+  
+  /* Crypto theme dashboard */
+  --dashboard-bg: hsl(222, 47%, 11%);
+  --dashboard-hero-bg: linear-gradient(135deg, hsl(215, 25%, 12%) 0%, hsl(217, 33%, 8%) 100%);
+  --dashboard-text: hsl(179, 40%, 90%);
+  --dashboard-text-muted: hsl(179, 30%, 70%);
+  --stats-card-bg: linear-gradient(135deg, hsl(217, 33%, 17%) 0%, hsl(215, 25%, 15%) 100%);
+  --stats-card-border: hsla(179, 82%, 51%, 0.2);
+  --stats-card-hover: hsla(179, 82%, 51%, 0.15);
+  --badge-super-admin: hsl(179, 82%, 51%);
+  --badge-admin: hsl(45, 93%, 57%);
+  --badge-manager: hsl(179, 60%, 70%);
+  --welcome-icon: hsl(179, 82%, 51%);
+  --chart-bg: linear-gradient(135deg, hsl(217, 33%, 17%) 0%, hsl(215, 25%, 15%) 100%);
+  --chart-border: hsla(179, 82%, 51%, 0.2);
 }
 
 .neon {
@@ -180,6 +225,21 @@
   --dropdown-border: hsla(300, 100%, 50%, 0.4);
   --dropdown-item: hsl(300, 80%, 95%);
   --dropdown-item-hover: hsla(300, 100%, 50%, 0.15);
+  
+  /* Neon theme dashboard */
+  --dashboard-bg: hsl(270, 100%, 3%);
+  --dashboard-hero-bg: linear-gradient(135deg, hsl(270, 80%, 5%) 0%, hsl(270, 100%, 2%) 100%);
+  --dashboard-text: hsl(300, 100%, 95%);
+  --dashboard-text-muted: hsl(300, 60%, 80%);
+  --stats-card-bg: linear-gradient(135deg, hsl(270, 80%, 8%) 0%, hsl(270, 100%, 5%) 100%);
+  --stats-card-border: hsla(300, 100%, 50%, 0.3);
+  --stats-card-hover: hsla(300, 100%, 50%, 0.15);
+  --badge-super-admin: hsl(300, 100%, 50%);
+  --badge-admin: hsl(270, 80%, 60%);
+  --badge-manager: hsl(300, 60%, 75%);
+  --welcome-icon: hsl(300, 100%, 50%);
+  --chart-bg: linear-gradient(135deg, hsl(270, 80%, 8%) 0%, hsl(270, 100%, 5%) 100%);
+  --chart-border: hsla(300, 100%, 50%, 0.3);
 }
 
 /* Modern component styles */
@@ -331,4 +391,116 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Dashboard specific styles */
+.dashboard-hero {
+  background: var(--dashboard-hero-bg);
+  color: var(--dashboard-text);
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+.dashboard-stats-card {
+  background: var(--stats-card-bg);
+  border: 1px solid var(--stats-card-border);
+  transition: all 0.3s ease;
+}
+
+.dashboard-stats-card:hover {
+  background: var(--stats-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px hsla(var(--primary), 0.15);
+}
+
+.dashboard-chart-card {
+  background: var(--chart-bg);
+  border: 1px solid var(--chart-border);
+  transition: all 0.3s ease;
+}
+
+.dashboard-welcome-text {
+  color: var(--dashboard-text);
+}
+
+.dashboard-welcome-muted {
+  color: var(--dashboard-text-muted);
+}
+
+.dashboard-welcome-icon {
+  color: var(--welcome-icon);
+}
+
+.badge-super-admin {
+  background: var(--badge-super-admin);
+  color: white;
+}
+
+.badge-admin {
+  background: var(--badge-admin);
+  color: white;
+}
+
+.badge-manager {
+  background: var(--badge-manager);
+  color: white;
+}
+
+.sparkle-animation {
+  animation: sparkle 2s infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(90deg); }
+  50% { transform: scale(1) rotate(180deg); }
+  75% { transform: scale(1.1) rotate(270deg); }
+}
+
+.rainbow-border {
+  position: relative;
+  border: 2px solid transparent;
+  background: var(--stats-card-bg);
+}
+
+.rainbow-border::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    var(--badge-super-admin), 
+    var(--badge-admin), 
+    var(--badge-manager), 
+    var(--welcome-icon)
+  );
+  border-radius: inherit;
+  z-index: -1;
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Theme specific glow effects */
+.crypto .dashboard-stats-card {
+  box-shadow: 0 0 15px hsla(179, 82%, 51%, 0.1);
+}
+
+.crypto .dashboard-stats-card:hover {
+  box-shadow: 0 0 25px hsla(179, 82%, 51%, 0.2);
+}
+
+.neon .dashboard-stats-card {
+  box-shadow: 0 0 15px hsla(300, 100%, 50%, 0.1);
+}
+
+.neon .dashboard-stats-card:hover {
+  box-shadow: 0 0 25px hsla(300, 100%, 50%, 0.2);
 }
