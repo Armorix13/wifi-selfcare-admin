@@ -98,13 +98,13 @@ export default function Installations() {
 
   const getPlanDetails = (planId: number, type: string) => {
     if (type === "fibre") {
-      const plan = dummyFibrePlans.find(p => p.id === planId);
+      const plan = dummyFibrePlans.find((p: any) => p.id === planId);
       return plan ? `${plan.title} - ₹${plan.price}` : "Unknown Plan";
     } else if (type === "ott") {
-      const plan = dummyOttPlans.find(p => p.id === planId);
+      const plan = dummyOttPlans.find((p: any) => p.id === planId);
       return plan ? `${plan.title} - ₹${plan.price}` : "Unknown Plan";
     } else if (type === "iptv") {
-      const plan = dummyIptvPlans.find(p => p.id === planId);
+      const plan = dummyIptvPlans.find((p: any) => p.id === planId);
       return plan ? `${plan.name} - ₹${plan.price}` : "Unknown Plan";
     }
     return "Unknown Plan";
@@ -172,7 +172,7 @@ export default function Installations() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout title="New Installation Management">
       <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
         {/* Header */}
         <div className="flex items-center justify-between space-y-2">

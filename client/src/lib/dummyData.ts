@@ -1954,3 +1954,6 @@ export const generateDummyWifiInstallationRequests = (): WifiInstallationRequest
 // Export dummy data
 export const dummyApplicationForms = generateDummyApplicationForms();
 export const dummyWifiInstallationRequests = generateDummyWifiInstallationRequests();
+export const dummyFibrePlans = generateDummyFibrePlans();
+export const dummyOttPlans = generateDummyOttPlans();
+export const dummyIptvPlans = generateDummyIptvPlans();
