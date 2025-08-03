@@ -42,7 +42,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { dummyNewInstallations, dummyLeads, type NewInstallation, type Lead } from "@/lib/dummyData";
+import { 
+  dummyNewInstallations, 
+  dummyLeads, 
+  dummyApplicationForms, 
+  dummyWifiInstallationRequests, 
+  dummyEngineers,
+  type NewInstallation, 
+  type Lead,
+  type ApplicationForm,
+  type WifiInstallationRequest 
+} from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
 
 export default function InstallationsLeads() {
@@ -53,6 +63,8 @@ export default function InstallationsLeads() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [installations, setInstallations] = useState(dummyNewInstallations);
   const [leads, setLeads] = useState(dummyLeads);
+  const [applicationForms] = useState(dummyApplicationForms);
+  const [installationRequests] = useState(dummyWifiInstallationRequests);
   const [showNewInstallationForm, setShowNewInstallationForm] = useState(false);
   const [showNewLeadForm, setShowNewLeadForm] = useState(false);
 
@@ -72,6 +84,33 @@ export default function InstallationsLeads() {
         ? { ...lead, status, updatedAt: new Date().toISOString() }
         : lead
     ));
+  };
+
+  // Helper functions for application forms and installation requests
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "inreview": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "accept": case "approved": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "reject": case "rejected": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+      case "new": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "contacted": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "converted": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "fibre": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "ott": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "iptv": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
+  };
+
+  const getEngineerName = (engineerId: number) => {
+    const engineer = dummyEngineers.find(e => e.id === engineerId);
+    return engineer ? engineer.name : "Unassigned";
   };
 
   // Filter installations
@@ -264,13 +303,200 @@ export default function InstallationsLeads() {
 
   return (
     <MainLayout title="New Installation & Leads">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">New Installation & Leads</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage installation requests and customer inquiries</p>
-          </div>
+      <div className="flex gap-6">
+        {/* Comprehensive Data Sidebar */}
+        <div className="w-80 space-y-6">
+          {/* Application Forms Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <HardHat className="mr-2 h-5 w-5" />
+                Application Forms
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                WiFi installation applications ({applicationForms.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-48 overflow-y-auto space-y-2">
+              {applicationForms.slice(0, 8).map((app) => (
+                <div 
+                  key={app.id} 
+                  className="p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm dashboard-text">{app.applicationId}</span>
+                    <Badge className={`${getStatusColor(app.status)} text-xs`}>
+                      {app.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted">{app.name}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <Badge className={`${getTypeColor(app.applicationType)} text-xs`}>
+                      {app.applicationType}
+                    </Badge>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(new Date(app.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Installation Requests Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <Building className="mr-2 h-5 w-5" />
+                Installation Requests
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                Active installation requests ({installationRequests.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-48 overflow-y-auto space-y-2">
+              {installationRequests.slice(0, 8).map((req) => (
+                <div 
+                  key={req.id} 
+                  className="p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm dashboard-text">#{req.id}</span>
+                    <Badge className={`${getStatusColor(req.status)} text-xs`}>
+                      {req.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted">{req.name}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <Badge className={`${getTypeColor(req.installationType)} text-xs`}>
+                      {req.installationType}
+                    </Badge>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(new Date(req.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                  {req.assignedEngineer && (
+                    <div className="mt-1 text-xs dashboard-text-muted">
+                      Engineer: {getEngineerName(req.assignedEngineer)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Regular Installations Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <Zap className="mr-2 h-5 w-5" />
+                New Installations
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                General installation requests ({installations.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-48 overflow-y-auto space-y-2">
+              {installations.slice(0, 8).map((installation) => (
+                <div 
+                  key={installation.id} 
+                  className="p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm dashboard-text">#{installation.id}</span>
+                    <Badge className={`${getStatusColor(installation.status)} text-xs`}>
+                      {installation.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted">{installation.customerName}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs dashboard-text-muted">{installation.requestType}</span>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(new Date(installation.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Leads Section */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <Phone className="mr-2 h-5 w-5" />
+                Customer Leads
+              </CardTitle>
+              <CardDescription className="dashboard-text-muted">
+                Active leads and inquiries ({leads.length})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-48 overflow-y-auto space-y-2">
+              {leads.slice(0, 8).map((lead) => (
+                <div 
+                  key={lead.id} 
+                  className="p-2 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-sm dashboard-text">#{lead.id}</span>
+                    <Badge className={`${getStatusColor(lead.status)} text-xs`}>
+                      {lead.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs dashboard-text-muted">{lead.name}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center text-xs dashboard-text-muted">
+                      {getSourceIcon(lead.source)}
+                      <span className="ml-1">{lead.source}</span>
+                    </div>
+                    <span className="text-xs dashboard-text-muted">
+                      {format(parseISO(lead.createdAt), "MMM dd")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Quick Stats */}
+          <Card className="dashboard-card">
+            <CardHeader>
+              <CardTitle className="text-lg dashboard-card-title flex items-center">
+                <BarChart3 className="mr-2 h-5 w-5" />
+                Quick Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{applicationForms.length}</div>
+                  <div className="text-xs dashboard-text-muted">Applications</div>
+                </div>
+                <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{installationRequests.length}</div>
+                  <div className="text-xs dashboard-text-muted">Requests</div>
+                </div>
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{installations.length}</div>
+                  <div className="text-xs dashboard-text-muted">Installations</div>
+                </div>
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded">
+                  <div className="text-lg font-bold dashboard-text">{leads.length}</div>
+                  <div className="text-xs dashboard-text-muted">Leads</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">New Installation & Leads</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Manage installation requests and customer inquiries</p>
+            </div>
+          </div>
 
         <Tabs defaultValue="analytics" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -972,6 +1198,7 @@ export default function InstallationsLeads() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </MainLayout>
   );
