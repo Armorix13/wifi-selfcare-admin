@@ -60,6 +60,34 @@
   --welcome-icon: hsl(221, 83%, 53%);
   --chart-bg: hsl(0, 0%, 100%);
   --chart-border: hsl(214, 13%, 91%);
+  
+  /* Status colors for complaints */
+  --status-pending: hsl(45, 93%, 95%);
+  --status-pending-text: hsl(45, 84%, 40%);
+  --status-assigned: hsl(221, 83%, 95%);
+  --status-assigned-text: hsl(221, 83%, 40%);
+  --status-progress: hsl(271, 81%, 95%);
+  --status-progress-text: hsl(271, 81%, 40%);
+  --status-visited: hsl(239, 84%, 95%);
+  --status-visited-text: hsl(239, 84%, 40%);
+  --status-resolved: hsl(142, 71%, 95%);
+  --status-resolved-text: hsl(142, 71%, 40%);
+  --status-failed: hsl(0, 84%, 95%);
+  --status-failed-text: hsl(0, 84%, 40%);
+  --status-default: hsl(210, 40%, 96%);
+  --status-default-text: hsl(215, 25%, 45%);
+  
+  /* Priority colors */
+  --priority-urgent: hsl(0, 84%, 95%);
+  --priority-urgent-text: hsl(0, 84%, 40%);
+  --priority-high: hsl(25, 95%, 95%);
+  --priority-high-text: hsl(25, 95%, 40%);
+  --priority-medium: hsl(45, 93%, 95%);
+  --priority-medium-text: hsl(45, 84%, 40%);
+  --priority-low: hsl(142, 71%, 95%);
+  --priority-low-text: hsl(142, 71%, 40%);
+  --priority-default: hsl(210, 40%, 96%);
+  --priority-default-text: hsl(215, 25%, 45%);
 }
 
 .dark {
@@ -120,6 +148,34 @@
   --welcome-icon: hsl(179, 82%, 51%);
   --chart-bg: hsl(217, 33%, 17%);
   --chart-border: hsl(217.2, 32.6%, 17.5%);
+  
+  /* Dark theme status colors */
+  --status-pending: hsl(45, 93%, 15%);
+  --status-pending-text: hsl(45, 93%, 70%);
+  --status-assigned: hsl(179, 82%, 15%);
+  --status-assigned-text: hsl(179, 82%, 70%);
+  --status-progress: hsl(271, 81%, 15%);
+  --status-progress-text: hsl(271, 81%, 70%);
+  --status-visited: hsl(239, 84%, 15%);
+  --status-visited-text: hsl(239, 84%, 70%);
+  --status-resolved: hsl(142, 71%, 15%);
+  --status-resolved-text: hsl(142, 71%, 70%);
+  --status-failed: hsl(0, 84%, 15%);
+  --status-failed-text: hsl(0, 84%, 70%);
+  --status-default: hsl(217, 33%, 22%);
+  --status-default-text: hsl(210, 40%, 75%);
+  
+  /* Dark theme priority colors */
+  --priority-urgent: hsl(0, 84%, 15%);
+  --priority-urgent-text: hsl(0, 84%, 70%);
+  --priority-high: hsl(25, 95%, 15%);
+  --priority-high-text: hsl(25, 95%, 70%);
+  --priority-medium: hsl(45, 93%, 15%);
+  --priority-medium-text: hsl(45, 93%, 70%);
+  --priority-low: hsl(142, 71%, 15%);
+  --priority-low-text: hsl(142, 71%, 70%);
+  --priority-default: hsl(217, 33%, 22%);
+  --priority-default-text: hsl(210, 40%, 75%);
 }
 
 .crypto {
@@ -180,6 +236,34 @@
   --welcome-icon: hsl(179, 82%, 51%);
   --chart-bg: linear-gradient(135deg, hsl(217, 33%, 17%) 0%, hsl(215, 25%, 15%) 100%);
   --chart-border: hsla(179, 82%, 51%, 0.2);
+  
+  /* Crypto theme status colors */
+  --status-pending: hsla(45, 93%, 51%, 0.1);
+  --status-pending-text: hsl(45, 93%, 60%);
+  --status-assigned: hsla(179, 82%, 51%, 0.1);
+  --status-assigned-text: hsl(179, 82%, 60%);
+  --status-progress: hsla(271, 81%, 51%, 0.1);
+  --status-progress-text: hsl(271, 81%, 60%);
+  --status-visited: hsla(239, 84%, 51%, 0.1);
+  --status-visited-text: hsl(239, 84%, 60%);
+  --status-resolved: hsla(142, 71%, 51%, 0.1);
+  --status-resolved-text: hsl(142, 71%, 60%);
+  --status-failed: hsla(0, 84%, 51%, 0.1);
+  --status-failed-text: hsl(0, 84%, 60%);
+  --status-default: hsla(179, 82%, 51%, 0.05);
+  --status-default-text: hsl(179, 60%, 70%);
+  
+  /* Crypto theme priority colors */
+  --priority-urgent: hsla(0, 84%, 51%, 0.1);
+  --priority-urgent-text: hsl(0, 84%, 60%);
+  --priority-high: hsla(25, 95%, 51%, 0.1);
+  --priority-high-text: hsl(25, 95%, 60%);
+  --priority-medium: hsla(45, 93%, 51%, 0.1);
+  --priority-medium-text: hsl(45, 93%, 60%);
+  --priority-low: hsla(142, 71%, 51%, 0.1);
+  --priority-low-text: hsl(142, 71%, 60%);
+  --priority-default: hsla(179, 82%, 51%, 0.05);
+  --priority-default-text: hsl(179, 60%, 70%);
 }
 
 .neon {
@@ -240,6 +324,34 @@
   --welcome-icon: hsl(300, 100%, 50%);
   --chart-bg: linear-gradient(135deg, hsl(270, 80%, 8%) 0%, hsl(270, 100%, 5%) 100%);
   --chart-border: hsla(300, 100%, 50%, 0.3);
+  
+  /* Neon theme status colors */
+  --status-pending: hsla(45, 100%, 50%, 0.1);
+  --status-pending-text: hsl(45, 100%, 70%);
+  --status-assigned: hsla(300, 100%, 50%, 0.1);
+  --status-assigned-text: hsl(300, 100%, 70%);
+  --status-progress: hsla(271, 100%, 50%, 0.1);
+  --status-progress-text: hsl(271, 100%, 70%);
+  --status-visited: hsla(239, 100%, 50%, 0.1);
+  --status-visited-text: hsl(239, 100%, 70%);
+  --status-resolved: hsla(142, 100%, 50%, 0.1);
+  --status-resolved-text: hsl(142, 100%, 70%);
+  --status-failed: hsla(0, 100%, 50%, 0.1);
+  --status-failed-text: hsl(0, 100%, 70%);
+  --status-default: hsla(300, 100%, 50%, 0.05);
+  --status-default-text: hsl(300, 60%, 80%);
+  
+  /* Neon theme priority colors */
+  --priority-urgent: hsla(0, 100%, 50%, 0.1);
+  --priority-urgent-text: hsl(0, 100%, 70%);
+  --priority-high: hsla(25, 100%, 50%, 0.1);
+  --priority-high-text: hsl(25, 100%, 70%);
+  --priority-medium: hsla(45, 100%, 50%, 0.1);
+  --priority-medium-text: hsl(45, 100%, 70%);
+  --priority-low: hsla(142, 100%, 50%, 0.1);
+  --priority-low-text: hsl(142, 100%, 70%);
+  --priority-default: hsla(300, 100%, 50%, 0.05);
+  --priority-default-text: hsl(300, 60%, 80%);
 }
 
 /* Modern component styles */
@@ -344,6 +456,79 @@
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* Dynamic status and priority badge classes */
+.dashboard-status-pending {
+  background: var(--status-pending);
+  color: var(--status-pending-text);
+  border: 1px solid var(--status-pending-text);
+}
+
+.dashboard-status-assigned {
+  background: var(--status-assigned);
+  color: var(--status-assigned-text);
+  border: 1px solid var(--status-assigned-text);
+}
+
+.dashboard-status-progress {
+  background: var(--status-progress);
+  color: var(--status-progress-text);
+  border: 1px solid var(--status-progress-text);
+}
+
+.dashboard-status-visited {
+  background: var(--status-visited);
+  color: var(--status-visited-text);
+  border: 1px solid var(--status-visited-text);
+}
+
+.dashboard-status-resolved {
+  background: var(--status-resolved);
+  color: var(--status-resolved-text);
+  border: 1px solid var(--status-resolved-text);
+}
+
+.dashboard-status-failed {
+  background: var(--status-failed);
+  color: var(--status-failed-text);
+  border: 1px solid var(--status-failed-text);
+}
+
+.dashboard-status-default {
+  background: var(--status-default);
+  color: var(--status-default-text);
+  border: 1px solid var(--status-default-text);
+}
+
+.dashboard-priority-urgent {
+  background: var(--priority-urgent);
+  color: var(--priority-urgent-text);
+  border: 1px solid var(--priority-urgent-text);
+}
+
+.dashboard-priority-high {
+  background: var(--priority-high);
+  color: var(--priority-high-text);
+  border: 1px solid var(--priority-high-text);
+}
+
+.dashboard-priority-medium {
+  background: var(--priority-medium);
+  color: var(--priority-medium-text);
+  border: 1px solid var(--priority-medium-text);
+}
+
+.dashboard-priority-low {
+  background: var(--priority-low);
+  color: var(--priority-low-text);
+  border: 1px solid var(--priority-low-text);
+}
+
+.dashboard-priority-default {
+  background: var(--priority-default);
+  color: var(--priority-default-text);
+  border: 1px solid var(--priority-default-text);
 }
 
 /* Responsive enhancements */
