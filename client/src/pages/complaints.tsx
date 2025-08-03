@@ -33,6 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   Filter,
@@ -53,10 +54,37 @@ import {
   Grid,
   Star,
   UserCheck,
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Timer,
+  Users,
+  AlertTriangle,
+  Calendar,
+  Settings,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { generateDummyComplaints, generateDummyEngineers, generateDummyCustomers, type Complaint } from "@/lib/dummyData";
+import { ComplaintChart } from "@/components/charts/complaint-chart";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
+} from "recharts";
 
 // Schema for creating complaints
 const insertComplaintSchema = z.object({
@@ -310,6 +338,84 @@ export default function Complaints() {
 
   const uniqueLocations = Array.from(new Set(complaints.map(c => c.location)));
 
+  // Analytics calculations
+  const calculateAnalytics = () => {
+    const total = complaints.length;
+    const pending = complaints.filter(c => c.status === 'pending').length;
+    const assigned = complaints.filter(c => c.status === 'assigned').length;
+    const inProgress = complaints.filter(c => c.status === 'in-progress').length;
+    const resolved = complaints.filter(c => c.status === 'resolved').length;
+    const notResolved = complaints.filter(c => c.status === 'not-resolved').length;
+    
+    const urgent = complaints.filter(c => c.priority === 'urgent').length;
+    const high = complaints.filter(c => c.priority === 'high').length;
+    const medium = complaints.filter(c => c.priority === 'medium').length;
+    const low = complaints.filter(c => c.priority === 'low').length;
+    
+    const resolutionRate = total > 0 ? ((resolved / total) * 100) : 0;
+    const avgResolutionTime = 2.5; // hours - dummy calculation
+    
+    // Calculate complaints by location
+    const locationStats = uniqueLocations.map(location => ({
+      location,
+      count: complaints.filter(c => c.location === location).length,
+      resolved: complaints.filter(c => c.location === location && c.status === 'resolved').length
+    }));
+    
+    // Calculate daily trends (last 7 days)
+    const dailyData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayComplaints = Math.floor(Math.random() * 15) + 5;
+      const dayResolved = Math.floor(dayComplaints * 0.7);
+      
+      dailyData.push({
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        complaints: dayComplaints,
+        resolved: dayResolved,
+        pending: dayComplaints - dayResolved
+      });
+    }
+    
+    return {
+      total,
+      pending,
+      assigned,
+      inProgress,
+      resolved,
+      notResolved,
+      urgent,
+      high,
+      medium,
+      low,
+      resolutionRate,
+      avgResolutionTime,
+      locationStats,
+      dailyData
+    };
+  };
+
+  const analytics = calculateAnalytics();
+
+  // Chart data
+  const statusData = [
+    { name: 'Pending', value: analytics.pending, color: '#ef4444' },
+    { name: 'Assigned', value: analytics.assigned, color: '#f59e0b' },
+    { name: 'In Progress', value: analytics.inProgress, color: '#3b82f6' },
+    { name: 'Resolved', value: analytics.resolved, color: '#10b981' },
+    { name: 'Not Resolved', value: analytics.notResolved, color: '#6b7280' }
+  ];
+
+  const priorityData = [
+    { name: 'Urgent', value: analytics.urgent, color: '#dc2626' },
+    { name: 'High', value: analytics.high, color: '#ea580c' },
+    { name: 'Medium', value: analytics.medium, color: '#ca8a04' },
+    { name: 'Low', value: analytics.low, color: '#65a30d' }
+  ];
+
+  const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#6b7280'];
+
   const renderStars = (rating: number | null) => {
     if (!rating) return null;
     return (
@@ -335,29 +441,10 @@ export default function Complaints() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold dashboard-welcome-text">Complaints Management</h1>
-            <p className="text-muted-foreground">Manage customer complaints and support tickets</p>
+            <p className="text-muted-foreground">Comprehensive complaint tracking and analytics</p>
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === "card" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("card")}
-                className="dashboard-card-header"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "table" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="dashboard-card-header"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-            
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="dashboard-primary-button">
@@ -487,113 +574,478 @@ export default function Complaints() {
           </div>
         </div>
 
-        {/* Filters */}
-        <Card className="dashboard-card">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search complaints..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-10 dashboard-input"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <Select value={statusFilter} onValueChange={(value) => {
-                  setStatusFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger className="w-[140px] dashboard-select">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent className="dashboard-select-content">
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="visited">Visited</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="not-resolved">Not Resolved</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* Analytics and Complaints Tabs */}
+        <Tabs defaultValue="analytics" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="complaints" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              Complaints
+            </TabsTrigger>
+          </TabsList>
 
-                <Select value={priorityFilter} onValueChange={(value) => {
-                  setPriorityFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger className="w-[140px] dashboard-select">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent className="dashboard-select-content">
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={locationFilter} onValueChange={(value) => {
-                  setLocationFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger className="w-[140px] dashboard-select">
-                    <SelectValue placeholder="Location" />
-                  </SelectTrigger>
-                  <SelectContent className="dashboard-select-content">
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {uniqueLocations.map((location) => (
-                      <SelectItem key={location} value={location}>
-                        {location}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Summary */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm dashboard-text-muted">
-            Showing {paginatedComplaints.length} of {filteredComplaints.length} complaints
-          </p>
-        </div>
-
-        {/* Complaints Grid/Table */}
-        {viewMode === "card" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paginatedComplaints.map((complaint) => (
-              <Card key={complaint.id} className="dashboard-card hover:shadow-lg transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm dashboard-card-title">#{complaint.id}</CardTitle>
-                        <p className="text-xs dashboard-text-muted">
-                          {getCustomerName(complaint.customerId)}
-                        </p>
-                      </div>
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            {/* Key Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="dashboard-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Complaints</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.total}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <Badge className={`${getPriorityColor(complaint.priority)} text-xs font-medium`}>
-                        {complaint.priority.toUpperCase()}
-                      </Badge>
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                      <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
+                  <div className="mt-4 flex items-center">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">+12% from last month</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Resolution Rate</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.resolutionRate.toFixed(1)}%</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
+                      <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center">
+                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">+5.2% from last month</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Avg Resolution Time</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.avgResolutionTime}h</p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
+                      <Timer className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center">
+                    <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">-15min from last month</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Pending Issues</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.pending}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+                      <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center">
+                    <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
+                    <span className="text-sm text-green-600 dark:text-green-400">-8% from last month</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Status Distribution */}
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Status Distribution
+                  </CardTitle>
                 </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {statusData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Priority Breakdown */}
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Priority Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={priorityData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+                          {priorityData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Trends and Location Analysis */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Daily Trends */}
+              <Card className="dashboard-card lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    Daily Trends (Last 7 Days)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={analytics.dailyData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '6px'
+                          }}
+                        />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="complaints"
+                          stackId="1"
+                          stroke="#3b82f6"
+                          fill="#3b82f6"
+                          fillOpacity={0.6}
+                          name="New Complaints"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="resolved"
+                          stackId="2"
+                          stroke="#10b981"
+                          fill="#10b981"
+                          fillOpacity={0.6}
+                          name="Resolved"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Locations */}
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Top Locations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {analytics.locationStats.slice(0, 5).map((location, index) => (
+                      <div key={location.location} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium dashboard-text">{location.location}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {location.resolved}/{location.count} resolved
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium dashboard-text">{location.count}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {((location.resolved / location.count) * 100).toFixed(0)}%
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Additional Analytics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="text-lg">Response Time Analysis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">&lt; 1 hour</span>
+                      <span className="text-sm font-medium">45%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '45%' }}></div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">1-4 hours</span>
+                      <span className="text-sm font-medium">30%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">&gt; 4 hours</span>
+                      <span className="text-sm font-medium">25%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-red-500 h-2 rounded-full" style={{ width: '25%' }}></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="text-lg">Engineer Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm dashboard-text">Average Rating</span>
+                      <span className="text-sm font-medium">4.2/5</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm dashboard-text">Active Engineers</span>
+                      <span className="text-sm font-medium">{engineers.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm dashboard-text">Assigned Complaints</span>
+                      <span className="text-sm font-medium">{analytics.assigned + analytics.inProgress}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm dashboard-text">Completion Rate</span>
+                      <span className="text-sm font-medium text-green-600">87%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardHeader>
+                  <CardTitle className="text-lg">Customer Satisfaction</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold dashboard-text">4.1</div>
+                      <div className="flex justify-center mt-1">
+                        {[1, 2, 3, 4].map((star) => (
+                          <Star key={star} className="h-4 w-4 text-yellow-400 fill-current" />
+                        ))}
+                        <Star className="h-4 w-4 text-gray-300" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">Average Rating</p>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>5★</span><span>45%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>4★</span><span>30%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>3★</span><span>15%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>2★</span><span>7%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>1★</span><span>3%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Complaints Tab */}
+          <TabsContent value="complaints" className="space-y-6">
+            {/* Filters */}
+            <Card className="dashboard-card">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search complaints..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="pl-10 dashboard-input"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={viewMode === "card" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("card")}
+                        className="dashboard-card-header"
+                      >
+                        <Grid className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant={viewMode === "table" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("table")}
+                        className="dashboard-card-header"
+                      >
+                        <List className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Select value={statusFilter} onValueChange={(value) => {
+                      setStatusFilter(value);
+                      setCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-[140px] dashboard-select">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent className="dashboard-select-content">
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="assigned">Assigned</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="visited">Visited</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="not-resolved">Not Resolved</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={priorityFilter} onValueChange={(value) => {
+                      setPriorityFilter(value);
+                      setCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-[140px] dashboard-select">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent className="dashboard-select-content">
+                        <SelectItem value="all">All Priority</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={locationFilter} onValueChange={(value) => {
+                      setLocationFilter(value);
+                      setCurrentPage(1);
+                    }}>
+                      <SelectTrigger className="w-[140px] dashboard-select">
+                        <SelectValue placeholder="Location" />
+                      </SelectTrigger>
+                      <SelectContent className="dashboard-select-content">
+                        <SelectItem value="all">All Locations</SelectItem>
+                        {uniqueLocations.map((location) => (
+                          <SelectItem key={location} value={location}>
+                            {location}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Results Summary */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm dashboard-text-muted">
+                Showing {paginatedComplaints.length} of {filteredComplaints.length} complaints
+              </p>
+            </div>
+
+            {/* Complaints Grid/Table */}
+            {viewMode === "card" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedComplaints.map((complaint) => (
+                  <Card key={complaint.id} className="dashboard-card hover:shadow-lg transition-all duration-300">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-sm dashboard-card-title">#{complaint.id}</CardTitle>
+                            <p className="text-xs dashboard-text-muted">
+                              {getCustomerName(complaint.customerId)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Badge className={`${getPriorityColor(complaint.priority)} text-xs font-medium`}>
+                            {complaint.priority.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold dashboard-text text-sm mb-1">{complaint.title}</h4>
@@ -809,36 +1261,38 @@ export default function Complaints() {
           </Card>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <div className="text-sm dashboard-text-muted">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="dashboard-pagination-button"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="dashboard-pagination-button"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <div className="text-sm dashboard-text-muted">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="dashboard-pagination-button"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="dashboard-pagination-button"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* View Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
