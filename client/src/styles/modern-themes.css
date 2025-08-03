@@ -531,6 +531,116 @@
   border: 1px solid var(--priority-default-text);
 }
 
+/* Additional dynamic classes for complaints section */
+.dashboard-welcome-text {
+  color: var(--dashboard-text);
+}
+
+.dashboard-text {
+  color: var(--dashboard-text);
+}
+
+.dashboard-text-muted {
+  color: var(--dashboard-text-muted);
+}
+
+.dashboard-card {
+  background: var(--stats-card-bg);
+  border: 1px solid var(--stats-card-border);
+}
+
+.dashboard-card:hover {
+  background: var(--stats-card-hover);
+}
+
+.dashboard-card-title {
+  color: var(--dashboard-text);
+}
+
+.dashboard-card-header {
+  color: var(--dashboard-text);
+  border: 1px solid var(--stats-card-border);
+}
+
+.dashboard-primary-button {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.dashboard-primary-button:hover {
+  opacity: 0.9;
+}
+
+.dashboard-dialog {
+  background: var(--stats-card-bg);
+  border: 1px solid var(--stats-card-border);
+}
+
+.dashboard-dialog-title {
+  color: var(--dashboard-text);
+}
+
+.dashboard-label {
+  color: var(--dashboard-text);
+}
+
+.dashboard-input {
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.dashboard-select {
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.dashboard-select-content {
+  background: var(--popover);
+  border: 1px solid var(--border);
+  color: var(--popover-foreground);
+}
+
+.dashboard-textarea {
+  background: var(--background);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.dashboard-action-button {
+  color: var(--dashboard-text);
+  border: 1px solid var(--stats-card-border);
+}
+
+.dashboard-action-button:hover {
+  background: var(--stats-card-hover);
+}
+
+.dashboard-table-header {
+  background: var(--stats-card-bg);
+  border-bottom: 1px solid var(--stats-card-border);
+}
+
+.dashboard-table-header-text {
+  color: var(--dashboard-text);
+  font-weight: 600;
+}
+
+.dashboard-table-row {
+  border-bottom: 1px solid var(--stats-card-border);
+}
+
+.dashboard-pagination-button {
+  background: var(--stats-card-bg);
+  border: 1px solid var(--stats-card-border);
+  color: var(--dashboard-text);
+}
+
+.dashboard-pagination-button:hover {
+  background: var(--stats-card-hover);
+}
+
 /* Responsive enhancements */
 @media (max-width: 1024px) {
   .sidebar-gradient {
