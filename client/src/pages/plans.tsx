@@ -45,6 +45,8 @@ export default function PlansPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [selectedPlanTypeForAdd, setSelectedPlanTypeForAdd] = useState("iptv");
+  const [formData, setFormData] = useState<any>({});
 
   // Get dummy data
   const iptvPlans = generateDummyIptvPlans();
@@ -71,12 +73,31 @@ export default function PlansPage() {
 
   const handleEdit = (plan: any) => {
     setEditingPlan(plan);
+    setFormData(plan);
     setShowEditDialog(true);
   };
 
   const handleDelete = (planId: number) => {
     // In real app, this would delete from backend
     console.log("Delete plan:", planId);
+  };
+
+  const handleAddPlan = () => {
+    console.log("Adding plan:", formData);
+    setShowAddDialog(false);
+    setFormData({});
+  };
+
+  const handleUpdatePlan = () => {
+    console.log("Updating plan:", formData);
+    setShowEditDialog(false);
+    setFormData({});
+    setEditingPlan(null);
+  };
+
+  const resetForm = () => {
+    setFormData({});
+    setSelectedPlanTypeForAdd("iptv");
   };
 
   return (
@@ -484,54 +505,352 @@ export default function PlansPage() {
         </Tabs>
 
         {/* Add Plan Dialog */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="max-w-2xl dashboard-chart-card">
+        <Dialog open={showAddDialog} onOpenChange={(open) => {
+          setShowAddDialog(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dashboard-chart-card">
             <DialogHeader>
-              <DialogTitle className="dashboard-welcome-text">Add New Service Plan</DialogTitle>
+              <DialogTitle className="dashboard-welcome-text flex items-center gap-2">
+                <Plus className="h-5 w-5 dashboard-welcome-icon" />
+                Add New Service Plan
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Plan Type Selection */}
+              <div>
+                <Label className="dashboard-welcome-text text-lg font-semibold">Plan Type</Label>
+                <Tabs value={selectedPlanTypeForAdd} onValueChange={setSelectedPlanTypeForAdd} className="mt-2">
+                  <TabsList className="grid w-full grid-cols-3 dashboard-chart-card">
+                    <TabsTrigger value="iptv" className="flex items-center gap-2">
+                      <Tv className="h-4 w-4" />
+                      IPTV Plan
+                    </TabsTrigger>
+                    <TabsTrigger value="ott" className="flex items-center gap-2">
+                      <PlayCircle className="h-4 w-4" />
+                      OTT Plan
+                    </TabsTrigger>
+                    <TabsTrigger value="fibre" className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Fibre Plan
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Common Fields */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="dashboard-welcome-text">Plan Type</Label>
-                  <Select>
-                    <SelectTrigger className="dashboard-welcome-input">
-                      <SelectValue placeholder="Select plan type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="iptv">IPTV Plan</SelectItem>
-                      <SelectItem value="ott">OTT Plan</SelectItem>
-                      <SelectItem value="fibre">Fibre Plan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div>
                   <Label className="dashboard-welcome-text">Provider</Label>
-                  <Input placeholder="Provider name" className="dashboard-welcome-input" />
+                  <Input 
+                    placeholder="Provider name" 
+                    className="dashboard-welcome-input"
+                    value={formData.provider || ""}
+                    onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                  />
                 </div>
-              </div>
-              <div>
-                <Label className="dashboard-welcome-text">Plan Name/Title</Label>
-                <Input placeholder="Enter plan name" className="dashboard-welcome-input" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="dashboard-welcome-text">Price (₹)</Label>
-                  <Input type="number" placeholder="0" className="dashboard-welcome-input" />
-                </div>
-                <div>
-                  <Label className="dashboard-welcome-text">Validity</Label>
-                  <Input placeholder="e.g., 1 Month, 6 Months" className="dashboard-welcome-input" />
+                  <Input 
+                    type="number" 
+                    placeholder="0" 
+                    className="dashboard-welcome-input"
+                    value={formData.price || ""}
+                    onChange={(e) => setFormData({...formData, price: parseInt(e.target.value)})}
+                  />
                 </div>
               </div>
+
+              {/* IPTV Specific Fields */}
+              {selectedPlanTypeForAdd === "iptv" && (
+                <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                  <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                    <Tv className="h-4 w-4" />
+                    IPTV Plan Details
+                  </h3>
+                  <div>
+                    <Label className="dashboard-welcome-text">Plan Name</Label>
+                    <Input 
+                      placeholder="e.g., Skypro Lite Play HD" 
+                      className="dashboard-welcome-input"
+                      value={formData.name || ""}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="dashboard-welcome-text">Total Channels</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="100" 
+                        className="dashboard-welcome-input"
+                        value={formData.totalChannels || ""}
+                        onChange={(e) => setFormData({...formData, totalChannels: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Pay Channels</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="80" 
+                        className="dashboard-welcome-input"
+                        value={formData.payChannels || ""}
+                        onChange={(e) => setFormData({...formData, payChannels: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Free to Air</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="100" 
+                        className="dashboard-welcome-input"
+                        value={formData.freeToAirChannels || ""}
+                        onChange={(e) => setFormData({...formData, freeToAirChannels: parseInt(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="dashboard-welcome-text">LCO Margin %</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="10" 
+                        className="dashboard-welcome-input"
+                        value={formData.lcoMarginPercent || ""}
+                        onChange={(e) => setFormData({...formData, lcoMarginPercent: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Distributor Margin %</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="5" 
+                        className="dashboard-welcome-input"
+                        value={formData.distributorMarginPercent || ""}
+                        onChange={(e) => setFormData({...formData, distributorMarginPercent: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Quality</Label>
+                      <Select value={formData.quality || ""} onValueChange={(value) => setFormData({...formData, quality: value})}>
+                        <SelectTrigger className="dashboard-welcome-input">
+                          <SelectValue placeholder="Select quality" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SD">SD</SelectItem>
+                          <SelectItem value="HD">HD</SelectItem>
+                          <SelectItem value="4K">4K</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Plan Type</Label>
+                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                      <SelectTrigger className="dashboard-welcome-input">
+                        <SelectValue placeholder="Select plan type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lite">Lite</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Channel List (comma separated)</Label>
+                    <Textarea 
+                      placeholder="Star Plus, Zee TV, Sony Entertainment..." 
+                      className="dashboard-welcome-input"
+                      value={formData.channelList?.join(", ") || ""}
+                      onChange={(e) => setFormData({...formData, channelList: e.target.value.split(", ").filter(c => c.trim())})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* OTT Specific Fields */}
+              {selectedPlanTypeForAdd === "ott" && (
+                <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                  <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                    <PlayCircle className="h-4 w-4" />
+                    OTT Plan Details
+                  </h3>
+                  <div>
+                    <Label className="dashboard-welcome-text">Plan Title</Label>
+                    <Input 
+                      placeholder="e.g., Fibre Premium Plus OTT 1599" 
+                      className="dashboard-welcome-input"
+                      value={formData.title || ""}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="dashboard-welcome-text">Speed Before Limit</Label>
+                      <Input 
+                        placeholder="1000 Mbps" 
+                        className="dashboard-welcome-input"
+                        value={formData.speedBeforeLimit || ""}
+                        onChange={(e) => setFormData({...formData, speedBeforeLimit: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Speed After Limit</Label>
+                      <Input 
+                        placeholder="4 Mbps" 
+                        className="dashboard-welcome-input"
+                        value={formData.speedAfterLimit || ""}
+                        onChange={(e) => setFormData({...formData, speedAfterLimit: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="dashboard-welcome-text">Data Limit (GB)</Label>
+                      <Input 
+                        type="number" 
+                        placeholder="3000" 
+                        className="dashboard-welcome-input"
+                        value={formData.dataLimitGB || ""}
+                        onChange={(e) => setFormData({...formData, dataLimitGB: parseInt(e.target.value)})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Validity</Label>
+                      <Input 
+                        placeholder="1 Month" 
+                        className="dashboard-welcome-input"
+                        value={formData.validity || ""}
+                        onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2 pt-6">
+                      <Checkbox 
+                        checked={formData.isUnlimited || false}
+                        onCheckedChange={(checked) => setFormData({...formData, isUnlimited: checked})}
+                      />
+                      <Label className="dashboard-welcome-text">Unlimited</Label>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Call Benefits</Label>
+                    <Input 
+                      placeholder="Unlimited calls to any Network" 
+                      className="dashboard-welcome-input"
+                      value={formData.callBenefit || ""}
+                      onChange={(e) => setFormData({...formData, callBenefit: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">OTT Apps (comma separated)</Label>
+                    <Textarea 
+                      placeholder="Hotstar, Hungama, Shemaroo, Lionsgate..." 
+                      className="dashboard-welcome-input"
+                      value={formData.ottApps?.join(", ") || ""}
+                      onChange={(e) => setFormData({...formData, ottApps: e.target.value.split(", ").filter(a => a.trim())})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Fibre Specific Fields */}
+              {selectedPlanTypeForAdd === "fibre" && (
+                <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                  <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                    <Zap className="h-4 w-4" />
+                    Fibre Plan Details
+                  </h3>
+                  <div>
+                    <Label className="dashboard-welcome-text">Plan Title</Label>
+                    <Input 
+                      placeholder="e.g., JioFiber Gold Plan - 1 Year" 
+                      className="dashboard-welcome-input"
+                      value={formData.title || ""}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="dashboard-welcome-text">Speed</Label>
+                      <Input 
+                        placeholder="300 Mbps" 
+                        className="dashboard-welcome-input"
+                        value={formData.speed || ""}
+                        onChange={(e) => setFormData({...formData, speed: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Validity</Label>
+                      <Input 
+                        placeholder="12 Months" 
+                        className="dashboard-welcome-input"
+                        value={formData.validity || ""}
+                        onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Data Limit</Label>
+                      <Input 
+                        placeholder="Unlimited" 
+                        className="dashboard-welcome-input"
+                        value={formData.dataLimit || ""}
+                        onChange={(e) => setFormData({...formData, dataLimit: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Plan Type</Label>
+                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                      <SelectTrigger className="dashboard-welcome-input">
+                        <SelectValue placeholder="Select plan type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Basic">Basic</SelectItem>
+                        <SelectItem value="Standard">Standard</SelectItem>
+                        <SelectItem value="Premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Benefits</Label>
+                    <Input 
+                      placeholder="Netflix + Prime + Disney+ Hotstar" 
+                      className="dashboard-welcome-input"
+                      value={formData.benefits || ""}
+                      onChange={(e) => setFormData({...formData, benefits: e.target.value})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Common Description */}
               <div>
                 <Label className="dashboard-welcome-text">Description</Label>
-                <Textarea placeholder="Plan description" className="dashboard-welcome-input" />
+                <Textarea 
+                  placeholder="Plan description..." 
+                  className="dashboard-welcome-input"
+                  value={formData.description || ""}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
               </div>
+
+              {/* Logo Upload */}
+              <div>
+                <Label className="dashboard-welcome-text">Logo URL</Label>
+                <Input 
+                  placeholder="https://yourcdn.com/logos/provider.png" 
+                  className="dashboard-welcome-input"
+                  value={formData.logo || ""}
+                  onChange={(e) => setFormData({...formData, logo: e.target.value})}
+                />
+              </div>
+
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => setShowAddDialog(false)}>
                   Cancel
                 </Button>
-                <Button className="dashboard-stats-card">
+                <Button onClick={handleAddPlan} className="dashboard-stats-card">
                   <span className="dashboard-welcome-text">Add Plan</span>
                 </Button>
               </div>
@@ -540,53 +859,319 @@ export default function PlansPage() {
         </Dialog>
 
         {/* Edit Plan Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent className="max-w-2xl dashboard-chart-card">
+        <Dialog open={showEditDialog} onOpenChange={(open) => {
+          setShowEditDialog(open);
+          if (!open) {
+            setEditingPlan(null);
+            setFormData({});
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto dashboard-chart-card">
             <DialogHeader>
-              <DialogTitle className="dashboard-welcome-text">Edit Plan</DialogTitle>
+              <DialogTitle className="dashboard-welcome-text flex items-center gap-2">
+                <Edit className="h-5 w-5 dashboard-welcome-icon" />
+                Edit {editingPlan?.name || editingPlan?.title || 'Plan'}
+              </DialogTitle>
             </DialogHeader>
             {editingPlan && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="dashboard-welcome-text">Plan Name/Title</Label>
-                  <Input 
-                    defaultValue={editingPlan.name || editingPlan.title} 
-                    className="dashboard-welcome-input" 
-                  />
-                </div>
+              <div className="space-y-6">
+                {/* Common Fields */}
                 <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="dashboard-welcome-text">Provider</Label>
+                    <Input 
+                      value={formData.provider || ""} 
+                      className="dashboard-welcome-input"
+                      onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                    />
+                  </div>
                   <div>
                     <Label className="dashboard-welcome-text">Price (₹)</Label>
                     <Input 
                       type="number" 
-                      defaultValue={editingPlan.price}
-                      className="dashboard-welcome-input" 
-                    />
-                  </div>
-                  <div>
-                    <Label className="dashboard-welcome-text">Provider</Label>
-                    <Input 
-                      defaultValue={editingPlan.provider}
-                      className="dashboard-welcome-input" 
+                      value={formData.price || ""} 
+                      className="dashboard-welcome-input"
+                      onChange={(e) => setFormData({...formData, price: parseInt(e.target.value)})}
                     />
                   </div>
                 </div>
+
+                {/* IPTV Fields */}
+                {editingPlan.hasOwnProperty('totalChannels') && (
+                  <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                    <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                      <Tv className="h-4 w-4" />
+                      IPTV Plan Details
+                    </h3>
+                    <div>
+                      <Label className="dashboard-welcome-text">Plan Name</Label>
+                      <Input 
+                        value={formData.name || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="dashboard-welcome-text">Total Channels</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.totalChannels || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, totalChannels: parseInt(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Pay Channels</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.payChannels || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, payChannels: parseInt(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Free to Air</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.freeToAirChannels || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, freeToAirChannels: parseInt(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="dashboard-welcome-text">LCO Margin %</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.lcoMarginPercent || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, lcoMarginPercent: parseInt(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Distributor Margin %</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.distributorMarginPercent || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, distributorMarginPercent: parseInt(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Quality</Label>
+                        <Select value={formData.quality || ""} onValueChange={(value) => setFormData({...formData, quality: value})}>
+                          <SelectTrigger className="dashboard-welcome-input">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SD">SD</SelectItem>
+                            <SelectItem value="HD">HD</SelectItem>
+                            <SelectItem value="4K">4K</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Plan Type</Label>
+                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                        <SelectTrigger className="dashboard-welcome-input">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="lite">Lite</SelectItem>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="premium">Premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Channel List (comma separated)</Label>
+                      <Textarea 
+                        value={formData.channelList?.join(", ") || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, channelList: e.target.value.split(", ").filter(c => c.trim())})}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* OTT Fields */}
+                {editingPlan.hasOwnProperty('speedBeforeLimit') && (
+                  <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                    <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                      <PlayCircle className="h-4 w-4" />
+                      OTT Plan Details
+                    </h3>
+                    <div>
+                      <Label className="dashboard-welcome-text">Plan Title</Label>
+                      <Input 
+                        value={formData.title || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="dashboard-welcome-text">Speed Before Limit</Label>
+                        <Input 
+                          value={formData.speedBeforeLimit || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, speedBeforeLimit: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Speed After Limit</Label>
+                        <Input 
+                          value={formData.speedAfterLimit || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, speedAfterLimit: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="dashboard-welcome-text">Data Limit (GB)</Label>
+                        <Input 
+                          type="number" 
+                          value={formData.dataLimitGB || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, dataLimitGB: parseInt(e.target.value)})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Validity</Label>
+                        <Input 
+                          value={formData.validity || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2 pt-6">
+                        <Checkbox 
+                          checked={formData.isUnlimited || false}
+                          onCheckedChange={(checked) => setFormData({...formData, isUnlimited: checked})}
+                        />
+                        <Label className="dashboard-welcome-text">Unlimited</Label>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Call Benefits</Label>
+                      <Input 
+                        value={formData.callBenefit || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, callBenefit: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">OTT Apps (comma separated)</Label>
+                      <Textarea 
+                        value={formData.ottApps?.join(", ") || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, ottApps: e.target.value.split(", ").filter(a => a.trim())})}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Fibre Fields */}
+                {editingPlan.hasOwnProperty('speed') && !editingPlan.hasOwnProperty('speedBeforeLimit') && (
+                  <div className="space-y-4 p-4 dashboard-stats-card rounded-lg">
+                    <h3 className="dashboard-welcome-text font-semibold flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Fibre Plan Details
+                    </h3>
+                    <div>
+                      <Label className="dashboard-welcome-text">Plan Title</Label>
+                      <Input 
+                        value={formData.title || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label className="dashboard-welcome-text">Speed</Label>
+                        <Input 
+                          value={formData.speed || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, speed: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Validity</Label>
+                        <Input 
+                          value={formData.validity || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label className="dashboard-welcome-text">Data Limit</Label>
+                        <Input 
+                          value={formData.dataLimit || ""} 
+                          className="dashboard-welcome-input"
+                          onChange={(e) => setFormData({...formData, dataLimit: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Plan Type</Label>
+                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                        <SelectTrigger className="dashboard-welcome-input">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Basic">Basic</SelectItem>
+                          <SelectItem value="Standard">Standard</SelectItem>
+                          <SelectItem value="Premium">Premium</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Benefits</Label>
+                      <Input 
+                        value={formData.benefits || ""} 
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({...formData, benefits: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Common Fields */}
                 <div>
                   <Label className="dashboard-welcome-text">Description</Label>
                   <Textarea 
-                    defaultValue={editingPlan.description}
-                    className="dashboard-welcome-input" 
+                    value={formData.description || ""} 
+                    className="dashboard-welcome-input"
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
                   />
                 </div>
+
+                <div>
+                  <Label className="dashboard-welcome-text">Logo URL</Label>
+                  <Input 
+                    value={formData.logo || ""} 
+                    className="dashboard-welcome-input"
+                    onChange={(e) => setFormData({...formData, logo: e.target.value})}
+                  />
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <Checkbox defaultChecked={editingPlan.isActive} />
+                  <Checkbox 
+                    checked={formData.isActive !== undefined ? formData.isActive : true}
+                    onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                  />
                   <Label className="dashboard-welcome-text">Active Plan</Label>
                 </div>
+
                 <div className="flex justify-end gap-4">
                   <Button variant="outline" onClick={() => setShowEditDialog(false)}>
                     Cancel
                   </Button>
-                  <Button className="dashboard-stats-card">
+                  <Button onClick={handleUpdatePlan} className="dashboard-stats-card">
                     <span className="dashboard-welcome-text">Save Changes</span>
                   </Button>
                 </div>
