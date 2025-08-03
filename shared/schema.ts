@@ -272,6 +272,85 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
   updatedAt: true,
 });
 
+// IPTV Plans Schema
+export const iptvPlans = pgTable("iptv_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  totalChannels: integer("total_channels").notNull(),
+  payChannels: integer("pay_channels").notNull(),
+  freeToAirChannels: integer("free_to_air_channels").notNull(),
+  price: integer("price").notNull(),
+  lcoMarginPercent: integer("lco_margin_percent").notNull(),
+  distributorMarginPercent: integer("distributor_margin_percent").notNull(),
+  channelList: jsonb("channel_list"),
+  planType: text("plan_type").notNull(), // lite, standard, premium
+  quality: text("quality").notNull(), // HD, 4K, SD
+  provider: text("provider").notNull(),
+  logo: text("logo"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// OTT Plans Schema
+export const ottPlans = pgTable("ott_plans", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  price: integer("price").notNull(),
+  speedBeforeLimit: text("speed_before_limit").notNull(),
+  speedAfterLimit: text("speed_after_limit").notNull(),
+  dataLimitGB: integer("data_limit_gb"),
+  isUnlimited: boolean("is_unlimited").default(false),
+  validity: text("validity").notNull(),
+  ottApps: jsonb("ott_apps"),
+  callBenefit: text("call_benefit"),
+  provider: text("provider").notNull(),
+  logo: text("logo"),
+  description: text("description"),
+  planType: text("plan_type").default("ott"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Fibre Plans Schema
+export const fibrePlans = pgTable("fibre_plans", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  price: integer("price").notNull(),
+  validity: text("validity").notNull(),
+  speed: text("speed").notNull(),
+  dataLimit: text("data_limit").notNull(),
+  provider: text("provider").notNull(),
+  logo: text("logo"),
+  benefits: text("benefits"),
+  description: text("description"),
+  planType: text("plan_type").notNull(), // Basic, Standard, Premium
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Insert schemas for service plans
+export const insertIptvPlanSchema = createInsertSchema(iptvPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOttPlanSchema = createInsertSchema(ottPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFibrePlanSchema = createInsertSchema(fibrePlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Auth schema
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -304,6 +383,12 @@ export type NewInstallation = typeof newInstallations.$inferSelect;
 export type InsertNewInstallation = z.infer<typeof insertNewInstallationSchema>;
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type IptvPlan = typeof iptvPlans.$inferSelect;
+export type InsertIptvPlan = z.infer<typeof insertIptvPlanSchema>;
+export type OttPlan = typeof ottPlans.$inferSelect;
+export type InsertOttPlan = z.infer<typeof insertOttPlanSchema>;
+export type FibrePlan = typeof fibrePlans.$inferSelect;
+export type InsertFibrePlan = z.infer<typeof insertFibrePlanSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
 
 // Additional validation schemas for API endpoints

@@ -1,0 +1,81 @@
+Service plans will three type of of that will be show there
+iptv Plan,ott plans,
+Fibre plans
+the dtaa can liket that
+{
+"success": true,
+"message": "IPTV plan fetched successfully",
+"data": {
+"_id": "688e751e9c228eede8e573e8",
+"name": "Skypro Lite Play HD",
+"totalChannels": 100,
+"payChannels": 80,
+"freeToAirChannels": 100,
+"price": 399,
+"lcoMarginPercent": 10,
+"distributorMarginPercent": 5,
+"channelList": [
+"Start Plus",
+"Zee Plus"
+],
+"planType": "lite",
+"quality": "HD",
+"provider": "SkyPro Networks",
+"logo": "/view/image/043af767-87bc-49aa-b0ce-d99cfcae6918-1754166558135.jpeg",
+"description": "Affordable HD IPTV plan with mix of popular channels.",
+"createdAt": "2025-08-02T20:29:18.170Z",
+"updatedAt": "2025-08-02T20:29:18.170Z",
+"__v": 0
+}
+}
+
+{
+"success": true,
+"message": "OTT plan fetched successfully",
+"data": {
+"_id": "688e5cebee416299b6c96c44",
+"title": "Fibre Basic Plus OTT 699",
+"price": 699,
+"speedBeforeLimit": "100 Mbps",
+"speedAfterLimit": "4 Mbps",
+"dataLimitGB": 4000,
+"isUnlimited": true,
+"validity": "1 Month",
+"ottApps": [
+"Hotstar",
+"Hungama",
+"Shemaroo",
+"Lionsgate",
+"Epicon"
+],
+"callBenefit": "Unlimited calls to any Network",
+"provider": "BSNL",
+"logo": "/view/image/38ed584f-4ba5-4d6f-b53f-670a99f5ce07-1754164872433.jpeg",
+"description": "Up to 100 Mbps till 4000 GB, 4 Mbps beyond. Free access to 6 OTT platforms.",
+"planType": "ott",
+"createdAt": "2025-08-02T18:46:03.779Z",
+"updatedAt": "2025-08-02T20:01:12.561Z",
+"__v": 0
+}
+}
+
+{
+"_id": "687b729b97f9f86f7186ae68",
+"title": "Airtel Wi-Fi Annual Saver Plan",
+"price": 4999,
+"validity": "12 Months",
+"speed": "200 Mbps",
+"dataLimit": "Unlimited",
+"provider": "Airtel",
+"logo": "https://yourcdn.com/logos/airtel.png",
+"benefits": "Free Netflix + Amazon Prime",
+"description": "Best value annual plan from Airtel offering 200 Mbps internet and unlimited usage, bundled with both Netflix and Amazon Prime access.",
+"planType": "Premium",
+"createdAt": "2025-07-19T10:25:31.731Z",
+"updatedAt": "2025-07-19T10:25:31.731Z",
+"__v": 0
+}
+
+        make that  more aweosme way manage all three type can be added 
+        make thta perfect
+        make things perfect view

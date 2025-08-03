@@ -36,6 +36,7 @@ Preferred communication style: Simple, everyday language.
 - **Support & Rating System**: Comprehensive ticket management with CRUD, filtering, conversation threads, customer feedback, and detailed settings panel.
 - **Notification System**: Advanced composer with multi-select recipient targeting, scheduling, multi-channel delivery (Push, Email, SMS), and history tracking.
 - **New Installation & Leads Management**: Unified interface for tracking installations and leads, with analytics, document upload (e.g., Aadhar, passport photos), and status management.
+- **Service Plans Management**: Comprehensive management of three service plan types (IPTV, OTT, Fibre) with different data structures, pricing models, and provider-specific features. Includes filtering, search, CRUD operations, and plan analytics with full dynamic theming support.
 
 ## External Dependencies
 - **Database**: PostgreSQL (via Neon Database)

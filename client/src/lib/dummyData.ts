@@ -64,6 +64,63 @@ export interface ServicePlan {
   planType?: 'Basic' | 'Premium' | 'Enterprise' | 'Gold';
 }
 
+// IPTV Plans Interface
+export interface IptvPlan {
+  id: number;
+  name: string;
+  totalChannels: number;
+  payChannels: number;
+  freeToAirChannels: number;
+  price: number;
+  lcoMarginPercent: number;
+  distributorMarginPercent: number;
+  channelList: string[];
+  planType: 'lite' | 'standard' | 'premium';
+  quality: 'HD' | '4K' | 'SD';
+  provider: string;
+  logo?: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// OTT Plans Interface
+export interface OttPlan {
+  id: number;
+  title: string;
+  price: number;
+  speedBeforeLimit: string;
+  speedAfterLimit: string;
+  dataLimitGB?: number;
+  isUnlimited: boolean;
+  validity: string;
+  ottApps: string[];
+  callBenefit?: string;
+  provider: string;
+  logo?: string;
+  description: string;
+  planType: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// Fibre Plans Interface
+export interface FibrePlan {
+  id: number;
+  title: string;
+  price: number;
+  validity: string;
+  speed: string;
+  dataLimit: string;
+  provider: string;
+  logo?: string;
+  benefits?: string;
+  description: string;
+  planType: 'Basic' | 'Standard' | 'Premium';
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface NewInstallation {
   id: number;
   customerName: string;
@@ -740,6 +797,186 @@ export const generateDummySupportTickets = (): SupportTicket[] => [
     createdAt: "2024-01-10T14:20:00Z",
     updatedAt: "2024-01-12T16:30:00Z",
     resolvedAt: "2024-01-12T16:30:00Z"
+  }
+];
+
+// IPTV Plans Dummy Data
+export const generateDummyIptvPlans = (): IptvPlan[] => [
+  {
+    id: 1,
+    name: "Skypro Lite Play HD",
+    totalChannels: 100,
+    payChannels: 80,
+    freeToAirChannels: 100,
+    price: 399,
+    lcoMarginPercent: 10,
+    distributorMarginPercent: 5,
+    channelList: ["Star Plus", "Zee TV", "Sony Entertainment", "Colors", "Zee Cinema", "Star Movies"],
+    planType: "lite",
+    quality: "HD",
+    provider: "SkyPro Networks",
+    logo: "https://via.placeholder.com/150x100/007BFF/FFFFFF?text=SkyPro",
+    description: "Affordable HD IPTV plan with mix of popular channels.",
+    isActive: true,
+    createdAt: "2025-01-15T20:29:18.170Z"
+  },
+  {
+    id: 2,
+    name: "DishTV Premium 4K",
+    totalChannels: 250,
+    payChannels: 200,
+    freeToAirChannels: 150,
+    price: 899,
+    lcoMarginPercent: 15,
+    distributorMarginPercent: 8,
+    channelList: ["HBO", "Star Gold", "Zee Premium", "Sony Max", "Discovery", "National Geographic"],
+    planType: "premium",
+    quality: "4K",
+    provider: "DishTV",
+    logo: "https://via.placeholder.com/150x100/FF6B35/FFFFFF?text=DishTV",
+    description: "Premium 4K IPTV experience with extensive channel lineup.",
+    isActive: true,
+    createdAt: "2025-01-15T20:29:18.170Z"
+  },
+  {
+    id: 3,
+    name: "TataSky Standard",
+    totalChannels: 180,
+    payChannels: 140,
+    freeToAirChannels: 120,
+    price: 649,
+    lcoMarginPercent: 12,
+    distributorMarginPercent: 6,
+    channelList: ["ESPN", "Star Sports", "Sony Six", "Zee Sports", "MTV", "VH1"],
+    planType: "standard",
+    quality: "HD",
+    provider: "Tata Sky",
+    logo: "https://via.placeholder.com/150x100/1B998B/FFFFFF?text=TataSky",
+    description: "Balanced standard plan with sports and entertainment channels.",
+    isActive: true,
+    createdAt: "2025-01-15T20:29:18.170Z"
+  }
+];
+
+// OTT Plans Dummy Data
+export const generateDummyOttPlans = (): OttPlan[] => [
+  {
+    id: 1,
+    title: "Fibre Basic Plus OTT 699",
+    price: 699,
+    speedBeforeLimit: "100 Mbps",
+    speedAfterLimit: "4 Mbps",
+    dataLimitGB: 4000,
+    isUnlimited: true,
+    validity: "1 Month",
+    ottApps: ["Hotstar", "Hungama", "Shemaroo", "Lionsgate", "Epicon"],
+    callBenefit: "Unlimited calls to any Network",
+    provider: "BSNL",
+    logo: "https://via.placeholder.com/150x100/FF9500/FFFFFF?text=BSNL",
+    description: "Up to 100 Mbps till 4000 GB, 4 Mbps beyond. Free access to 6 OTT platforms.",
+    planType: "ott",
+    isActive: true,
+    createdAt: "2025-01-15T18:46:03.779Z"
+  },
+  {
+    id: 2,
+    title: "JioFiber OTT Supreme",
+    price: 1299,
+    speedBeforeLimit: "150 Mbps",
+    speedAfterLimit: "10 Mbps",
+    dataLimitGB: 0,
+    isUnlimited: true,
+    validity: "1 Month",
+    ottApps: ["Netflix", "Amazon Prime", "Disney+ Hotstar", "Sony LIV", "ZEE5", "Voot"],
+    callBenefit: "Unlimited calls + Free JioSaavn",
+    provider: "Reliance Jio",
+    logo: "https://via.placeholder.com/150x100/0066CC/FFFFFF?text=Jio",
+    description: "Supreme unlimited plan with premium OTT apps and unlimited calling.",
+    planType: "ott",
+    isActive: true,
+    createdAt: "2025-01-15T18:46:03.779Z"
+  },
+  {
+    id: 3,
+    title: "Airtel Xstream Fiber",
+    price: 999,
+    speedBeforeLimit: "200 Mbps",
+    speedAfterLimit: "5 Mbps",
+    dataLimitGB: 3500,
+    isUnlimited: false,
+    validity: "1 Month",
+    ottApps: ["Airtel Xstream", "Amazon Prime", "Disney+ Hotstar", "ZEE5"],
+    callBenefit: "Unlimited calls + Free Wynk Music",
+    provider: "Bharti Airtel",
+    logo: "https://via.placeholder.com/150x100/E60026/FFFFFF?text=Airtel",
+    description: "High-speed fiber with premium OTT bundle and unlimited voice calls.",
+    planType: "ott",
+    isActive: true,
+    createdAt: "2025-01-15T18:46:03.779Z"
+  }
+];
+
+// Fibre Plans Dummy Data
+export const generateDummyFibrePlans = (): FibrePlan[] => [
+  {
+    id: 1,
+    title: "Airtel Wi-Fi Annual Saver Plan",
+    price: 4999,
+    validity: "12 Months",
+    speed: "200 Mbps",
+    dataLimit: "Unlimited",
+    provider: "Airtel",
+    logo: "https://via.placeholder.com/150x100/E60026/FFFFFF?text=Airtel",
+    benefits: "Free Netflix + Amazon Prime",
+    description: "Best value annual plan from Airtel offering 200 Mbps internet and unlimited usage, bundled with both Netflix and Amazon Prime access.",
+    planType: "Premium",
+    isActive: true,
+    createdAt: "2025-01-15T10:25:31.731Z"
+  },
+  {
+    id: 2,
+    title: "JioFiber Gigabit Pro",
+    price: 8999,
+    validity: "12 Months",
+    speed: "1 Gbps",
+    dataLimit: "Unlimited",
+    provider: "Reliance Jio",
+    logo: "https://via.placeholder.com/150x100/0066CC/FFFFFF?text=Jio",
+    benefits: "All Premium OTT + Gaming Bundle",
+    description: "Ultimate gigabit experience with all premium OTT platforms and gaming optimizations.",
+    planType: "Premium",
+    isActive: true,
+    createdAt: "2025-01-15T10:25:31.731Z"
+  },
+  {
+    id: 3,
+    title: "BSNL Fiber Basic",
+    price: 1999,
+    validity: "6 Months",
+    speed: "50 Mbps",
+    dataLimit: "500 GB",
+    provider: "BSNL",
+    logo: "https://via.placeholder.com/150x100/FF9500/FFFFFF?text=BSNL",
+    benefits: "Basic Email Support",
+    description: "Affordable fiber plan for basic internet needs with reliable connectivity.",
+    planType: "Basic",
+    isActive: true,
+    createdAt: "2025-01-15T10:25:31.731Z"
+  },
+  {
+    id: 4,
+    title: "VI Fiber Standard",
+    price: 3499,
+    validity: "6 Months",
+    speed: "100 Mbps",
+    dataLimit: "1 TB",
+    provider: "Vodafone Idea",
+    logo: "https://via.placeholder.com/150x100/E60000/FFFFFF?text=VI",
+    benefits: "VI Movies & TV + Priority Support",
+    description: "Standard fiber plan with good speed and data allowance for families.",
+    planType: "Standard",
+    isActive: true,
+    createdAt: "2025-01-15T10:25:31.731Z"
   }
 ];
 
