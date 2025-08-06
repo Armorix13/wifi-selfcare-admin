@@ -85,6 +85,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
+import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetEngineersQuery } from "@/api";
 
 // Schema for creating complaints
 const insertComplaintSchema = z.object({
@@ -107,19 +108,40 @@ export default function Complaints() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
+  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null | any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedEngineerId, setSelectedEngineerId] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [engineerSearchQuery, setEngineerSearchQuery] = useState<string>("");
   const itemsPerPage = 6;
 
   const { toast } = useToast();
 
-  // Load dummy data
-  const [complaints, setComplaints] = useState(generateDummyComplaints());
-  const engineers = generateDummyEngineers();
+  // Build query parameters
+  const queryParams: any = {
+    page: currentPage,
+    limit: itemsPerPage,
+  };
+
+  if (statusFilter !== "all") queryParams.status = statusFilter;
+  if (priorityFilter !== "all") queryParams.priority = priorityFilter;
+  if (typeFilter !== "all") queryParams.type = typeFilter;
+
+  const { data: complaintData, isLoading, error } = useGetAllComplaintsQuery(queryParams);
+  const { data: engineersData, isLoading: engineersLoading } = useGetEngineersQuery({});
+  const [assignEngineerToComplaint, { isLoading: isAssigning }] = useAssignEngineerToComplaintMutation();
+
+  // Use real data from API
+  const complaints = complaintData?.data?.complaints || [];
+  const pagination = complaintData?.data?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
+  const engineers = engineersData?.data?.engineers || [];
   const customers = generateDummyCustomers();
+
+  console.log("complaint", complaintData);
+  console.log("engineers", engineersData);
+  console.log("engineers array", engineers);
 
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
@@ -148,9 +170,8 @@ export default function Complaints() {
   });
 
   // Helper functions
-  const getCustomerName = (customerId: number) => {
-    const customer = customers.find((c: any) => c.id === customerId);
-    return customer?.name || "Unknown Customer";
+  const getCustomerName = (complaint: any) => {
+    return complaint.user?.firstName + " " + complaint.user?.lastName || "Unknown Customer";
   };
 
   const getEngineerName = (engineerId: number | null) => {
@@ -159,7 +180,11 @@ export default function Complaints() {
     return engineer?.name || "Unknown Engineer";
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, hasEngineer?: boolean) => {
+    if (hasEngineer && status === "pending") {
+      return "dashboard-status-assigned";
+    }
+    
     switch (status) {
       case "pending":
         return "dashboard-status-pending";
@@ -211,21 +236,6 @@ export default function Complaints() {
 
   // CRUD operations
   const onSubmit = (data: InsertComplaint) => {
-    const newComplaint: Complaint = {
-      id: Math.max(...complaints.map(c => c.id)) + 1,
-      title: `${data.category} Issue`,
-      customerId: customers.length + 1,
-      customerName: data.customerName,
-      description: data.description,
-      priority: data.priority,
-      status: "pending",
-      location: data.location,
-      engineerId: null,
-      engineerName: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setComplaints([...complaints, newComplaint]);
     toast({
       title: "Success",
       description: "Complaint created successfully",
@@ -234,36 +244,21 @@ export default function Complaints() {
     form.reset();
   };
 
-  const handleEdit = (complaint: Complaint) => {
+  const handleEdit = (complaint: any) => {
     setSelectedComplaint(complaint);
     editForm.reset({
-      customerName: complaint.customerName,
-      email: "customer@email.com", // Default for demo
-      phone: "1234567890", // Default for demo
-      location: complaint.location,
+      customerName: complaint.user?.firstName + " " + complaint.user?.lastName,
+      email: complaint.user?.email || "",
+      phone: complaint.phoneNumber || "",
+      location: "Location", // Default for demo
       priority: complaint.priority,
-      description: complaint.description,
-      category: "technical"
+      description: complaint.issueDescription,
+      category: complaint.type
     });
     setIsEditDialogOpen(true);
   };
 
   const onEditSubmit = (data: InsertComplaint) => {
-    if (!selectedComplaint) return;
-    
-    const updatedComplaints = complaints.map(complaint => 
-      complaint.id === selectedComplaint.id 
-        ? { 
-            ...complaint, 
-            customerName: data.customerName,
-            location: data.location,
-            priority: data.priority,
-            description: data.description,
-            updatedAt: new Date().toISOString()
-          }
-        : complaint
-    );
-    setComplaints(updatedComplaints);
     toast({
       title: "Success",
       description: "Complaint updated successfully",
@@ -272,95 +267,95 @@ export default function Complaints() {
     setSelectedComplaint(null);
   };
 
-  const handleView = (complaint: Complaint) => {
+  const handleView = (complaint: any) => {
     setSelectedComplaint(complaint);
     setIsViewDialogOpen(true);
   };
 
-  const handleDelete = (complaint: Complaint) => {
-    setComplaints(complaints.filter(c => c.id !== complaint.id));
+  const handleDelete = (complaint: any) => {
     toast({
       title: "Success",
       description: "Complaint deleted successfully",
     });
   };
 
-  const handleAssign = (complaint: Complaint) => {
+  const handleAssign = (complaint: any) => {
     setSelectedComplaint(complaint);
     setIsAssignDialogOpen(true);
   };
 
-  const assignEngineer = () => {
+  const assignEngineer = async () => {
     if (!selectedComplaint || !selectedEngineerId) return;
 
-    const engineer = engineers.find((e: any) => e.id === parseInt(selectedEngineerId));
-    const updatedComplaints = complaints.map(complaint => 
-      complaint.id === selectedComplaint.id 
-        ? { 
-            ...complaint, 
-            engineerId: parseInt(selectedEngineerId),
-            engineerName: engineer?.name || null,
-            status: "assigned" as const,
-            updatedAt: new Date().toISOString()
-          }
-        : complaint
-    );
-    setComplaints(updatedComplaints);
-    toast({
-      title: "Success",
-      description: "Engineer assigned successfully",
-    });
-    setIsAssignDialogOpen(false);
-    setSelectedComplaint(null);
-    setSelectedEngineerId("");
+    const selectedEngineer = engineers.find((engineer: any) => engineer._id === selectedEngineerId);
+    
+    if (!selectedEngineer) {
+      toast({
+        title: "Error",
+        description: "Selected engineer not found",
+      });
+      return;
+    }
+
+    try {
+      await assignEngineerToComplaint({
+        id: selectedComplaint._id,
+        engineerId: selectedEngineerId,
+        priority: selectedComplaint.priority,
+      }).unwrap();
+
+      toast({
+        title: "Success",
+        description: `Engineer ${selectedEngineer.firstName} ${selectedEngineer.lastName} (${selectedEngineer.email}) assigned successfully`,
+      });
+      setIsAssignDialogOpen(false);
+      setSelectedComplaint(null);
+      setSelectedEngineerId("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign engineer. Please try again.",
+      });
+    }
   };
 
-  // Filtering and pagination
-  const filteredComplaints = complaints.filter((complaint: Complaint) => {
-    const customerName = getCustomerName(complaint.customerId);
+  // Filtering for search (client-side filtering)
+  const filteredComplaints = complaints.filter((complaint: any) => {
+    const customerName = complaint.user?.firstName + " " + complaint.user?.lastName;
     const matchesSearch =
       !searchQuery ||
       complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      complaint.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      complaint.issueDescription.toLowerCase().includes(searchQuery.toLowerCase()) ||
       customerName.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return (
-      matchesSearch &&
-      (statusFilter === "all" || complaint.status === statusFilter) &&
-      (priorityFilter === "all" || complaint.priority === priorityFilter) &&
-      (locationFilter === "all" || complaint.location === locationFilter)
-    );
+    return matchesSearch;
   });
 
-  const totalPages = Math.ceil(filteredComplaints.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedComplaints = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = pagination.pages;
+  const paginatedComplaints = filteredComplaints;
 
-  const uniqueLocations = Array.from(new Set(complaints.map(c => c.location)));
+  const uniqueLocations = Array.from(new Set(complaints.map((c: any) => c.location || "Unknown")));
 
   // Analytics calculations
   const calculateAnalytics = () => {
     const total = complaints.length;
-    const pending = complaints.filter(c => c.status === 'pending').length;
-    const assigned = complaints.filter(c => c.status === 'assigned').length;
-    const inProgress = complaints.filter(c => c.status === 'in-progress').length;
-    const resolved = complaints.filter(c => c.status === 'resolved').length;
-    const notResolved = complaints.filter(c => c.status === 'not-resolved').length;
+    const pending = complaints.filter((c: any) => c.status === 'pending').length;
+    const assigned = complaints.filter((c: any) => c.status === 'assigned').length;
+    const inProgress = complaints.filter((c: any) => c.status === 'in-progress').length;
+    const resolved = complaints.filter((c: any) => c.status === 'resolved').length;
+    const notResolved = complaints.filter((c: any) => c.status === 'not-resolved').length;
     
-    const urgent = complaints.filter(c => c.priority === 'urgent').length;
-    const high = complaints.filter(c => c.priority === 'high').length;
-    const medium = complaints.filter(c => c.priority === 'medium').length;
-    const low = complaints.filter(c => c.priority === 'low').length;
+    const urgent = complaints.filter((c: any) => c.priority === 'urgent').length;
+    const high = complaints.filter((c: any) => c.priority === 'high').length;
+    const medium = complaints.filter((c: any) => c.priority === 'medium').length;
+    const low = complaints.filter((c: any) => c.priority === 'low').length;
     
     const resolutionRate = total > 0 ? ((resolved / total) * 100) : 0;
     const avgResolutionTime = 2.5; // hours - dummy calculation
     
-    // Calculate complaints by location
-    const locationStats = uniqueLocations.map(location => ({
-      location,
-      count: complaints.filter(c => c.location === location).length,
-      resolved: complaints.filter(c => c.location === location && c.status === 'resolved').length
-    }));
+    // Calculate complaints by type (WIFI/CCTV)
+    const wifiComplaints = complaints.filter((c: any) => c.type === 'WIFI').length;
+    const cctvComplaints = complaints.filter((c: any) => c.type === 'CCTV').length;
     
     // Calculate daily trends (last 7 days)
     const dailyData = [];
@@ -391,7 +386,8 @@ export default function Complaints() {
       low,
       resolutionRate,
       avgResolutionTime,
-      locationStats,
+      wifiComplaints,
+      cctvComplaints,
       dailyData
     };
   };
@@ -412,6 +408,11 @@ export default function Complaints() {
     { name: 'High', value: analytics.high, color: '#ea580c' },
     { name: 'Medium', value: analytics.medium, color: '#ca8a04' },
     { name: 'Low', value: analytics.low, color: '#65a30d' }
+  ];
+
+  const typeData = [
+    { name: 'WIFI', value: analytics.wifiComplaints, color: '#3b82f6' },
+    { name: 'CCTV', value: analytics.cctvComplaints, color: '#8b5cf6' }
   ];
 
   const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#6b7280'];
@@ -447,10 +448,10 @@ export default function Complaints() {
           <div className="flex items-center gap-3">
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="dashboard-primary-button">
+                {/* <Button className="dashboard-primary-button">
                   <Plus className="h-4 w-4 mr-2" />
                   New Complaint
-                </Button>
+                </Button> */}
               </DialogTrigger>
               <DialogContent className="max-w-2xl dashboard-dialog">
                 <DialogHeader>
@@ -699,34 +700,34 @@ export default function Complaints() {
                 </CardContent>
               </Card>
 
-              {/* Priority Breakdown */}
+              {/* Type Distribution */}
               <Card className="dashboard-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Priority Breakdown
+                    <Activity className="h-5 w-5" />
+                    Type Distribution
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={priorityData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '6px'
-                          }}
-                        />
-                        <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                          {priorityData.map((entry, index) => (
+                      <PieChart>
+                        <Pie
+                          data={typeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {typeData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
-                        </Bar>
-                      </BarChart>
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
@@ -782,37 +783,54 @@ export default function Complaints() {
                 </CardContent>
               </Card>
 
-              {/* Top Locations */}
+              {/* Complaint Types */}
               <Card className="dashboard-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Top Locations
+                    <Activity className="h-5 w-5" />
+                    Complaint Types
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {analytics.locationStats.slice(0, 5).map((location, index) => (
-                      <div key={location.location} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium dashboard-text">{location.location}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {location.resolved}/{location.count} resolved
-                            </p>
-                          </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium">
+                          <Activity className="h-4 w-4 text-blue-600" />
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium dashboard-text">{location.count}</p>
+                        <div>
+                          <p className="font-medium dashboard-text">WIFI</p>
                           <p className="text-sm text-muted-foreground">
-                            {((location.resolved / location.count) * 100).toFixed(0)}%
+                            {analytics.wifiComplaints} complaints
                           </p>
                         </div>
                       </div>
-                    ))}
+                      <div className="text-right">
+                        <p className="font-medium dashboard-text">{analytics.wifiComplaints}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {analytics.total > 0 ? ((analytics.wifiComplaints / analytics.total) * 100).toFixed(0) : 0}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-medium">
+                          <Activity className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium dashboard-text">CCTV</p>
+                          <p className="text-sm text-muted-foreground">
+                            {analytics.cctvComplaints} complaints
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium dashboard-text">{analytics.cctvComplaints}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {analytics.total > 0 ? ((analytics.cctvComplaints / analytics.total) * 100).toFixed(0) : 0}%
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -993,20 +1011,17 @@ export default function Complaints() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={locationFilter} onValueChange={(value) => {
-                      setLocationFilter(value);
+                    <Select value={typeFilter} onValueChange={(value) => {
+                      setTypeFilter(value);
                       setCurrentPage(1);
                     }}>
                       <SelectTrigger className="w-[140px] dashboard-select">
-                        <SelectValue placeholder="Location" />
+                        <SelectValue placeholder="Type" />
                       </SelectTrigger>
                       <SelectContent className="dashboard-select-content">
-                        <SelectItem value="all">All Locations</SelectItem>
-                        {uniqueLocations.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="WIFI">WIFI</SelectItem>
+                        <SelectItem value="CCTV">CCTV</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1017,14 +1032,41 @@ export default function Complaints() {
             {/* Results Summary */}
             <div className="flex items-center justify-between">
               <p className="text-sm dashboard-text-muted">
-                Showing {paginatedComplaints.length} of {filteredComplaints.length} complaints
+                {isLoading ? "Loading complaints..." : `Showing ${paginatedComplaints.length} of ${pagination.total} complaints`}
               </p>
+              {error && (
+                <p className="text-sm text-red-500">
+                  Error loading complaints. Please try again.
+                </p>
+              )}
             </div>
 
             {/* Complaints Grid/Table */}
-            {viewMode === "card" ? (
+            {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedComplaints.map((complaint) => (
+                {[...Array(6)].map((_, index) => (
+                  <Card key={index} className="dashboard-card">
+                    <CardHeader className="pb-3">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-1/2"></div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-muted rounded w-full mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-3/4"></div>
+                      </div>
+                      <div className="animate-pulse">
+                        <div className="h-3 bg-muted rounded w-1/3"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : viewMode === "card" ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {paginatedComplaints.map((complaint:any) => (
                   <Card key={complaint.id} className="dashboard-card hover:shadow-lg transition-all duration-300">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -1033,9 +1075,9 @@ export default function Complaints() {
                             <User className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <CardTitle className="text-sm dashboard-card-title">#{complaint.id}</CardTitle>
+                            <CardTitle className="text-sm dashboard-card-title">#{complaint._id}</CardTitle>
                             <p className="text-xs dashboard-text-muted">
-                              {getCustomerName(complaint.customerId)}
+                              {getCustomerName(complaint)}
                             </p>
                           </div>
                         </div>
@@ -1049,12 +1091,12 @@ export default function Complaints() {
                 <CardContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold dashboard-text text-sm mb-1">{complaint.title}</h4>
-                    <p className="text-xs dashboard-text-muted line-clamp-2">{complaint.description}</p>
+                    <p className="text-xs dashboard-text-muted line-clamp-2">{complaint.issueDescription}</p>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <Badge className={`${getStatusColor(complaint.status)} text-xs font-medium`}>
-                      {complaint.status.replace('-', ' ').toUpperCase()}
+                    <Badge className={`${getStatusColor(complaint.status, !!complaint.engineer)} text-xs font-medium`}>
+                      {complaint.engineer ? "ASSIGNED" : complaint.status.replace('-', ' ').toUpperCase()}
                     </Badge>
                     <div className="flex items-center text-xs dashboard-text-muted">
                       <Clock className="h-3 w-3 mr-1" />
@@ -1064,19 +1106,24 @@ export default function Complaints() {
 
                   <div className="flex items-center justify-between text-xs dashboard-text-muted">
                     <div className="flex items-center">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {complaint.location}
+                      <Activity className="h-3 w-3 mr-1" />
+                      {complaint.type}
                     </div>
-                    {complaint.engineerName && (
+                    {complaint.engineer ? (
                       <div className="flex items-center">
                         <UserCheck className="h-3 w-3 mr-1" />
-                        {complaint.engineerName}
+                        {complaint.engineer.firstName} {complaint.engineer.lastName}
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <Phone className="h-3 w-3 mr-1" />
+                        {complaint.phoneNumber}
                       </div>
                     )}
                   </div>
 
                   <div className="flex gap-1 pt-2">
-                    {complaint.status === "pending" && (
+                    {complaint.status === "pending" && !complaint.engineer && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1085,6 +1132,17 @@ export default function Complaints() {
                       >
                         <User className="h-3 w-3 mr-1" />
                         Assign
+                      </Button>
+                    )}
+                    {complaint.engineer && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 h-8 text-xs bg-green-50 text-green-700 hover:bg-green-100"
+                        disabled
+                      >
+                        <UserCheck className="h-3 w-3 mr-1" />
+                        Assigned
                       </Button>
                     )}
                     <Button
@@ -1110,6 +1168,75 @@ export default function Complaints() {
               </Card>
             ))}
           </div>
+        ) : isLoading ? (
+          <Card className="dashboard-card">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b dashboard-table-header">
+                      <th className="text-left p-4 dashboard-table-header-text">ID</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Customer</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Issue</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Priority</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Status</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Engineer</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Created</th>
+                      <th className="text-left p-4 dashboard-table-header-text">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(5)].map((_, index) => (
+                      <tr key={index} className="border-b dashboard-table-row">
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-muted rounded w-16"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-muted rounded w-24 mb-1"></div>
+                            <div className="h-3 bg-muted rounded w-20"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-muted rounded w-32 mb-1"></div>
+                            <div className="h-3 bg-muted rounded w-24"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-6 bg-muted rounded w-16"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-6 bg-muted rounded w-20"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-muted rounded w-20"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-4 bg-muted rounded w-16"></div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="animate-pulse">
+                            <div className="h-8 bg-muted rounded w-24"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <Card className="dashboard-card">
             <CardContent className="p-0">
@@ -1128,11 +1255,11 @@ export default function Complaints() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedComplaints.map((complaint) => (
+                    {paginatedComplaints.map((complaint:any) => (
                       <tr key={complaint.id} className="border-b dashboard-table-row hover:bg-muted/50">
                         <td className="p-4">
                           <div className="font-mono text-sm font-medium dashboard-text">
-                            #{complaint.id}
+                            #{complaint._id}
                           </div>
                         </td>
                         <td className="p-4">
@@ -1142,11 +1269,11 @@ export default function Complaints() {
                             </div>
                             <div>
                               <div className="text-sm font-medium dashboard-text">
-                                {getCustomerName(complaint.customerId)}
+                                {getCustomerName(complaint)}
                               </div>
                               <div className="text-xs dashboard-text-muted flex items-center">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {complaint.location}
+                                <Activity className="h-3 w-3 mr-1" />
+                                {complaint.type}
                               </div>
                             </div>
                           </div>
@@ -1157,7 +1284,7 @@ export default function Complaints() {
                               {complaint.title}
                             </div>
                             <div className="text-xs dashboard-text-muted truncate">
-                              {complaint.description}
+                              {complaint.issueDescription}
                             </div>
                           </div>
                         </td>
@@ -1167,22 +1294,27 @@ export default function Complaints() {
                           </Badge>
                         </td>
                         <td className="p-4">
-                          <Badge className={`${getStatusColor(complaint.status)} font-medium`}>
-                            {complaint.status.replace('-', ' ').toUpperCase()}
+                          <Badge className={`${getStatusColor(complaint.status, !!complaint.engineer)} font-medium`}>
+                            {complaint.engineer ? "ASSIGNED" : complaint.status.replace('-', ' ').toUpperCase()}
                           </Badge>
                         </td>
                         <td className="p-4">
                           <div className="flex items-center space-x-2">
-                            {complaint.engineerName ? (
+                            {complaint.engineer ? (
                               <>
                                 <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
                                   <span className="text-xs font-medium text-white">
-                                    {complaint.engineerName.split(" ").map((n: string) => n[0]).join("")}
+                                    {complaint.engineer.firstName[0]}{complaint.engineer.lastName[0]}
                                   </span>
                                 </div>
-                                <span className="text-sm font-medium dashboard-text">
-                                  {complaint.engineerName}
-                                </span>
+                                <div>
+                                  <span className="text-sm font-medium dashboard-text">
+                                    {complaint.engineer.firstName} {complaint.engineer.lastName}
+                                  </span>
+                                  <div className="text-xs text-muted-foreground">
+                                    {complaint.engineer.email}
+                                  </div>
+                                </div>
                               </>
                             ) : (
                               <Badge variant="outline" className="dashboard-text-muted">
@@ -1199,7 +1331,7 @@ export default function Complaints() {
                         </td>
                         <td className="p-4">
                           <div className="flex space-x-1">
-                            {complaint.status === "pending" && (
+                            {complaint.status === "pending" && !complaint.engineer && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1207,6 +1339,16 @@ export default function Complaints() {
                                 className="dashboard-action-button"
                               >
                                 <User className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {complaint.engineer && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="dashboard-action-button text-green-600"
+                                disabled
+                              >
+                                <UserCheck className="h-4 w-4" />
                               </Button>
                             )}
                             <Button
@@ -1265,7 +1407,7 @@ export default function Complaints() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between">
                 <div className="text-sm dashboard-text-muted">
-                  Page {currentPage} of {totalPages}
+                  Page {pagination.page} of {pagination.pages} (Total: {pagination.total})
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -1305,12 +1447,12 @@ export default function Complaints() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="dashboard-label">Complaint ID</Label>
-                    <p className="font-mono dashboard-text">#{selectedComplaint.id}</p>
+                    <p className="font-mono dashboard-text">#{selectedComplaint._id}</p>
                   </div>
                   <div>
                     <Label className="dashboard-label">Status</Label>
-                    <Badge className={`${getStatusColor(selectedComplaint.status)} font-medium mt-1`}>
-                      {selectedComplaint.status.replace('-', ' ').toUpperCase()}
+                    <Badge className={`${getStatusColor(selectedComplaint.status, !!selectedComplaint.engineer)} font-medium mt-1`}>
+                      {selectedComplaint.engineer ? "ASSIGNED" : selectedComplaint.status.replace('-', ' ').toUpperCase()}
                     </Badge>
                   </div>
                 </div>
@@ -1318,7 +1460,7 @@ export default function Complaints() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="dashboard-label">Customer</Label>
-                    <p className="dashboard-text">{getCustomerName(selectedComplaint.customerId)}</p>
+                    <p className="dashboard-text">{getCustomerName(selectedComplaint)}</p>
                   </div>
                   <div>
                     <Label className="dashboard-label">Priority</Label>
@@ -1335,24 +1477,56 @@ export default function Complaints() {
 
                 <div>
                   <Label className="dashboard-label">Description</Label>
-                  <p className="dashboard-text">{selectedComplaint.description}</p>
+                  <p className="dashboard-text">{selectedComplaint.issueDescription}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="dashboard-label">Location</Label>
+                    <Label className="dashboard-label">Type</Label>
                     <p className="dashboard-text flex items-center">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {selectedComplaint.location}
+                      <Activity className="h-4 w-4 mr-2" />
+                      {selectedComplaint.type}
                     </p>
                   </div>
                   <div>
-                    <Label className="dashboard-label">Engineer</Label>
-                    <p className="dashboard-text">
-                      {selectedComplaint.engineerName || "Not assigned"}
+                    <Label className="dashboard-label">Phone Number</Label>
+                    <p className="dashboard-text flex items-center">
+                      <Phone className="h-4 w-4 mr-2" />
+                      {selectedComplaint.phoneNumber}
                     </p>
                   </div>
                 </div>
+
+                {selectedComplaint.engineer && (
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-medium mb-3 flex items-center">
+                      <UserCheck className="h-4 w-4 mr-2 text-blue-600" />
+                      Assigned Engineer
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="dashboard-label text-sm">Engineer Name</Label>
+                        <p className="dashboard-text">
+                          {selectedComplaint.engineer.firstName} {selectedComplaint.engineer.lastName}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="dashboard-label text-sm">Email</Label>
+                        <p className="dashboard-text">{selectedComplaint.engineer.email}</p>
+                      </div>
+                      <div>
+                        <Label className="dashboard-label text-sm">Phone</Label>
+                        <p className="dashboard-text">{selectedComplaint.engineer.phoneNumber}</p>
+                      </div>
+                      <div>
+                        <Label className="dashboard-label text-sm">Assigned By</Label>
+                        <p className="dashboard-text">
+                          {selectedComplaint.assignedBy?.firstName} {selectedComplaint.assignedBy?.lastName}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1370,6 +1544,19 @@ export default function Complaints() {
                     </p>
                   </div>
                 </div>
+
+                {selectedComplaint.attachments && selectedComplaint.attachments.length > 0 && (
+                  <div>
+                    <Label className="dashboard-label">Attachments</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedComplaint.attachments.map((attachment: string, index: number) => (
+                        <Badge key={index} variant="outline" className="dashboard-text-muted">
+                          Attachment {index + 1}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -1473,33 +1660,150 @@ export default function Complaints() {
 
         {/* Assign Engineer Dialog */}
         <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogContent className="dashboard-dialog">
+          <DialogContent className="dashboard-dialog max-w-2xl">
             <DialogHeader>
               <DialogTitle className="dashboard-dialog-title">Assign Engineer</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Select an engineer to assign to this complaint
+              </p>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {selectedComplaint && (
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Complaint Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">ID:</span>
+                      <span className="ml-2 font-mono">#{selectedComplaint._id}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="ml-2">{selectedComplaint.type}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="ml-2">{selectedComplaint.title}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Priority:</span>
+                      <Badge className={`${getPriorityColor(selectedComplaint.priority)} ml-2`}>
+                        {selectedComplaint.priority.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
-                <Label className="dashboard-label">Select Engineer</Label>
-                <Select value={selectedEngineerId} onValueChange={setSelectedEngineerId}>
-                  <SelectTrigger className="dashboard-select">
-                    <SelectValue placeholder="Choose an engineer" />
-                  </SelectTrigger>
-                  <SelectContent className="dashboard-select-content">
-                    {engineers.map((engineer: any) => (
-                      <SelectItem key={engineer.id} value={engineer.id.toString()}>
-                        {engineer.name} - {engineer.specialization}
-                      </SelectItem>
+                <Label className="dashboard-label">Select Engineer ({engineers.length} available)</Label>
+                {!engineersLoading && engineers.length > 0 && (
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search engineers..."
+                        value={engineerSearchQuery}
+                        onChange={(e) => setEngineerSearchQuery(e.target.value)}
+                        className="pl-10 dashboard-input"
+                      />
+                    </div>
+                  </div>
+                )}
+                {engineersLoading ? (
+                  <div className="space-y-2">
+                    {[...Array(3)].map((_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <div className="h-12 bg-muted rounded-lg"></div>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                ) : engineers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No engineers available</p>
+                    <p className="text-xs mt-1">Please add engineers to the system first</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {engineers
+                      .filter((engineer: any) => {
+                        if (!engineerSearchQuery) return true;
+                        const searchTerm = engineerSearchQuery.toLowerCase();
+                        return (
+                          engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                          engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                          engineer.email?.toLowerCase().includes(searchTerm) ||
+                          engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                        );
+                      })
+                                            .map((engineer: any) => (
+                        <div
+                          key={engineer._id}
+                          className={`p-4 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
+                            selectedEngineerId === engineer._id ? 'border-primary bg-primary/5' : 'border-border'
+                          }`}
+                          onClick={() => setSelectedEngineerId(engineer._id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <User className="h-5 w-5 text-white" />
+                              </div>
+                                                          <div>
+                              <div className="font-medium dashboard-text">
+                                {engineer.firstName} {engineer.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {engineer.email}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium dashboard-text">
+                              Engineer
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {engineer.countryCode} {engineer.phoneNumber}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Role: {engineer.role}
+                        </div>
+                        </div>
+                      ))}
+                    {engineers.filter((engineer: any) => {
+                      if (!engineerSearchQuery) return false;
+                      const searchTerm = engineerSearchQuery.toLowerCase();
+                      return (
+                        engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                        engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                        engineer.email?.toLowerCase().includes(searchTerm) ||
+                        engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                      );
+                    }).length === 0 && engineerSearchQuery && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No engineers found matching "{engineerSearchQuery}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => {
+                  setIsAssignDialogOpen(false);
+                  setSelectedEngineerId("");
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={assignEngineer} disabled={!selectedEngineerId} className="dashboard-primary-button">
-                  Assign Engineer
+                <Button 
+                  onClick={assignEngineer} 
+                  disabled={!selectedEngineerId || engineersLoading || isAssigning}
+                  className="dashboard-primary-button"
+                >
+                  {isAssigning ? "Assigning..." : engineersLoading ? "Loading..." : "Assign Engineer"}
                 </Button>
               </div>
             </div>

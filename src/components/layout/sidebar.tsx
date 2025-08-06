@@ -35,11 +35,11 @@ import {
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view-dashboard" },
   { name: "Complaints", href: "/complaints", icon: AlertCircle, permission: "assign-complaints" },
+  { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
   { name: "Engineers", href: "/engineers", icon: Users, permission: "manage-engineers" },
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
   { name: "Products", href: "/products", icon: Package, permission: "manage-products" },
   { name: "Service Plans", href: "/plans", icon: CreditCard, permission: "manage-plans" },
-  { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permission: "view-analytics" },
   { name: "Notifications", href: "/notifications", icon: Bell, permission: "manage-notifications" },
   { name: "Support & Rating", href: "/support", icon: Headphones, permission: "manage-support" },

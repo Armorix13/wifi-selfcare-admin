@@ -4,7 +4,8 @@ export const BASE_URL = `http://51.21.19.38:8000`;
 
 const Tags = {
   Advertisements: "Advertisements",
-  WIFI:"WIFI"
+  WIFI:"WIFI",
+  COMPLAINTS:"COMPLAINTS"
 };
 
 export const LIMIT = 20;
@@ -13,7 +14,7 @@ export const LIMIT = 20;
 const baseQuery = fetchBaseQuery({
   baseUrl: `${BASE_URL}/api/v1`,
   prepareHeaders: (headers) => {
-    const auth =`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODkyMmYyMGRjNTk0N2U0NjhkMmNiYTciLCJyb2xlIjoidXNlciIsImp0aSI6IjNlSHNWRFRaIiwiaWF0IjoxNzU0NDI1MzgxLCJleHAiOjE3NTcwMTczODF9.9J0xfAvVqm0PtlYprR9lJ7uQnQoBxhBcyuEwbGXmptk`;
+    const auth =`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODkyMmYyMGRjNTk0N2U0NjhkMmNiYTciLCJyb2xlIjoic3VwZXJhZG1pbiIsImp0aSI6Ik5kRlFFc2JLIiwiaWF0IjoxNzU0NTAxMzk3LCJleHAiOjE3NTcwOTMzOTd9.gpsA_mL9gUQXPKyEWkiTOhU6AC9r9la33ufpwfKKa_w`;
     if (auth) {
       headers.set("Authorization", `Bearer ${auth}`);
     }
@@ -101,6 +102,28 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.WIFI], // This will refetch installation requests after status update
     }),
+    getAllComplaints: builder.query({
+      query: (params: { page?: number; limit?: number; type?: string; status?: string; priority?: string } = {}) => ({
+        url: `/complaints`,
+        method: "GET",
+        params: {
+          page: params.page || 1,
+          limit: params.limit || 10,
+          ...(params.type && { type: params.type }),
+          ...(params.status && { status: params.status }),
+          ...(params.priority && { priority: params.priority }),
+        },
+      }),
+      providesTags: [Tags.WIFI],
+    }),
+    assignEngineerToComplaint: builder.mutation({
+      query: ({ id, engineerId, priority }) => ({
+        url: `/complaints/${id}/assign`,
+        method: "PUT",
+        body: { engineerId, priority },
+      }),
+      invalidatesTags: [Tags.WIFI], // This will refetch complaints after assignment
+    }),
   }),
 });
 
@@ -113,5 +136,7 @@ export const {
   useUpdateApplicationStatusMutation,
   useGetAllInstallationRequestsQuery,
   useGetEngineersQuery,
-  useUpdateInstallationRequestStatusMutation
+  useUpdateInstallationRequestStatusMutation,
+  useGetAllComplaintsQuery,
+  useAssignEngineerToComplaintMutation
 } = api;
