@@ -36,6 +36,7 @@ const userSchema = z.object({
   area: z.enum(["urban", "rural"]),
   mode: z.enum(["online", "offline"]),
   isActive: z.boolean().default(true),
+  profileImageUrl: z.any().optional(),
 });
 
 // Define advertisement schema for form validation
@@ -68,6 +69,10 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const itemsPerPage = 6;
+
+  // Image handling states for user profile
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   // Advertisement states
   // RTK Query hooks
@@ -117,6 +122,25 @@ export default function Users() {
 
   // Load dummy data
   const [users, setUsers] = useState(generateDummyCustomers());
+
+  // Image handling functions for user profile
+  const handleUserImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setProfileImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeUserImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    form.setValue("profileImageUrl", undefined);
+  };
 
   const form = useForm<UserData>({
     resolver: zodResolver(userSchema),
@@ -172,6 +196,7 @@ export default function Users() {
       ...data,
       id: Math.max(...users.map(u => u.id)) + 1,
       createdAt: new Date().toISOString(),
+      profileImageUrl: profileImagePreview ? profileImagePreview : undefined, // Properly handle null to undefined
     };
     setUsers([...users, newUser]);
     toast({
@@ -180,11 +205,18 @@ export default function Users() {
     });
     setIsCreateDialogOpen(false);
     form.reset();
+    // Reset image states
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
   };
 
   const handleEditUser = (data: UserData) => {
     const updatedUsers = users.map(user => 
-      user.id === selectedUser?.id ? { ...user, ...data } : user
+      user.id === selectedUser?.id ? { 
+        ...user, 
+        ...data,
+        profileImageUrl: profileImagePreview || user.profileImageUrl // Keep existing image if no new one selected
+      } : user
     );
     setUsers(updatedUsers);
     toast({
@@ -192,6 +224,9 @@ export default function Users() {
       description: "User updated successfully",
     });
     setIsEditDialogOpen(false);
+    // Reset image states
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
   };
 
   const handleDeleteUser = (userId: number) => {
@@ -496,6 +531,67 @@ export default function Users() {
                             <Input {...form.register("location")} />
                           </div>
                         </div>
+                        
+                        {/* Profile Image Upload */}
+                        <div className="space-y-4">
+                          <Label htmlFor="profile-image">Profile Image</Label>
+                          
+                          {!profileImagePreview ? (
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                                 onClick={() => document.getElementById('profile-image-upload')?.click()}>
+                              <div className="flex flex-col items-center gap-4">
+                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <Upload className="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                  <p className="font-medium">Upload profile image</p>
+                                  <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                </div>
+                                <label className="cursor-pointer">
+                                  <span className="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
+                                    <ImageIcon className="h-4 w-4 mr-2" />
+                                    Choose File
+                                  </span>
+                                  <input
+                                    id="profile-image-upload"
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleUserImageUpload}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative inline-block">
+                              <div className="bg-muted rounded-lg p-4">
+                                <div className="flex items-center gap-4">
+                                  <img 
+                                    src={profileImagePreview} 
+                                    alt="Profile preview" 
+                                    className="h-16 w-16 object-cover rounded-lg border"
+                                  />
+                                  <div className="flex-1">
+                                    <p className="font-medium">
+                                      {profileImageFile?.name}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {profileImageFile ? (profileImageFile.size / 1024 / 1024).toFixed(2) : '0'} MB
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={removeUserImage}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                             Cancel
@@ -519,7 +615,19 @@ export default function Users() {
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          {user.profileImageUrl ? (
+                            <img 
+                              src={user.profileImageUrl} 
+                              alt={user.name}
+                              className="w-10 h-10 rounded-full object-cover border"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center ${user.profileImageUrl ? 'hidden' : ''}`}>
                             <User className="w-5 h-5" />
                           </div>
                           <div>
@@ -851,25 +959,55 @@ export default function Users() {
                         </div>
                         <div>
                           <Label htmlFor="ad-image">Image</Label>
-                          <div 
-                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                            onClick={() => document.getElementById('ad-image-upload')?.click()}
-                          >
-                            <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                            <p className="text-sm text-gray-500">Click to upload image or drag and drop</p>
-                            <input
-                              id="ad-image-upload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  advertisementForm.setValue("image", file);
-                                }
-                              }}
-                            />
-                          </div>
+                          {!advertisementForm.watch("image") ? (
+                            <div 
+                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                              onClick={() => document.getElementById('ad-image-upload')?.click()}
+                            >
+                              <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                              <p className="text-sm text-gray-500">Click to upload image or drag and drop</p>
+                              <input
+                                id="ad-image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    advertisementForm.setValue("image", file);
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="relative inline-block">
+                              <div className="bg-muted rounded-lg p-4">
+                                <div className="flex items-center gap-4">
+                                  <img 
+                                    src={URL.createObjectURL(advertisementForm.watch("image"))} 
+                                    alt="Advertisement preview" 
+                                    className="h-16 w-16 object-cover rounded-lg border"
+                                  />
+                                  <div className="flex-1">
+                                    <p className="font-medium">
+                                      {advertisementForm.watch("image")?.name}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {advertisementForm.watch("image") ? (advertisementForm.watch("image").size / 1024 / 1024).toFixed(2) : '0'} MB
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => advertisementForm.setValue("image", null)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex justify-end gap-2">
@@ -1089,6 +1227,80 @@ export default function Users() {
                 </Select>
               </div>
             </div>
+            
+            {/* Profile Image Upload for Edit */}
+            <div className="space-y-4">
+              <Label htmlFor="edit-profile-image">Profile Image</Label>
+              
+              {!profileImagePreview && !selectedUser?.profileImageUrl ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                     onClick={() => document.getElementById('edit-profile-image-upload')?.click()}>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Upload new profile image</p>
+                      <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                    <label className="cursor-pointer">
+                      <span className="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Choose File
+                      </span>
+                      <input
+                        id="edit-profile-image-upload"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleUserImageUpload}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative inline-block">
+                  <div className="bg-muted rounded-lg p-4">
+                    <div className="flex items-center gap-4">
+                      <img 
+                        src={profileImagePreview || selectedUser?.profileImageUrl} 
+                        alt="Profile preview" 
+                        className="h-16 w-16 object-cover rounded-lg border"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {profileImageFile?.name || 'Current profile image'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {profileImageFile ? (profileImageFile.size / 1024 / 1024).toFixed(2) + ' MB' : 'Existing image'}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <label className="cursor-pointer">
+                          <span className="inline-flex items-center px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm transition-colors">
+                            Change
+                          </span>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleUserImageUpload}
+                          />
+                        </label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeUserImage}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel
@@ -1109,7 +1321,19 @@ export default function Users() {
             {selectedUser && (
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  {selectedUser.profileImageUrl ? (
+                    <img 
+                      src={selectedUser.profileImageUrl} 
+                      alt={selectedUser.name}
+                      className="w-16 h-16 rounded-full object-cover border"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center ${selectedUser.profileImageUrl ? 'hidden' : ''}`}>
                     <User className="w-8 h-8" />
                   </div>
                   <div>
@@ -1236,25 +1460,73 @@ export default function Users() {
               </div>
               <div>
                 <Label htmlFor="edit-ad-image">Image</Label>
-                <div 
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                  onClick={() => document.getElementById('edit-ad-image-upload')?.click()}
-                >
-                  <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">Click to upload new image or drag and drop</p>
-                  <input
-                    id="edit-ad-image-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        advertisementForm.setValue("image", file);
-                      }
-                    }}
-                  />
-                </div>
+                {!advertisementForm.watch("image") && !selectedAdvertisement?.imageUrl ? (
+                  <div 
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                    onClick={() => document.getElementById('edit-ad-image-upload')?.click()}
+                  >
+                    <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Click to upload new image or drag and drop</p>
+                    <input
+                      id="edit-ad-image-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          advertisementForm.setValue("image", file);
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative inline-block">
+                    <div className="bg-muted rounded-lg p-4">
+                      <div className="flex items-center gap-4">
+                        <img 
+                          src={advertisementForm.watch("image") ? URL.createObjectURL(advertisementForm.watch("image")) : `${BASE_URL}${selectedAdvertisement?.imageUrl}`} 
+                          alt="Advertisement preview" 
+                          className="h-16 w-16 object-cover rounded-lg border"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {advertisementForm.watch("image")?.name || 'Current advertisement image'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {advertisementForm.watch("image") ? (advertisementForm.watch("image").size / 1024 / 1024).toFixed(2) + ' MB' : 'Existing image'}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <label className="cursor-pointer">
+                            <span className="inline-flex items-center px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm transition-colors">
+                              Change
+                            </span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  advertisementForm.setValue("image", file);
+                                }
+                              }}
+                            />
+                          </label>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => advertisementForm.setValue("image", null)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex justify-end gap-2">

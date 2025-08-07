@@ -63,6 +63,10 @@ import {
   AlertTriangle,
   Calendar,
   Settings,
+  FileText,
+  Image,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -85,7 +89,7 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetEngineersQuery } from "@/api";
+import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetEngineersQuery, BASE_URL, useGetAllComplaintDasboardQuery } from "@/api";
 
 // Schema for creating complaints
 const insertComplaintSchema = z.object({
@@ -116,6 +120,10 @@ export default function Complaints() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [engineerSearchQuery, setEngineerSearchQuery] = useState<string>("");
   const itemsPerPage = 6;
+  const { data: complaintDashboardData, isLoading: complaintDashboardLoading } = useGetAllComplaintDasboardQuery({});
+
+  console.log("complaintDashboardData", complaintDashboardData);
+  
 
   const { toast } = useToast();
 
@@ -172,6 +180,17 @@ export default function Complaints() {
   // Helper functions
   const getCustomerName = (complaint: any) => {
     return complaint.user?.firstName + " " + complaint.user?.lastName || "Unknown Customer";
+  };
+
+  const formatComplaintId = (complaint: any) => {
+    if (!complaint._id) return "Unknown";
+    
+    // Get the last 3 digits of the MongoDB _id
+    const lastThreeDigits = complaint._id.slice(-3);
+    
+    // Format based on complaint type
+    const type = complaint.type || "UNKNOWN";
+    return `${type}-${lastThreeDigits}`;
   };
 
   const getEngineerName = (engineerId: number | null) => {
@@ -234,6 +253,36 @@ export default function Complaints() {
     }
   };
 
+  // Helper function to construct full attachment URL
+  const getAttachmentUrl = (attachmentPath: string) => {
+    if (!attachmentPath) return null;
+    
+    // If the path already starts with http, return as is
+    if (attachmentPath.startsWith('http')) {
+      return attachmentPath;
+    }
+    
+    // Remove leading slash if present
+    const cleanPath = attachmentPath.startsWith('/') ? attachmentPath.slice(1) : attachmentPath;
+    
+    // Construct full URL
+    return `${BASE_URL}/${cleanPath}`;
+  };
+
+  // Helper function to get file type from URL
+  const getFileType = (url: string) => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return 'image';
+    } else if (['pdf'].includes(extension || '')) {
+      return 'pdf';
+    } else if (['doc', 'docx'].includes(extension || '')) {
+      return 'document';
+    } else {
+      return 'unknown';
+    }
+  };
+
   // CRUD operations
   const onSubmit = (data: InsertComplaint) => {
     toast({
@@ -246,26 +295,12 @@ export default function Complaints() {
 
   const handleEdit = (complaint: any) => {
     setSelectedComplaint(complaint);
-    editForm.reset({
-      customerName: complaint.user?.firstName + " " + complaint.user?.lastName,
-      email: complaint.user?.email || "",
-      phone: complaint.phoneNumber || "",
-      location: "Location", // Default for demo
-      priority: complaint.priority,
-      description: complaint.issueDescription,
-      category: complaint.type
-    });
+    setSelectedEngineerId(""); // Reset selected engineer
+    setEngineerSearchQuery(""); // Reset search query
     setIsEditDialogOpen(true);
   };
 
-  const onEditSubmit = (data: InsertComplaint) => {
-    toast({
-      title: "Success",
-      description: "Complaint updated successfully",
-    });
-    setIsEditDialogOpen(false);
-    setSelectedComplaint(null);
-  };
+
 
   const handleView = (complaint: any) => {
     setSelectedComplaint(complaint);
@@ -336,84 +371,123 @@ export default function Complaints() {
 
   const uniqueLocations = Array.from(new Set(complaints.map((c: any) => c.location || "Unknown")));
 
-  // Analytics calculations
+  // Analytics calculations using real API data
   const calculateAnalytics = () => {
-    const total = complaints.length;
-    const pending = complaints.filter((c: any) => c.status === 'pending').length;
-    const assigned = complaints.filter((c: any) => c.status === 'assigned').length;
-    const inProgress = complaints.filter((c: any) => c.status === 'in-progress').length;
-    const resolved = complaints.filter((c: any) => c.status === 'resolved').length;
-    const notResolved = complaints.filter((c: any) => c.status === 'not-resolved').length;
-    
-    const urgent = complaints.filter((c: any) => c.priority === 'urgent').length;
-    const high = complaints.filter((c: any) => c.priority === 'high').length;
-    const medium = complaints.filter((c: any) => c.priority === 'medium').length;
-    const low = complaints.filter((c: any) => c.priority === 'low').length;
-    
-    const resolutionRate = total > 0 ? ((resolved / total) * 100) : 0;
-    const avgResolutionTime = 2.5; // hours - dummy calculation
-    
-    // Calculate complaints by type (WIFI/CCTV)
-    const wifiComplaints = complaints.filter((c: any) => c.type === 'WIFI').length;
-    const cctvComplaints = complaints.filter((c: any) => c.type === 'CCTV').length;
-    
-    // Calculate daily trends (last 7 days)
-    const dailyData = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dayComplaints = Math.floor(Math.random() * 15) + 5;
-      const dayResolved = Math.floor(dayComplaints * 0.7);
-      
-      dailyData.push({
-        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        complaints: dayComplaints,
-        resolved: dayResolved,
-        pending: dayComplaints - dayResolved
-      });
+    if (!complaintDashboardData?.data?.dashboardData) {
+      return {
+        total: 0,
+        pending: 0,
+        assigned: 0,
+        inProgress: 0,
+        resolved: 0,
+        notResolved: 0,
+        urgent: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        resolutionRate: 0,
+        avgResolutionTime: 0,
+        wifiComplaints: 0,
+        cctvComplaints: 0,
+        dailyData: [],
+        kpis: {
+          totalComplaints: { value: 0, change: "0", trend: "up" },
+          resolutionRate: { value: "0", change: "0", trend: "up" },
+          avgResolutionTime: { value: "0", change: "0", trend: "up" },
+          pendingIssues: { value: 0, change: "0", trend: "down" }
+        },
+        statusDistribution: [],
+        typeDistribution: [],
+        priorityDistribution: [],
+        topIssueTypes: [],
+        engineerPerformance: [],
+        recentActivity: []
+      };
     }
-    
+
+    const dashboardData = complaintDashboardData.data.dashboardData;
+    const kpis = dashboardData.kpis;
+    const distributions = dashboardData.distributions;
+    const trends = dashboardData.trends;
+    const additionalData = dashboardData.additionalData;
+
+    // Calculate status counts
+    const statusCounts = distributions.status.reduce((acc: any, item: any) => {
+      acc[item.status] = item.count;
+      return acc;
+    }, {});
+
+    // Calculate type counts
+    const typeCounts = distributions.type.reduce((acc: any, item: any) => {
+      acc[item.type] = item.count;
+      return acc;
+    }, {});
+
+    // Calculate priority counts
+    const priorityCounts = additionalData.priorityDistribution.reduce((acc: any, item: any) => {
+      acc[item.priority] = item.count;
+      return acc;
+    }, {});
+
+    // Format daily trends data
+    const dailyData = trends.daily.map((item: any) => ({
+      date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      complaints: item.newComplaints,
+      resolved: item.resolved,
+      pending: item.newComplaints - item.resolved
+    }));
+
     return {
-      total,
-      pending,
-      assigned,
-      inProgress,
-      resolved,
-      notResolved,
-      urgent,
-      high,
-      medium,
-      low,
-      resolutionRate,
-      avgResolutionTime,
-      wifiComplaints,
-      cctvComplaints,
-      dailyData
+      total: kpis.totalComplaints.value,
+      pending: statusCounts.pending || 0,
+      assigned: statusCounts.assigned || 0,
+      inProgress: statusCounts['in-progress'] || 0,
+      resolved: statusCounts.resolved || 0,
+      notResolved: statusCounts['not-resolved'] || 0,
+      urgent: priorityCounts.urgent || 0,
+      high: priorityCounts.high || 0,
+      medium: priorityCounts.medium || 0,
+      low: priorityCounts.low || 0,
+      resolutionRate: parseFloat(kpis.resolutionRate.value),
+      avgResolutionTime: parseFloat(kpis.avgResolutionTime.value),
+      wifiComplaints: typeCounts.WIFI || 0,
+      cctvComplaints: typeCounts.CCTV || 0,
+      dailyData,
+      kpis,
+      statusDistribution: distributions.status,
+      typeDistribution: distributions.type,
+      priorityDistribution: additionalData.priorityDistribution,
+      topIssueTypes: additionalData.topIssueTypes,
+      engineerPerformance: additionalData.engineerPerformance,
+      recentActivity: additionalData.recentActivity
     };
   };
 
   const analytics = calculateAnalytics();
 
-  // Chart data
-  const statusData = [
-    { name: 'Pending', value: analytics.pending, color: '#ef4444' },
-    { name: 'Assigned', value: analytics.assigned, color: '#f59e0b' },
-    { name: 'In Progress', value: analytics.inProgress, color: '#3b82f6' },
-    { name: 'Resolved', value: analytics.resolved, color: '#10b981' },
-    { name: 'Not Resolved', value: analytics.notResolved, color: '#6b7280' }
-  ];
+  // Chart data using real API data
+  const statusData = analytics.statusDistribution.map((item: any) => ({
+    name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+    value: item.count,
+    color: item.status === 'pending' ? '#ef4444' : 
+           item.status === 'assigned' ? '#f59e0b' : 
+           item.status === 'in-progress' ? '#3b82f6' : 
+           item.status === 'resolved' ? '#10b981' : '#6b7280'
+  }));
 
-  const priorityData = [
-    { name: 'Urgent', value: analytics.urgent, color: '#dc2626' },
-    { name: 'High', value: analytics.high, color: '#ea580c' },
-    { name: 'Medium', value: analytics.medium, color: '#ca8a04' },
-    { name: 'Low', value: analytics.low, color: '#65a30d' }
-  ];
+  const priorityData = analytics.priorityDistribution.map((item: any) => ({
+    name: item.priority.charAt(0).toUpperCase() + item.priority.slice(1),
+    value: item.count,
+    color: item.priority === 'urgent' ? '#dc2626' : 
+           item.priority === 'high' ? '#ea580c' : 
+           item.priority === 'medium' ? '#ca8a04' : '#65a30d'
+  }));
 
-  const typeData = [
-    { name: 'WIFI', value: analytics.wifiComplaints, color: '#3b82f6' },
-    { name: 'CCTV', value: analytics.cctvComplaints, color: '#8b5cf6' }
-  ];
+  const typeData = analytics.typeDistribution.map((item: any) => ({
+    name: item.type,
+    value: item.count,
+    color: item.type === 'WIFI' ? '#3b82f6' : '#8b5cf6'
+  }));
 
   const COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#6b7280'];
 
@@ -590,22 +664,47 @@ export default function Complaints() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* Key Metrics Cards */}
+            {complaintDashboardLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, index) => (
+                  <Card key={index} className="dashboard-card">
+                    <CardContent className="p-6">
+                      <div className="animate-pulse">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="h-4 bg-muted rounded w-24"></div>
+                          <div className="w-12 h-12 bg-muted rounded-lg"></div>
+                        </div>
+                        <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                        <div className="h-4 bg-muted rounded w-32"></div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <>
+                {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="dashboard-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Total Complaints</p>
-                      <p className="text-2xl font-bold dashboard-text">{analytics.total}</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.kpis.totalComplaints.value}</p>
                     </div>
                     <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                       <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center">
-                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+12% from last month</span>
+                    {analytics.kpis.totalComplaints.trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                    )}
+                    <span className={`text-sm ${analytics.kpis.totalComplaints.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {analytics.kpis.totalComplaints.change}% from last month
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -615,15 +714,21 @@ export default function Complaints() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Resolution Rate</p>
-                      <p className="text-2xl font-bold dashboard-text">{analytics.resolutionRate.toFixed(1)}%</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.kpis.resolutionRate.value}%</p>
                     </div>
                     <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
                       <Target className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center">
-                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+5.2% from last month</span>
+                    {analytics.kpis.resolutionRate.trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
+                    )}
+                    <span className={`text-sm ${analytics.kpis.resolutionRate.trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {analytics.kpis.resolutionRate.change}% from last month
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -633,15 +738,21 @@ export default function Complaints() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Avg Resolution Time</p>
-                      <p className="text-2xl font-bold dashboard-text">{analytics.avgResolutionTime}h</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.kpis.avgResolutionTime.value}h</p>
                     </div>
                     <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
                       <Timer className="h-6 w-6 text-orange-600 dark:text-orange-400" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center">
-                    <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600 dark:text-green-400">-15min from last month</span>
+                    {analytics.kpis.avgResolutionTime.trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-red-500 mr-1" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
+                    )}
+                    <span className={`text-sm ${analytics.kpis.avgResolutionTime.trend === 'up' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {analytics.kpis.avgResolutionTime.change}h from last month
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -651,15 +762,21 @@ export default function Complaints() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Pending Issues</p>
-                      <p className="text-2xl font-bold dashboard-text">{analytics.pending}</p>
+                      <p className="text-2xl font-bold dashboard-text">{analytics.kpis.pendingIssues.value}</p>
                     </div>
                     <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
                       <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                     </div>
                   </div>
                   <div className="mt-4 flex items-center">
-                    <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-sm text-green-600 dark:text-green-400">-8% from last month</span>
+                    {analytics.kpis.pendingIssues.trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-red-500 mr-1" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-green-500 mr-1" />
+                    )}
+                    <span className={`text-sm ${analytics.kpis.pendingIssues.trend === 'up' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {analytics.kpis.pendingIssues.change}% from last month
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -684,12 +801,12 @@ export default function Complaints() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {statusData.map((entry, index) => (
+                          {statusData.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -717,12 +834,12 @@ export default function Complaints() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {typeData.map((entry, index) => (
+                          {typeData.map((entry: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -793,44 +910,27 @@ export default function Complaints() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium">
-                          <Activity className="h-4 w-4 text-blue-600" />
+                    {analytics.typeDistribution.map((type: any) => (
+                      <div key={type.type} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 ${type.type === 'WIFI' ? 'bg-blue-100' : 'bg-purple-100'} rounded-full flex items-center justify-center text-sm font-medium`}>
+                            <Activity className={`h-4 w-4 ${type.type === 'WIFI' ? 'text-blue-600' : 'text-purple-600'}`} />
+                          </div>
+                          <div>
+                            <p className="font-medium dashboard-text">{type.type}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {type.count} complaints
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium dashboard-text">WIFI</p>
+                        <div className="text-right">
+                          <p className="font-medium dashboard-text">{type.count}</p>
                           <p className="text-sm text-muted-foreground">
-                            {analytics.wifiComplaints} complaints
+                            {type.percentage}%
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium dashboard-text">{analytics.wifiComplaints}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {analytics.total > 0 ? ((analytics.wifiComplaints / analytics.total) * 100).toFixed(0) : 0}%
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-medium">
-                          <Activity className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium dashboard-text">CCTV</p>
-                          <p className="text-sm text-muted-foreground">
-                            {analytics.cctvComplaints} complaints
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium dashboard-text">{analytics.cctvComplaints}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {analytics.total > 0 ? ((analytics.cctvComplaints / analytics.total) * 100).toFixed(0) : 0}%
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -934,6 +1034,8 @@ export default function Complaints() {
                 </CardContent>
               </Card>
             </div>
+              </>
+            )}
           </TabsContent>
 
           {/* Complaints Tab */}
@@ -1075,7 +1177,7 @@ export default function Complaints() {
                             <User className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <CardTitle className="text-sm dashboard-card-title">#{complaint._id}</CardTitle>
+                            <CardTitle className="text-sm dashboard-card-title">#{formatComplaintId(complaint)}</CardTitle>
                             <p className="text-xs dashboard-text-muted">
                               {getCustomerName(complaint)}
                             </p>
@@ -1121,6 +1223,15 @@ export default function Complaints() {
                       </div>
                     )}
                   </div>
+
+                  {complaint.attachments && complaint.attachments.length > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center text-blue-600 dark:text-blue-400">
+                        <FileText className="h-3 w-3 mr-1" />
+                        {complaint.attachments.length} attachment{complaint.attachments.length > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-1 pt-2">
                     {complaint.status === "pending" && !complaint.engineer && (
@@ -1259,7 +1370,7 @@ export default function Complaints() {
                       <tr key={complaint.id} className="border-b dashboard-table-row hover:bg-muted/50">
                         <td className="p-4">
                           <div className="font-mono text-sm font-medium dashboard-text">
-                            #{complaint._id}
+                            #{formatComplaintId(complaint)}
                           </div>
                         </td>
                         <td className="p-4">
@@ -1286,6 +1397,12 @@ export default function Complaints() {
                             <div className="text-xs dashboard-text-muted truncate">
                               {complaint.issueDescription}
                             </div>
+                            {complaint.attachments && complaint.attachments.length > 0 && (
+                              <div className="flex items-center mt-1 text-xs text-blue-600 dark:text-blue-400">
+                                <FileText className="h-3 w-3 mr-1" />
+                                {complaint.attachments.length} attachment{complaint.attachments.length > 1 ? 's' : ''}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="p-4">
@@ -1438,89 +1555,89 @@ export default function Complaints() {
 
         {/* View Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="max-w-2xl dashboard-dialog">
-            <DialogHeader>
-              <DialogTitle className="dashboard-dialog-title">Complaint Details</DialogTitle>
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto dashboard-dialog pr-4">
+            <DialogHeader className="sticky top-0 bg-background pb-4 border-b pr-8">
+              <DialogTitle className="dashboard-dialog-title text-lg sm:text-xl">Complaint Details</DialogTitle>
             </DialogHeader>
             {selectedComplaint && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label className="dashboard-label">Complaint ID</Label>
-                    <p className="font-mono dashboard-text">#{selectedComplaint._id}</p>
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Complaint ID</Label>
+                    <p className="font-mono dashboard-text text-sm sm:text-base break-all">#{formatComplaintId(selectedComplaint)}</p>
                   </div>
                   <div>
-                    <Label className="dashboard-label">Status</Label>
-                    <Badge className={`${getStatusColor(selectedComplaint.status, !!selectedComplaint.engineer)} font-medium mt-1`}>
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Status</Label>
+                    <Badge className={`${getStatusColor(selectedComplaint.status, !!selectedComplaint.engineer)} font-medium text-xs sm:text-sm`}>
                       {selectedComplaint.engineer ? "ASSIGNED" : selectedComplaint.status.replace('-', ' ').toUpperCase()}
                     </Badge>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label className="dashboard-label">Customer</Label>
-                    <p className="dashboard-text">{getCustomerName(selectedComplaint)}</p>
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Customer</Label>
+                    <p className="dashboard-text text-sm sm:text-base break-words">{getCustomerName(selectedComplaint)}</p>
                   </div>
                   <div>
-                    <Label className="dashboard-label">Priority</Label>
-                    <Badge className={`${getPriorityColor(selectedComplaint.priority)} font-medium mt-1`}>
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Priority</Label>
+                    <Badge className={`${getPriorityColor(selectedComplaint.priority)} font-medium text-xs sm:text-sm`}>
                       {selectedComplaint.priority.toUpperCase()}
                     </Badge>
                   </div>
                 </div>
 
                 <div>
-                  <Label className="dashboard-label">Issue Title</Label>
-                  <p className="dashboard-text">{selectedComplaint.title}</p>
+                  <Label className="dashboard-label text-sm sm:text-base mb-2 block">Issue Title</Label>
+                  <p className="dashboard-text text-sm sm:text-base break-words">{selectedComplaint.title}</p>
                 </div>
 
                 <div>
-                  <Label className="dashboard-label">Description</Label>
-                  <p className="dashboard-text">{selectedComplaint.issueDescription}</p>
+                  <Label className="dashboard-label text-sm sm:text-base mb-2 block">Description</Label>
+                  <p className="dashboard-text text-sm sm:text-base break-words leading-relaxed">{selectedComplaint.issueDescription}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label className="dashboard-label">Type</Label>
-                    <p className="dashboard-text flex items-center">
-                      <Activity className="h-4 w-4 mr-2" />
-                      {selectedComplaint.type}
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Type</Label>
+                    <p className="dashboard-text text-sm sm:text-base flex items-center">
+                      <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                      <span className="break-words">{selectedComplaint.type}</span>
                     </p>
                   </div>
                   <div>
-                    <Label className="dashboard-label">Phone Number</Label>
-                    <p className="dashboard-text flex items-center">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {selectedComplaint.phoneNumber}
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Phone Number</Label>
+                    <p className="dashboard-text text-sm sm:text-base flex items-center">
+                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                      <span className="break-all">{selectedComplaint.phoneNumber}</span>
                     </p>
                   </div>
                 </div>
 
                 {selectedComplaint.engineer && (
-                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h4 className="font-medium mb-3 flex items-center">
-                      <UserCheck className="h-4 w-4 mr-2 text-blue-600" />
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-medium mb-3 flex items-center text-sm sm:text-base">
+                      <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-blue-600 flex-shrink-0" />
                       Assigned Engineer
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <Label className="dashboard-label text-sm">Engineer Name</Label>
-                        <p className="dashboard-text">
+                        <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Engineer Name</Label>
+                        <p className="dashboard-text text-sm sm:text-base break-words">
                           {selectedComplaint.engineer.firstName} {selectedComplaint.engineer.lastName}
                         </p>
                       </div>
                       <div>
-                        <Label className="dashboard-label text-sm">Email</Label>
-                        <p className="dashboard-text">{selectedComplaint.engineer.email}</p>
+                        <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Email</Label>
+                        <p className="dashboard-text text-sm sm:text-base break-all">{selectedComplaint.engineer.email}</p>
                       </div>
                       <div>
-                        <Label className="dashboard-label text-sm">Phone</Label>
-                        <p className="dashboard-text">{selectedComplaint.engineer.phoneNumber}</p>
+                        <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Phone</Label>
+                        <p className="dashboard-text text-sm sm:text-base break-all">{selectedComplaint.engineer.phoneNumber}</p>
                       </div>
                       <div>
-                        <Label className="dashboard-label text-sm">Assigned By</Label>
-                        <p className="dashboard-text">
+                        <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Assigned By</Label>
+                        <p className="dashboard-text text-sm sm:text-base break-words">
                           {selectedComplaint.assignedBy?.firstName} {selectedComplaint.assignedBy?.lastName}
                         </p>
                       </div>
@@ -1528,32 +1645,180 @@ export default function Complaints() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <Label className="dashboard-label">Created</Label>
-                    <p className="dashboard-text flex items-center">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {getTimeAgo(selectedComplaint.createdAt)}
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Created</Label>
+                    <p className="dashboard-text text-sm sm:text-base flex items-center">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                      <span className="break-words">{getTimeAgo(selectedComplaint.createdAt)}</span>
                     </p>
                   </div>
                   <div>
-                    <Label className="dashboard-label">Last Updated</Label>
-                    <p className="dashboard-text flex items-center">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {getTimeAgo(selectedComplaint.updatedAt)}
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Last Updated</Label>
+                    <p className="dashboard-text text-sm sm:text-base flex items-center">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
+                      <span className="break-words">{getTimeAgo(selectedComplaint.updatedAt)}</span>
                     </p>
                   </div>
                 </div>
 
                 {selectedComplaint.attachments && selectedComplaint.attachments.length > 0 && (
                   <div>
-                    <Label className="dashboard-label">Attachments</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedComplaint.attachments.map((attachment: string, index: number) => (
-                        <Badge key={index} variant="outline" className="dashboard-text-muted">
-                          Attachment {index + 1}
-                        </Badge>
-                      ))}
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Attachments ({selectedComplaint.attachments.length})</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {selectedComplaint.attachments.map((attachment: string, index: number) => {
+                        const fullUrl = getAttachmentUrl(attachment);
+                        const fileType = getFileType(attachment);
+                        const fileName = attachment.split('/').pop() || `Attachment ${index + 1}`;
+                        
+                                                  return (
+                            <div key={index} className="border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                              {fileType === 'image' && fullUrl ? (
+                              <div className="space-y-3">
+                                <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                                  <img
+                                    src={fullUrl}
+                                    alt={`Attachment ${index + 1}`}
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      target.nextElementSibling?.classList.remove('hidden');
+                                    }}
+                                  />
+                                  <div className="hidden w-full h-full flex items-center justify-center bg-muted">
+                                    <div className="text-center text-muted-foreground">
+                                      <Image className="h-8 w-8 mx-auto mb-2" />
+                                      <p className="text-sm">Image not available</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs sm:text-sm font-medium truncate">{fileName}</span>
+                                  <div className="flex gap-1 sm:gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => window.open(fullUrl, '_blank')}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            const response = await fetch(fullUrl);
+                                            if (!response.ok) {
+                                              throw new Error(`HTTP error! status: ${response.status}`);
+                                            }
+                                            const blob = await response.blob();
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = fileName;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            window.URL.revokeObjectURL(url);
+                                            
+                                            toast({
+                                              title: "Download Successful",
+                                              description: `${fileName} has been downloaded successfully.`,
+                                            });
+                                          } catch (error) {
+                                            console.error('Download failed:', error);
+                                            toast({
+                                              title: "Download Failed",
+                                              description: "Failed to download the file. Opening in new tab instead.",
+                                              variant: "destructive",
+                                            });
+                                            // Fallback to direct link
+                                            window.open(fullUrl, '_blank');
+                                          }
+                                        }}
+                                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                      >
+                                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                                      </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                                    {fileType === 'pdf' ? (
+                                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                                    ) : fileType === 'document' ? (
+                                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                                    ) : (
+                                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs sm:text-sm font-medium truncate">{fileName}</p>
+                                    <p className="text-xs text-muted-foreground capitalize">{fileType} file</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1 sm:gap-2">
+                                  {fullUrl && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => window.open(fullUrl, '_blank')}
+                                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                      >
+                                        <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            const response = await fetch(fullUrl);
+                                            if (!response.ok) {
+                                              throw new Error(`HTTP error! status: ${response.status}`);
+                                            }
+                                            const blob = await response.blob();
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = fileName;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            window.URL.revokeObjectURL(url);
+                                            
+                                            toast({
+                                              title: "Download Successful",
+                                              description: `${fileName} has been downloaded successfully.`,
+                                            });
+                                          } catch (error) {
+                                            console.error('Download failed:', error);
+                                            toast({
+                                              title: "Download Failed",
+                                              description: "Failed to download the file. Opening in new tab instead.",
+                                              variant: "destructive",
+                                            });
+                                            // Fallback to direct link
+                                            window.open(fullUrl, '_blank');
+                                          }
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1566,95 +1831,161 @@ export default function Complaints() {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-2xl dashboard-dialog">
             <DialogHeader>
-              <DialogTitle className="dashboard-dialog-title">Edit Complaint</DialogTitle>
+              <DialogTitle className="dashboard-dialog-title">Reassign Engineer</DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Reassign this complaint to a different engineer
+              </p>
             </DialogHeader>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="customerName" className="dashboard-label">Customer Name</Label>
-                  <Input
-                    {...editForm.register("customerName")}
-                    placeholder="Enter customer name"
-                    className="dashboard-input"
-                  />
-                  {editForm.formState.errors.customerName && (
-                    <p className="text-sm text-red-500">{editForm.formState.errors.customerName.message}</p>
-                  )}
+            <div className="space-y-6">
+              {selectedComplaint && (
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-3">Complaint Details</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">ID:</span>
+                      <span className="ml-2 font-mono">#{formatComplaintId(selectedComplaint)}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="ml-2">{selectedComplaint.type}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Title:</span>
+                      <span className="ml-2">{selectedComplaint.title}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Priority:</span>
+                      <Badge className={`${getPriorityColor(selectedComplaint.priority)} ml-2`}>
+                        {selectedComplaint.priority.toUpperCase()}
+                      </Badge>
+                    </div>
+                    {selectedComplaint.engineer && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground">Current Engineer:</span>
+                          <span className="ml-2">
+                            {selectedComplaint.engineer.firstName} {selectedComplaint.engineer.lastName}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Email:</span>
+                          <span className="ml-2">{selectedComplaint.engineer.email}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="location" className="dashboard-label">Location</Label>
-                  <Input
-                    {...editForm.register("location")}
-                    placeholder="Enter location"
-                    className="dashboard-input"
-                  />
-                  {editForm.formState.errors.location && (
-                    <p className="text-sm text-red-500">{editForm.formState.errors.location.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="priority" className="dashboard-label">Priority</Label>
-                  <Select
-                    value={editForm.watch("priority")}
-                    onValueChange={(value: "low" | "medium" | "high" | "urgent") =>
-                      editForm.setValue("priority", value)
-                    }
-                  >
-                    <SelectTrigger className="dashboard-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="dashboard-select-content">
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="category" className="dashboard-label">Category</Label>
-                  <Select
-                    value={editForm.watch("category")}
-                    onValueChange={(value: string) => editForm.setValue("category", value)}
-                  >
-                    <SelectTrigger className="dashboard-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="dashboard-select-content">
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="billing">Billing</SelectItem>
-                      <SelectItem value="service">Service</SelectItem>
-                      <SelectItem value="installation">Installation</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
+              )}
+
               <div>
-                <Label htmlFor="description" className="dashboard-label">Description</Label>
-                <Textarea
-                  {...editForm.register("description")}
-                  placeholder="Describe the issue..."
-                  rows={4}
-                  className="dashboard-textarea"
-                />
-                {editForm.formState.errors.description && (
-                  <p className="text-sm text-red-500">{editForm.formState.errors.description.message}</p>
-                )}
+                <Label className="dashboard-label">Select New Engineer</Label>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search engineers..."
+                      value={engineerSearchQuery}
+                      onChange={(e) => setEngineerSearchQuery(e.target.value)}
+                      className="pl-10 dashboard-input"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {engineers
+                    .filter((engineer: any) => {
+                      if (!engineerSearchQuery) return true;
+                      const searchTerm = engineerSearchQuery.toLowerCase();
+                      return (
+                        engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                        engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                        engineer.email?.toLowerCase().includes(searchTerm) ||
+                        engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                      );
+                    })
+                    .map((engineer: any) => (
+                      <div
+                        key={engineer._id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
+                          selectedEngineerId === engineer._id ? 'border-primary bg-primary/5' : 'border-border'
+                        }`}
+                        onClick={() => setSelectedEngineerId(engineer._id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                              <User className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-medium dashboard-text">
+                                {engineer.firstName} {engineer.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {engineer.email}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium dashboard-text">
+                              Engineer
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {engineer.countryCode} {engineer.phoneNumber}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          Role: {engineer.role}
+                        </div>
+                      </div>
+                    ))}
+                  {engineers.filter((engineer: any) => {
+                    if (!engineerSearchQuery) return false;
+                    const searchTerm = engineerSearchQuery.toLowerCase();
+                    return (
+                      engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                      engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                      engineer.email?.toLowerCase().includes(searchTerm) ||
+                      engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                    );
+                  }).length === 0 && engineerSearchQuery && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No engineers found matching "{engineerSearchQuery}"</p>
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <div className="flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedEngineerId("");
+                }}>
                   Cancel
                 </Button>
-                <Button type="submit" className="dashboard-primary-button">
-                  Update Complaint
+                <Button 
+                  onClick={() => {
+                    if (selectedEngineerId) {
+                      const selectedEngineer = engineers.find((engineer: any) => engineer._id === selectedEngineerId);
+                      if (selectedEngineer) {
+                        toast({
+                          title: "Success",
+                          description: `Engineer reassigned to ${selectedEngineer.firstName} ${selectedEngineer.lastName}`,
+                        });
+                        setIsEditDialogOpen(false);
+                        setSelectedEngineerId("");
+                        setSelectedComplaint(null);
+                      }
+                    }
+                  }}
+                  disabled={!selectedEngineerId}
+                  className="dashboard-primary-button"
+                >
+                  Reassign Engineer
                 </Button>
               </div>
-            </form>
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -1674,7 +2005,7 @@ export default function Complaints() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">ID:</span>
-                      <span className="ml-2 font-mono">#{selectedComplaint._id}</span>
+                      <span className="ml-2 font-mono">#{formatComplaintId(selectedComplaint)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Type:</span>

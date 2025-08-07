@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, User, Wrench, MapPin, Calendar, Clock, Star, MessageSquare, CheckCircle, X, Flag, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, AlertCircle, User, Wrench, MapPin, Calendar, Clock, Star, MessageSquare, CheckCircle, X, Flag, Phone, Mail, FileText, Image, Download, ExternalLink } from 'lucide-react';
 import { dummyComplaints, dummyCustomers, dummyEngineers } from '@/lib/dummyData';
 import { MainLayout } from '@/components/layout/main-layout';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { BASE_URL } from '@/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ComplaintDetail() {
   const params = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const complaintId = params?.id ? parseInt(params.id) : null;
   
   const complaint = complaintId ? dummyComplaints.find(c => c.id === complaintId) : null;
@@ -78,6 +81,36 @@ export default function ComplaintDetail() {
     return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   };
 
+  // Helper function to construct full attachment URL
+  const getAttachmentUrl = (attachmentPath: string) => {
+    if (!attachmentPath) return null;
+    
+    // If the path already starts with http, return as is
+    if (attachmentPath.startsWith('http')) {
+      return attachmentPath;
+    }
+    
+    // Remove leading slash if present
+    const cleanPath = attachmentPath.startsWith('/') ? attachmentPath.slice(1) : attachmentPath;
+    
+    // Construct full URL
+    return `${BASE_URL}/${cleanPath}`;
+  };
+
+  // Helper function to get file type from URL
+  const getFileType = (url: string) => {
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return 'image';
+    } else if (['pdf'].includes(extension || '')) {
+      return 'pdf';
+    } else if (['doc', 'docx'].includes(extension || '')) {
+      return 'document';
+    } else {
+      return 'unknown';
+    }
+  };
+
   // Mock timeline data
   const timeline = [
     {
@@ -116,10 +149,10 @@ export default function ComplaintDetail() {
 
   return (
     <MainLayout title={`${complaint.title} - Complaint Details`}>
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
               size="sm"
@@ -127,36 +160,39 @@ export default function ComplaintDetail() {
               className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Complaints
+              <span className="hidden sm:inline">Back to Complaints</span>
+              <span className="sm:hidden">Back</span>
             </Button>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">#{complaint.id}</h1>
-                <Badge className={cn("capitalize", getPriorityColor(complaint.priority))}>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white break-words">#{complaint.id}</h1>
+                <Badge className={cn("capitalize text-xs sm:text-sm", getPriorityColor(complaint.priority))}>
                   {complaint.priority}
                 </Badge>
-                <Badge className={cn("capitalize", getStatusColor(complaint.status))}>
+                <Badge className={cn("capitalize text-xs sm:text-sm", getStatusColor(complaint.status))}>
                   {complaint.status}
                 </Badge>
               </div>
-              <p className="text-gray-600 dark:text-gray-400">{complaint.title}</p>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 break-words">{complaint.title}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Add Note
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+              <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Add Note</span>
+              <span className="sm:hidden">Note</span>
             </Button>
-            <Button variant="outline" size="sm">
-              <Flag className="h-4 w-4 mr-2" />
-              Escalate
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+              <Flag className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Escalate</span>
+              <span className="sm:hidden">Escalate</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left Column - Details */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Complaint Details */}
             <Card>
               <CardHeader>
@@ -165,38 +201,38 @@ export default function ComplaintDetail() {
                   Complaint Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 p-4 sm:p-6">
                 <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">Description</h4>
-                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2 text-sm sm:text-base">Description</h4>
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed break-words">
                     {complaint.description}
                   </p>
                 </div>
                 
                 <Separator />
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Created</p>
-                    <p className="font-medium">{new Date(complaint.createdAt).toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Created</p>
+                    <p className="font-medium text-sm sm:text-base break-words">{new Date(complaint.createdAt).toLocaleString()}</p>
                     <p className="text-xs text-gray-400">{getTimeElapsed(complaint.createdAt)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Last Updated</p>
-                    <p className="font-medium">{new Date(complaint.updatedAt).toLocaleString()}</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Last Updated</p>
+                    <p className="font-medium text-sm sm:text-base break-words">{new Date(complaint.updatedAt).toLocaleString()}</p>
                     <p className="text-xs text-gray-400">{getTimeElapsed(complaint.updatedAt)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Location</p>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Location</p>
                     <div className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      <span className="font-medium">{complaint.location}</span>
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="font-medium text-sm sm:text-base break-words">{complaint.location}</span>
                     </div>
                   </div>
                   {complaint.resolvedAt && (
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Resolved</p>
-                      <p className="font-medium">{new Date(complaint.resolvedAt).toLocaleString()}</p>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Resolved</p>
+                      <p className="font-medium text-sm sm:text-base break-words">{new Date(complaint.resolvedAt).toLocaleString()}</p>
                       <p className="text-xs text-gray-400">{getTimeElapsed(complaint.resolvedAt)}</p>
                     </div>
                   )}
@@ -234,6 +270,173 @@ export default function ComplaintDetail() {
                       <p className="text-gray-600 dark:text-gray-400 leading-relaxed bg-blue-50 dark:bg-blue-900/10 p-3 rounded-lg">
                         {complaint.feedback}
                       </p>
+                    </div>
+                  </>
+                )}
+
+                {complaint.attachments && complaint.attachments.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-600" />
+                        Attachments ({complaint.attachments.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {complaint.attachments.map((attachment: string, index: number) => {
+                          const fullUrl = getAttachmentUrl(attachment);
+                          const fileType = getFileType(attachment);
+                          const fileName = attachment.split('/').pop() || `Attachment ${index + 1}`;
+                          
+                          return (
+                            <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                              {fileType === 'image' && fullUrl ? (
+                                <div className="space-y-3">
+                                  <div className="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                                    <img
+                                      src={fullUrl}
+                                      alt={`Attachment ${index + 1}`}
+                                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        target.nextElementSibling?.classList.remove('hidden');
+                                      }}
+                                    />
+                                    <div className="hidden w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                                      <div className="text-center text-gray-500 dark:text-gray-400">
+                                        <Image className="h-8 w-8 mx-auto mb-2" />
+                                        <p className="text-sm">Image not available</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium truncate">{fileName}</span>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => window.open(fullUrl, '_blank')}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={async () => {
+                                          try {
+                                            const response = await fetch(fullUrl);
+                                            if (!response.ok) {
+                                              throw new Error(`HTTP error! status: ${response.status}`);
+                                            }
+                                            const blob = await response.blob();
+                                            const url = window.URL.createObjectURL(blob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = fileName;
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                            window.URL.revokeObjectURL(url);
+                                            
+                                            toast({
+                                              title: "Download Successful",
+                                              description: `${fileName} has been downloaded successfully.`,
+                                            });
+                                          } catch (error) {
+                                            console.error('Download failed:', error);
+                                            toast({
+                                              title: "Download Failed",
+                                              description: "Failed to download the file. Opening in new tab instead.",
+                                              variant: "destructive",
+                                            });
+                                            // Fallback to direct link
+                                            window.open(fullUrl, '_blank');
+                                          }
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+                                      {fileType === 'pdf' ? (
+                                        <FileText className="h-5 w-5 text-red-600" />
+                                      ) : fileType === 'document' ? (
+                                        <FileText className="h-5 w-5 text-blue-600" />
+                                      ) : (
+                                        <FileText className="h-5 w-5 text-gray-600" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium truncate">{fileName}</p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{fileType} file</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    {fullUrl && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => window.open(fullUrl, '_blank')}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <ExternalLink className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={async () => {
+                                            try {
+                                              const response = await fetch(fullUrl);
+                                              if (!response.ok) {
+                                                throw new Error(`HTTP error! status: ${response.status}`);
+                                              }
+                                              const blob = await response.blob();
+                                              const url = window.URL.createObjectURL(blob);
+                                              const link = document.createElement('a');
+                                              link.href = url;
+                                              link.download = fileName;
+                                              document.body.appendChild(link);
+                                              link.click();
+                                              document.body.removeChild(link);
+                                              window.URL.revokeObjectURL(url);
+                                              
+                                              toast({
+                                                title: "Download Successful",
+                                                description: `${fileName} has been downloaded successfully.`,
+                                              });
+                                            } catch (error) {
+                                              console.error('Download failed:', error);
+                                              toast({
+                                                title: "Download Failed",
+                                                description: "Failed to download the file. Opening in new tab instead.",
+                                                variant: "destructive",
+                                              });
+                                              // Fallback to direct link
+                                              window.open(fullUrl, '_blank');
+                                            }
+                                          }}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </>
                 )}

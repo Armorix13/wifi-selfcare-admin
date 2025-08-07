@@ -116,6 +116,12 @@ export const api = createApi({
       }),
       providesTags: [Tags.WIFI],
     }),
+    getAllComplaintDasboard: builder.query({
+      query: ()=> ({
+        url: `/complaints/complaint-dashboard`,
+        method: "GET"
+      }),
+    }),
     assignEngineerToComplaint: builder.mutation({
       query: ({ id, engineerId, priority }) => ({
         url: `/complaints/${id}/assign`,
@@ -138,5 +144,6 @@ export const {
   useGetEngineersQuery,
   useUpdateInstallationRequestStatusMutation,
   useGetAllComplaintsQuery,
-  useAssignEngineerToComplaintMutation
+  useAssignEngineerToComplaintMutation,
+  useGetAllComplaintDasboardQuery
 } = api;

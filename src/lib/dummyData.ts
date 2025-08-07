@@ -28,6 +28,7 @@ export interface Customer {
   mode: 'online' | 'offline';
   isActive: boolean;
   createdAt: string;
+  profileImageUrl?: string; // Add profile image URL field
 }
 
 export interface Engineer {
@@ -410,7 +411,8 @@ export const generateDummyCustomers = (): Customer[] => [
     area: "urban",
     mode: "online",
     isActive: true,
-    createdAt: "2024-01-15T10:00:00Z"
+    createdAt: "2024-01-15T10:00:00Z",
+    profileImageUrl: "/uploads/profile-image-1.jpg"
   },
   {
     id: 2,
@@ -430,7 +432,8 @@ export const generateDummyCustomers = (): Customer[] => [
     area: "urban",
     mode: "offline",
     isActive: true,
-    createdAt: "2024-02-01T10:00:00Z"
+    createdAt: "2024-02-01T10:00:00Z",
+    profileImageUrl: "/uploads/profile-image-2.jpg"
   },
   {
     id: 3,
@@ -450,7 +453,8 @@ export const generateDummyCustomers = (): Customer[] => [
     area: "rural",
     mode: "offline",
     isActive: false,
-    createdAt: "2023-12-01T10:00:00Z"
+    createdAt: "2023-12-01T10:00:00Z",
+    profileImageUrl: "/uploads/profile-image-3.jpg"
   },
   {
     id: 4,
@@ -470,7 +474,8 @@ export const generateDummyCustomers = (): Customer[] => [
     area: "rural",
     mode: "online",
     isActive: true,
-    createdAt: "2024-02-01T10:00:00Z"
+    createdAt: "2024-02-01T10:00:00Z",
+    profileImageUrl: "/uploads/profile-image-4.jpg"
   },
   {
     id: 5,
@@ -490,7 +495,8 @@ export const generateDummyCustomers = (): Customer[] => [
     area: "urban",
     mode: "online",
     isActive: true,
-    createdAt: "2024-03-10T10:00:00Z"
+    createdAt: "2024-03-10T10:00:00Z",
+    profileImageUrl: "/uploads/profile-image-5.jpg"
   }
 ];
 
