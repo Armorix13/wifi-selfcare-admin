@@ -5,7 +5,8 @@ export const BASE_URL = `http://51.21.19.38:8000`;
 const Tags = {
   Advertisements: "Advertisements",
   WIFI:"WIFI",
-  COMPLAINTS:"COMPLAINTS"
+  COMPLAINTS:"COMPLAINTS",
+  PRODUCT:"PRODUCT"
 };
 
 export const LIMIT = 20;
@@ -130,6 +131,28 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.WIFI], // This will refetch complaints after assignment
     }),
+    getProductDashbaordData: builder.query({
+      query: ()=> ({
+        url: `/dashboard/product-analytics`,
+        method: "GET"
+      }),
+      providesTags:[Tags.PRODUCT]
+    }),
+    addProduct: builder.mutation<any, FormData>({
+      query: (formData) => ({
+        url: '/products',
+        method: 'POST',
+        body: formData,
+      }),
+      invalidatesTags: [Tags.PRODUCT]
+
+    }),
+    getCategories: builder.query({
+      query: () => ({
+        url: '/categories',
+        method: 'GET',
+      }),
+    }),
   }),
 });
 
@@ -145,5 +168,8 @@ export const {
   useUpdateInstallationRequestStatusMutation,
   useGetAllComplaintsQuery,
   useAssignEngineerToComplaintMutation,
-  useGetAllComplaintDasboardQuery
+  useGetAllComplaintDasboardQuery,
+  useGetProductDashbaordDataQuery,
+  useAddProductMutation,
+  useGetCategoriesQuery
 } = api;
