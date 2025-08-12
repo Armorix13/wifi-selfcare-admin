@@ -138,6 +138,12 @@ export const api = createApi({
       }),
       providesTags:[Tags.PRODUCT]
     }),
+    getplansDashbaordData: builder.query({
+      query: ()=> ({
+        url: `/dashboard/service-plans`,
+        method: "GET"
+      }),
+    }),
     addProduct: builder.mutation<any, FormData>({
       query: (formData) => ({
         url: '/products',
@@ -147,11 +153,26 @@ export const api = createApi({
       invalidatesTags: [Tags.PRODUCT]
 
     }),
+    deleteProduct: builder.mutation({
+      query: (id) => ({
+        url: `/products/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [Tags.PRODUCT]
+    }),
     getCategories: builder.query({
       query: () => ({
         url: '/categories',
         method: 'GET',
       }),
+    }),
+    updateProduct: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/products/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: [Tags.PRODUCT]
     }),
   }),
 });
@@ -171,5 +192,8 @@ export const {
   useGetAllComplaintDasboardQuery,
   useGetProductDashbaordDataQuery,
   useAddProductMutation,
-  useGetCategoriesQuery
+  useGetCategoriesQuery,
+  useDeleteProductMutation,
+  useUpdateProductMutation,
+  useGetplansDashbaordDataQuery
 } = api;

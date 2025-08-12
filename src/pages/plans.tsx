@@ -39,6 +39,7 @@ import {
   X
 } from "lucide-react";
 import { generateDummyIptvPlans, generateDummyOttPlans, generateDummyFibrePlans, type IptvPlan, type OttPlan, type FibrePlan } from "@/lib/dummyData";
+import { useGetplansDashbaordDataQuery } from "@/api";
 
 export default function PlansPage() {
   const [activeTab, setActiveTab] = useState("iptv");
@@ -53,10 +54,16 @@ export default function PlansPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  // Get dummy data
-  const iptvPlans = generateDummyIptvPlans();
-  const ottPlans = generateDummyOttPlans();
-  const fibrePlans = generateDummyFibrePlans();
+  const { data: plansData, isLoading, error } = useGetplansDashbaordDataQuery({});
+
+  // Extract data from API response
+  const summary = plansData?.data?.summary || { totalPlans: 0, iptvPlans: 0, ottPlans: 0, fibrePlans: 0 };
+  const allPlans = plansData?.data?.plans || [];
+  const iptvPlans = plansData?.data?.planTypes?.iptv || [];
+  const ottPlans = plansData?.data?.planTypes?.ott || [];
+  const fibrePlans = plansData?.data?.planTypes?.fibre || [];
+  const providers = plansData?.data?.filters?.providers || [];
+  const planTypes = plansData?.data?.filters?.planTypes || [];
 
   // Filter functions
   const filterPlans = (plans: any[]) => {
@@ -65,15 +72,14 @@ export default function PlansPage() {
                            plan.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            plan.provider.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesProvider = selectedProvider === "all" || plan.provider.toLowerCase().includes(selectedProvider.toLowerCase());
-      const matchesPlanType = selectedPlanType === "all" || plan.planType.toLowerCase() === selectedPlanType.toLowerCase();
+      const matchesPlanType = selectedPlanType === "all" || plan.category?.toLowerCase() === selectedPlanType.toLowerCase();
       return matchesSearch && matchesProvider && matchesPlanType;
     });
   };
 
   // Get unique providers for filter
   const getAllProviders = () => {
-    const allPlans = [...iptvPlans, ...ottPlans, ...fibrePlans];
-    return Array.from(new Set(allPlans.map(plan => plan.provider)));
+    return providers.filter((provider: string) => provider !== "All Providers");
   };
 
   const handleEdit = (plan: any) => {
@@ -127,6 +133,41 @@ export default function PlansPage() {
     setFormData({...formData, logo: ""});
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <MainLayout title="Service Plans Management">
+        <div className="space-y-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="dashboard-welcome-text">Loading plans...</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <MainLayout title="Service Plans Management">
+        <div className="space-y-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <X className="h-6 w-6 text-red-600" />
+              </div>
+              <p className="dashboard-welcome-text text-red-600">Error loading plans</p>
+              <p className="dashboard-welcome-muted">Please try again later</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout title="Service Plans Management">
       <div className="space-y-6">
@@ -153,7 +194,7 @@ export default function PlansPage() {
                 <div>
                   <p className="text-sm dashboard-welcome-muted">Total Plans</p>
                   <p className="text-2xl font-bold dashboard-welcome-text">
-                    {iptvPlans.length + ottPlans.length + fibrePlans.length}
+                    {summary.totalPlans}
                   </p>
                 </div>
                 <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
@@ -168,7 +209,7 @@ export default function PlansPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm dashboard-welcome-muted">IPTV Plans</p>
-                  <p className="text-2xl font-bold dashboard-welcome-text">{iptvPlans.length}</p>
+                  <p className="text-2xl font-bold dashboard-welcome-text">{summary.iptvPlans}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
                   <Tv className="h-6 w-6 text-white" />
@@ -182,7 +223,7 @@ export default function PlansPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm dashboard-welcome-muted">OTT Plans</p>
-                  <p className="text-2xl font-bold dashboard-welcome-text">{ottPlans.length}</p>
+                  <p className="text-2xl font-bold dashboard-welcome-text">{summary.ottPlans}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
                   <PlayCircle className="h-6 w-6 text-white" />
@@ -196,7 +237,7 @@ export default function PlansPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm dashboard-welcome-muted">Fibre Plans</p>
-                  <p className="text-2xl font-bold dashboard-welcome-text">{fibrePlans.length}</p>
+                  <p className="text-2xl font-bold dashboard-welcome-text">{summary.fibrePlans}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full dashboard-welcome-icon flex items-center justify-center">
                   <Zap className="h-6 w-6 text-white" />
@@ -227,7 +268,7 @@ export default function PlansPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Providers</SelectItem>
-                  {getAllProviders().map(provider => (
+                  {getAllProviders().map((provider: string) => (
                     <SelectItem key={provider} value={provider.toLowerCase()}>{provider}</SelectItem>
                   ))}
                 </SelectContent>
@@ -238,11 +279,11 @@ export default function PlansPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                  <SelectItem value="lite">Lite</SelectItem>
-                  <SelectItem value="ott">OTT</SelectItem>
+                  {planTypes.map((type: any) => (
+                    <SelectItem key={type.value} value={type.value.toLowerCase()}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -268,17 +309,46 @@ export default function PlansPage() {
 
           {/* IPTV Plans */}
           <TabsContent value="iptv">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filterPlans(iptvPlans).map((plan) => (
-                <Card key={plan.id} className="dashboard-chart-card shadow-lg hover:scale-105 transition-transform duration-300">
+            {iptvPlans.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <Tv className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="dashboard-welcome-text text-lg">No IPTV Plans Available</p>
+                <p className="dashboard-welcome-muted">Create your first IPTV plan to get started</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filterPlans(iptvPlans).map((plan) => (
+                  <Card key={plan.id} className="dashboard-chart-card shadow-lg hover:scale-105 transition-transform duration-300">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg dashboard-welcome-icon flex items-center justify-center">
-                          <Tv className="h-6 w-6 text-white" />
+                        <div className="h-12 w-12 rounded-lg overflow-hidden">
+                          {plan.logo ? (
+                            <>
+                              <img 
+                                src={plan.logo} 
+                                alt={`${plan.provider} logo`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center hidden">
+                                <Tv className="h-6 w-6 text-white" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
+                              <Tv className="h-6 w-6 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div>
-                          <CardTitle className="text-lg dashboard-welcome-text">{plan.name}</CardTitle>
+                          <CardTitle className="text-lg dashboard-welcome-text">{plan.title}</CardTitle>
                           <p className="text-sm dashboard-welcome-muted">{plan.provider}</p>
                         </div>
                       </div>
@@ -306,53 +376,54 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
                       <Badge className={`${
-                        plan.planType === 'premium' ? 'badge-super-admin' :
-                        plan.planType === 'standard' ? 'badge-admin' : 'badge-manager'
+                        plan.category === 'premium' ? 'badge-super-admin' :
+                        plan.category === 'standard' ? 'badge-admin' : 'badge-manager'
                       }`}>
-                        {plan.planType} {plan.quality}
+                        {plan.category} {plan.quality}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.totalChannels} Channels</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Crown className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.payChannels} Premium</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Radio className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.freeToAirChannels} Free</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.lcoMarginPercent}% LCO</span>
-                      </div>
+                      {plan.features?.slice(0, 4).map((feature: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          {feature.icon === 'monitor' && <Monitor className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'crown' && <Crown className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'broadcast' && <Radio className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'chart-line' && <TrendingUp className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'wifi' && <Wifi className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'calendar' && <Calendar className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'globe' && <Globe className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'shield' && <Shield className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'phone' && <Phone className="h-4 w-4 dashboard-welcome-icon" />}
+                          <span className="dashboard-welcome-text">{feature.label}</span>
+                        </div>
+                      ))}
                     </div>
 
                     <p className="text-sm dashboard-welcome-muted">{plan.description}</p>
 
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium dashboard-welcome-text">Popular Channels:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {plan.channelList.slice(0, 3).map((channel: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {channel}
-                          </Badge>
-                        ))}
-                        {plan.channelList.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{plan.channelList.length - 3} more
-                          </Badge>
-                        )}
+                    {plan.popularChannels && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium dashboard-welcome-text">Popular Channels:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {plan.popularChannels.slice(0, 3).map((channel: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {channel}
+                            </Badge>
+                          ))}
+                          {plan.popularChannels.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{plan.popularChannels.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* OTT Plans */}
@@ -363,8 +434,28 @@ export default function PlansPage() {
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg dashboard-welcome-icon flex items-center justify-center">
-                          <PlayCircle className="h-6 w-6 text-white" />
+                        <div className="h-12 w-12 rounded-lg overflow-hidden">
+                          {plan.logo ? (
+                            <>
+                              <img 
+                                src={plan.logo} 
+                                alt={`${plan.provider} logo`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center hidden">
+                                <PlayCircle className="h-6 w-6 text-white" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
+                              <PlayCircle className="h-6 w-6 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <CardTitle className="text-lg dashboard-welcome-text">{plan.title}</CardTitle>
@@ -400,41 +491,36 @@ export default function PlansPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Wifi className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.speedBeforeLimit}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.validity}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.speedAfterLimit} FUP</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">Calls</span>
-                      </div>
+                      {plan.features?.slice(0, 4).map((feature: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          {feature.icon === 'wifi' && <Wifi className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'calendar' && <Calendar className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'shield' && <Shield className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'phone' && <Phone className="h-4 w-4 dashboard-welcome-icon" />}
+                          <span className="dashboard-welcome-text">{feature.label}</span>
+                        </div>
+                      ))}
                     </div>
 
                     <p className="text-sm dashboard-welcome-muted">{plan.description}</p>
 
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium dashboard-welcome-text">OTT Apps Included:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {plan.ottApps.slice(0, 3).map((app: string, idx: number) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {app}
-                          </Badge>
-                        ))}
-                        {plan.ottApps.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{plan.ottApps.length - 3} more
-                          </Badge>
-                        )}
+                    {plan.ottApps && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium dashboard-welcome-text">OTT Apps Included:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {plan.ottApps.slice(0, 3).map((app: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {app}
+                            </Badge>
+                          ))}
+                          {plan.ottApps.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{plan.ottApps.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {plan.callBenefit && (
                       <div className="flex items-center gap-2 text-sm">
@@ -456,8 +542,28 @@ export default function PlansPage() {
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg dashboard-welcome-icon flex items-center justify-center">
-                          <Zap className="h-6 w-6 text-white" />
+                        <div className="h-12 w-12 rounded-lg overflow-hidden">
+                          {plan.logo ? (
+                            <>
+                              <img 
+                                src={plan.logo} 
+                                alt={`${plan.provider} logo`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center hidden">
+                                <Zap className="h-6 w-6 text-white" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
+                              <Zap className="h-6 w-6 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <CardTitle className="text-lg dashboard-welcome-text">{plan.title}</CardTitle>
@@ -488,30 +594,23 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
                       <Badge className={`${
-                        plan.planType === 'Premium' ? 'badge-super-admin' :
-                        plan.planType === 'Standard' ? 'badge-admin' : 'badge-manager'
+                        plan.category === 'Premium' ? 'badge-super-admin' :
+                        plan.category === 'Standard' ? 'badge-admin' : 'badge-manager'
                       }`}>
-                        {plan.planType}
+                        {plan.category}
                       </Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.speed}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.validity}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">{plan.dataLimit}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 dashboard-welcome-icon" />
-                        <span className="dashboard-welcome-text">Fiber</span>
-                      </div>
+                      {plan.features?.slice(0, 4).map((feature: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          {feature.icon === 'wifi' && <Zap className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'calendar' && <Calendar className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'globe' && <Globe className="h-4 w-4 dashboard-welcome-icon" />}
+                          {feature.icon === 'shield' && <Shield className="h-4 w-4 dashboard-welcome-icon" />}
+                          <span className="dashboard-welcome-text">{feature.label}</span>
+                        </div>
+                      ))}
                     </div>
 
                     <p className="text-sm dashboard-welcome-muted">{plan.description}</p>
