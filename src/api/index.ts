@@ -166,6 +166,27 @@ export const api = createApi({
         method: 'GET',
       }),
     }),
+    addFibrePlan: builder.mutation({
+      query: (body) => ({
+        url: '/plans',
+        method: 'POST',
+        body
+      }),
+    }),
+    addIptvlan: builder.mutation({
+      query: (body) => ({
+        url: '/iptvplan/add',
+        method: 'POST',
+        body
+      }),
+    }),
+    addOttPlan: builder.mutation({
+      query: (body) => ({
+        url: '/ottplans/add',
+        method: 'POST',
+        body
+      }),
+    }),
     updateProduct: builder.mutation({
       query: ({ id, body }) => ({
         url: `/products/${id}`,
@@ -195,5 +216,8 @@ export const {
   useGetCategoriesQuery,
   useDeleteProductMutation,
   useUpdateProductMutation,
-  useGetplansDashbaordDataQuery
+  useGetplansDashbaordDataQuery,
+  useAddFibrePlanMutation,
+  useAddOttPlanMutation,
+  useAddIptvlanMutation
 } = api;

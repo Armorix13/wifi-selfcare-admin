@@ -10,13 +10,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Tv, 
-  Wifi, 
-  Zap, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import { useToast } from "@/hooks/use-toast";
+import {
+  FibrePlanFormData,
+  OttPlanFormData,
+  IptvPlanFormData
+} from "@/lib/types/plans";
+import {
+  Tv,
+  Wifi,
+  Zap,
+  Plus,
+  Edit,
+  Trash2,
   Eye,
   Users,
   Star,
@@ -39,7 +45,12 @@ import {
   X
 } from "lucide-react";
 import { generateDummyIptvPlans, generateDummyOttPlans, generateDummyFibrePlans, type IptvPlan, type OttPlan, type FibrePlan } from "@/lib/dummyData";
-import { useGetplansDashbaordDataQuery } from "@/api";
+import {
+  useGetplansDashbaordDataQuery,
+  useAddFibrePlanMutation,
+  useAddOttPlanMutation,
+  useAddIptvlanMutation
+} from "@/api";
 
 export default function PlansPage() {
   const [activeTab, setActiveTab] = useState("iptv");
@@ -48,13 +59,23 @@ export default function PlansPage() {
   const [selectedPlanType, setSelectedPlanType] = useState("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingPlan, setEditingPlan] = useState<any>(null);
+  const [deletingPlan, setDeletingPlan] = useState<any>(null);
   const [selectedPlanTypeForAdd, setSelectedPlanTypeForAdd] = useState("iptv");
   const [formData, setFormData] = useState<any>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: plansData, isLoading, error } = useGetplansDashbaordDataQuery({});
+  const { toast } = useToast();
+
+  // API Mutations
+  const [addFibrePlan, { isLoading: isAddingFibre }] = useAddFibrePlanMutation();
+  const [addOttPlan, { isLoading: isAddingOtt }] = useAddOttPlanMutation();
+  const [addIptvPlan, { isLoading: isAddingIptv }] = useAddIptvlanMutation();
 
   // Extract data from API response
   const summary = plansData?.data?.summary || { totalPlans: 0, iptvPlans: 0, ottPlans: 0, fibrePlans: 0 };
@@ -68,9 +89,9 @@ export default function PlansPage() {
   // Filter functions
   const filterPlans = (plans: any[]) => {
     return plans.filter(plan => {
-      const matchesSearch = plan.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           plan.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           plan.provider.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = plan.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plan.provider.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesProvider = selectedProvider === "all" || plan.provider.toLowerCase().includes(selectedProvider.toLowerCase());
       const matchesPlanType = selectedPlanType === "all" || plan.category?.toLowerCase() === selectedPlanType.toLowerCase();
       return matchesSearch && matchesProvider && matchesPlanType;
@@ -90,15 +111,225 @@ export default function PlansPage() {
     setShowEditDialog(true);
   };
 
-  const handleDelete = (planId: number) => {
-    // In real app, this would delete from backend
-    console.log("Delete plan:", planId);
+  const handleDelete = (plan: any) => {
+    if (!plan) {
+      toast({
+        title: "Error",
+        description: "Invalid plan data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingPlan(plan);
+    setShowDeleteDialog(true);
   };
 
-  const handleAddPlan = () => {
-    console.log("Adding plan:", formData);
-    setShowAddDialog(false);
-    setFormData({});
+  const confirmDelete = async () => {
+    if (!deletingPlan) {
+      toast({
+        title: "Error",
+        description: "No plan selected for deletion",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // In real app, this would call the delete API
+      console.log("Deleting plan:", deletingPlan);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: "Success",
+        description: `${deletingPlan.name || deletingPlan.title || 'Plan'} deleted successfully`,
+      });
+
+      setShowDeleteDialog(false);
+      setDeletingPlan(null);
+    } catch (error: any) {
+      console.error("Error deleting plan:", error);
+      toast({
+        title: "Error",
+        description: error?.data?.message || "Failed to delete plan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const validateForm = () => {
+    if (!logoFile) {
+      toast({
+        title: "Logo Required",
+        description: "Please upload a provider logo",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!formData.provider || !formData.price || !formData.description) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (selectedPlanTypeForAdd === "iptv") {
+      if (!formData.name || !formData.totalChannels || !formData.payChannels || !formData.freeToAirChannels || !formData.planType || !formData.quality || !formData.channelList) {
+        toast({
+          title: "IPTV Plan Details Missing",
+          description: "Please fill in all required IPTV plan fields including plan type, quality, and channel list",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Validate that channelList has at least one channel
+      const channelList = (formData.channelList || "").split(",").map((c: string) => c.trim()).filter((c: string) => c);
+      if (channelList.length === 0) {
+        toast({
+          title: "Channel List Required",
+          description: "Please provide at least one channel for the IPTV plan",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else if (selectedPlanTypeForAdd === "ott") {
+      if (!formData.title || !formData.speedBeforeLimit || !formData.speedAfterLimit || !formData.dataLimitGB || !formData.validity) {
+        toast({
+          title: "OTT Plan Details Missing",
+          description: "Please fill in all OTT plan fields",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else if (selectedPlanTypeForAdd === "fibre") {
+      if (!formData.title || !formData.speed || !formData.validity || !formData.dataLimit || !formData.benefits) {
+        toast({
+          title: "Fibre Plan Details Missing",
+          description: "Please fill in all Fibre plan fields including benefits",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Validate that benefits array has at least one item
+      const benefitsArray = parseBenefits(formData.benefits);
+      if (benefitsArray.length === 0) {
+        toast({
+          title: "Benefits Required",
+          description: "Please provide at least one benefit for the Fibre plan",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleAddPlan = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formDataToSend = new FormData();
+
+      // Add logo file
+      if (logoFile) {
+        formDataToSend.append("logo", logoFile);
+      }
+
+      if (selectedPlanTypeForAdd === "fibre") {
+        // Fibre Plan
+        formDataToSend.append("title", formData.title || "");
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("validity", formData.validity || "");
+        formDataToSend.append("speed", formData.speed || "");
+        formDataToSend.append("dataLimit", formData.dataLimit || "");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+        formDataToSend.append("planType", formData.planType || "");
+        // Convert benefits string to array and append each benefit
+        const benefitsArray = parseBenefits(formData.benefits || "");
+        benefitsArray.forEach((benefit: string, index: number) => {
+          formDataToSend.append(`benefits[${index}]`, benefit);
+        });
+
+        await addFibrePlan(formDataToSend).unwrap();
+        toast({
+          title: "Success",
+          description: "Fibre plan added successfully",
+        });
+      } else if (selectedPlanTypeForAdd === "ott") {
+        // OTT Plan
+        formDataToSend.append("title", formData.title || "");
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("speedBeforeLimit", formData.speedBeforeLimit || "");
+        formDataToSend.append("speedAfterLimit", formData.speedAfterLimit || "");
+        formDataToSend.append("dataLimitGB", (formData.dataLimitGB || 0).toString());
+        formDataToSend.append("isUnlimited", (formData.isUnlimited || false).toString());
+        formDataToSend.append("validity", formData.validity || "");
+        formDataToSend.append("ottApps", (formData.ottApps || []).join(","));
+        formDataToSend.append("callBenefit", formData.callBenefit || "");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+        formDataToSend.append("planType", "ott");
+
+        await addOttPlan(formDataToSend).unwrap();
+        toast({
+          title: "Success",
+          description: "OTT plan added successfully",
+        });
+      } else if (selectedPlanTypeForAdd === "iptv") {
+        // IPTV Plan - Matching your exact FormData structure
+        formDataToSend.append("name", formData.name || "");
+        formDataToSend.append("payChannels", (formData.payChannels || 0).toString());
+        formDataToSend.append("totalChannels", (formData.totalChannels || 0).toString());
+        formDataToSend.append("freeToAirChannels", (formData.freeToAirChannels || 0).toString());
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("lcoMarginPercent", (formData.lcoMarginPercent || 10).toString());
+        formDataToSend.append("distributorMarginPercent", (formData.distributorMarginPercent || 5).toString());
+
+        // Handle channelList as array with proper indexing
+        const channelList = (formData.channelList || "").split(",").map((c: string) => c.trim()).filter((c: string) => c);
+        channelList.forEach((channel: string, index: number) => {
+          formDataToSend.append(`channelList[]`, channel);
+        });
+
+        formDataToSend.append("planType", formData.planType || "lite");
+        formDataToSend.append("quality", formData.quality || "HD");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+
+        await addIptvPlan(formDataToSend).unwrap();
+        toast({
+          title: "Success",
+          description: "IPTV plan added successfully",
+        });
+      }
+
+      setShowAddDialog(false);
+      resetForm();
+    } catch (error: any) {
+      console.error("Error adding plan:", error);
+      toast({
+        title: "Error",
+        description: error?.data?.message || "Failed to add plan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleUpdatePlan = () => {
@@ -113,6 +344,57 @@ export default function PlansPage() {
     setSelectedPlanTypeForAdd("iptv");
     setLogoFile(null);
     setLogoPreview(null);
+  };
+
+  // Initialize form with default values when switching to IPTV
+  const handlePlanTypeChange = (value: string) => {
+    setSelectedPlanTypeForAdd(value);
+    if (value === "iptv") {
+      setFormData({
+        lcoMarginPercent: 10,
+        distributorMarginPercent: 5,
+        quality: "HD",
+        planType: "lite"
+      });
+    } else {
+      setFormData({});
+    }
+  };
+
+  // Helper function to convert comma-separated benefits string to array
+  const parseBenefits = (benefitsString: string): string[] => {
+    return benefitsString
+      .split(",")
+      .map((benefit: string) => benefit.trim())
+      .filter((benefit: string) => benefit.length > 0);
+  };
+
+  // Helper function to get plan type icon
+  const getPlanTypeIcon = (planType: string) => {
+    switch (planType) {
+      case 'iptv':
+        return <Tv className="h-5 w-5 text-white" />;
+      case 'ott':
+        return <PlayCircle className="h-5 w-5 text-white" />;
+      case 'fibre':
+        return <Zap className="h-5 w-5 text-white" />;
+      default:
+        return <Tv className="h-5 w-5 text-white" />;
+    }
+  };
+
+  // Helper function to detect plan type from plan object
+  const detectPlanType = (plan: any): string => {
+    if (!plan) return activeTab; // Return current tab if plan is null/undefined
+
+    if (plan.hasOwnProperty('totalChannels') && plan.hasOwnProperty('payChannels')) {
+      return 'iptv';
+    } else if (plan.hasOwnProperty('speedBeforeLimit') && plan.hasOwnProperty('speedAfterLimit')) {
+      return 'ott';
+    } else if (plan.hasOwnProperty('speed') && plan.hasOwnProperty('dataLimit')) {
+      return 'fibre';
+    }
+    return activeTab; // fallback to current tab
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +412,7 @@ export default function PlansPage() {
   const removeUploadedFile = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    setFormData({...formData, logo: ""});
+    setFormData({ ...formData, logo: "" });
   };
 
   // Loading state
@@ -177,7 +459,7 @@ export default function PlansPage() {
             <h1 className="text-3xl font-bold dashboard-welcome-text">Service Plans Management</h1>
             <p className="dashboard-welcome-muted">Manage IPTV, OTT, and Fibre service plans</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setShowAddDialog(true)}
             className="dashboard-stats-card hover:scale-105 transition-transform duration-300"
           >
@@ -321,106 +603,105 @@ export default function PlansPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {filterPlans(iptvPlans).map((plan) => (
                   <Card key={plan.id} className="dashboard-chart-card shadow-lg hover:scale-105 transition-transform duration-300">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-lg overflow-hidden">
-                          {plan.logo ? (
-                            <>
-                              <img 
-                                src={plan.logo} 
-                                alt={`${plan.provider} logo`}
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  target.nextElementSibling?.classList.remove('hidden');
-                                }}
-                              />
-                              <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center hidden">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-lg overflow-hidden">
+                            {plan.logo ? (
+                              <>
+                                <img
+                                  src={plan.logo}
+                                  alt={`${plan.provider} logo`}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center hidden">
+                                  <Tv className="h-6 w-6 text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
                                 <Tv className="h-6 w-6 text-white" />
                               </div>
-                            </>
-                          ) : (
-                            <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
-                              <Tv className="h-6 w-6 text-white" />
-                            </div>
-                          )}
+                            )}
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg dashboard-welcome-text">{plan.title}</CardTitle>
+                            <p className="text-sm dashboard-welcome-muted">{plan.provider}</p>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-lg dashboard-welcome-text">{plan.title}</CardTitle>
-                          <p className="text-sm dashboard-welcome-muted">{plan.provider}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(plan)}
-                          className="dashboard-welcome-icon"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(plan.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
-                      <Badge className={`${
-                        plan.category === 'premium' ? 'badge-super-admin' :
-                        plan.category === 'standard' ? 'badge-admin' : 'badge-manager'
-                      }`}>
-                        {plan.category} {plan.quality}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {plan.features?.slice(0, 4).map((feature: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          {feature.icon === 'monitor' && <Monitor className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'crown' && <Crown className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'broadcast' && <Radio className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'chart-line' && <TrendingUp className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'wifi' && <Wifi className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'calendar' && <Calendar className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'globe' && <Globe className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'shield' && <Shield className="h-4 w-4 dashboard-welcome-icon" />}
-                          {feature.icon === 'phone' && <Phone className="h-4 w-4 dashboard-welcome-icon" />}
-                          <span className="dashboard-welcome-text">{feature.label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <p className="text-sm dashboard-welcome-muted">{plan.description}</p>
-
-                    {plan.popularChannels && (
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium dashboard-welcome-text">Popular Channels:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {plan.popularChannels.slice(0, 3).map((channel: string, idx: number) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {channel}
-                            </Badge>
-                          ))}
-                          {plan.popularChannels.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{plan.popularChannels.length - 3} more
-                            </Badge>
-                          )}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(plan)}
+                            className="dashboard-welcome-icon"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(plan)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
+                        <Badge className={`${plan.category === 'premium' ? 'badge-super-admin' :
+                            plan.category === 'standard' ? 'badge-admin' : 'badge-manager'
+                          }`}>
+                          {plan.category} {plan.quality}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        {plan.features?.slice(0, 4).map((feature: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            {feature.icon === 'monitor' && <Monitor className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'crown' && <Crown className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'broadcast' && <Radio className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'chart-line' && <TrendingUp className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'wifi' && <Wifi className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'calendar' && <Calendar className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'globe' && <Globe className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'shield' && <Shield className="h-4 w-4 dashboard-welcome-icon" />}
+                            {feature.icon === 'phone' && <Phone className="h-4 w-4 dashboard-welcome-icon" />}
+                            <span className="dashboard-welcome-text">{feature.label}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <p className="text-sm dashboard-welcome-muted">{plan.description}</p>
+
+                      {plan.popularChannels && (
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium dashboard-welcome-text">Popular Channels:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {plan.popularChannels.slice(0, 3).map((channel: string, idx: number) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {channel}
+                              </Badge>
+                            ))}
+                            {plan.popularChannels.length > 3 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{plan.popularChannels.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
@@ -437,8 +718,8 @@ export default function PlansPage() {
                         <div className="h-12 w-12 rounded-lg overflow-hidden">
                           {plan.logo ? (
                             <>
-                              <img 
-                                src={plan.logo} 
+                              <img
+                                src={plan.logo}
                                 alt={`${plan.provider} logo`}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
@@ -474,8 +755,8 @@ export default function PlansPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(plan.id)}
-                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDelete(plan)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -545,8 +826,8 @@ export default function PlansPage() {
                         <div className="h-12 w-12 rounded-lg overflow-hidden">
                           {plan.logo ? (
                             <>
-                              <img 
-                                src={plan.logo} 
+                              <img
+                                src={plan.logo}
                                 alt={`${plan.provider} logo`}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
@@ -582,8 +863,8 @@ export default function PlansPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(plan.id)}
-                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDelete(plan)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -593,10 +874,9 @@ export default function PlansPage() {
                   <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
-                      <Badge className={`${
-                        plan.category === 'Premium' ? 'badge-super-admin' :
-                        plan.category === 'Standard' ? 'badge-admin' : 'badge-manager'
-                      }`}>
+                      <Badge className={`${plan.category === 'Premium' ? 'badge-super-admin' :
+                          plan.category === 'Standard' ? 'badge-admin' : 'badge-manager'
+                        }`}>
                         {plan.category}
                       </Badge>
                     </div>
@@ -644,9 +924,14 @@ export default function PlansPage() {
             </DialogHeader>
             <div className="space-y-6">
               {/* Plan Type Selection */}
+              <div className="mb-4">
+                <p className="text-sm dashboard-welcome-muted mb-2">
+                  * Required fields must be filled before submission
+                </p>
+              </div>
               <div>
                 <Label className="dashboard-welcome-text text-lg font-semibold">Plan Type</Label>
-                <Tabs value={selectedPlanTypeForAdd} onValueChange={setSelectedPlanTypeForAdd} className="mt-2">
+                <Tabs value={selectedPlanTypeForAdd} onValueChange={handlePlanTypeChange} className="mt-2">
                   <TabsList className="grid w-full grid-cols-3 dashboard-chart-card">
                     <TabsTrigger value="iptv" className="flex items-center gap-2">
                       <Tv className="h-4 w-4" />
@@ -668,21 +953,21 @@ export default function PlansPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="dashboard-welcome-text">Provider</Label>
-                  <Input 
-                    placeholder="Provider name" 
+                  <Input
+                    placeholder="Provider name"
                     className="dashboard-welcome-input"
                     value={formData.provider || ""}
-                    onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label className="dashboard-welcome-text">Price (₹)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="0" 
+                  <Input
+                    type="number"
+                    placeholder="0"
                     className="dashboard-welcome-input"
                     value={formData.price || ""}
-                    onChange={(e) => setFormData({...formData, price: parseInt(e.target.value)})}
+                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
                   />
                 </div>
               </div>
@@ -695,102 +980,115 @@ export default function PlansPage() {
                     IPTV Plan Details
                   </h3>
                   <div>
-                    <Label className="dashboard-welcome-text">Plan Name</Label>
-                    <Input 
-                      placeholder="e.g., Skypro Lite Play HD" 
+                    <Label className="dashboard-welcome-text">Plan Name *</Label>
+                    <Input
+                      placeholder="e.g., Skypro Lite Play HD"
                       className="dashboard-welcome-input"
                       value={formData.name || ""}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label className="dashboard-welcome-text">Total Channels</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="100" 
+                      <Label className="dashboard-welcome-text">Total Channels *</Label>
+                      <Input
+                        type="number"
+                        placeholder="100"
                         className="dashboard-welcome-input"
                         value={formData.totalChannels || ""}
-                        onChange={(e) => setFormData({...formData, totalChannels: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, totalChannels: parseInt(e.target.value) })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Pay Channels</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="80" 
+                      <Label className="dashboard-welcome-text">Pay Channels *</Label>
+                      <Input
+                        type="number"
+                        placeholder="80"
                         className="dashboard-welcome-input"
                         value={formData.payChannels || ""}
-                        onChange={(e) => setFormData({...formData, payChannels: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, payChannels: parseInt(e.target.value) })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Free to Air</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="100" 
+                      <Label className="dashboard-welcome-text">Free to Air *</Label>
+                      <Input
+                        type="number"
+                        placeholder="100"
                         className="dashboard-welcome-input"
                         value={formData.freeToAirChannels || ""}
-                        onChange={(e) => setFormData({...formData, freeToAirChannels: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, freeToAirChannels: parseInt(e.target.value) })}
+                        required
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label className="dashboard-welcome-text">LCO Margin %</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="10" 
+                      <Label className="dashboard-welcome-text">LCO Margin % *</Label>
+                      <Input
+                        type="number"
+                        placeholder="10"
                         className="dashboard-welcome-input"
                         value={formData.lcoMarginPercent || ""}
-                        onChange={(e) => setFormData({...formData, lcoMarginPercent: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, lcoMarginPercent: parseInt(e.target.value) })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Distributor Margin %</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="5" 
+                      <Label className="dashboard-welcome-text">Distributor Margin % *</Label>
+                      <Input
+                        type="number"
+                        placeholder="5"
                         className="dashboard-welcome-input"
                         value={formData.distributorMarginPercent || ""}
-                        onChange={(e) => setFormData({...formData, distributorMarginPercent: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, distributorMarginPercent: parseInt(e.target.value) })}
+                        required
                       />
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Quality</Label>
-                      <Select value={formData.quality || ""} onValueChange={(value) => setFormData({...formData, quality: value})}>
+                      <Label className="dashboard-welcome-text">Quality *</Label>
+                      <Select value={formData.quality || ""} onValueChange={(value) => setFormData({ ...formData, quality: value })}>
                         <SelectTrigger className="dashboard-welcome-input">
                           <SelectValue placeholder="Select quality" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="SD">SD</SelectItem>
                           <SelectItem value="HD">HD</SelectItem>
-                          <SelectItem value="4K">4K</SelectItem>
+                          <SelectItem value="Mixed">Mixed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div>
-                    <Label className="dashboard-welcome-text">Plan Type</Label>
-                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                    <Label className="dashboard-welcome-text">Plan Type *</Label>
+                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({ ...formData, planType: value })}>
                       <SelectTrigger className="dashboard-welcome-input">
                         <SelectValue placeholder="Select plan type" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="starter">Starter</SelectItem>
                         <SelectItem value="lite">Lite</SelectItem>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
+                        <SelectItem value="popular">Popular</SelectItem>
+                        <SelectItem value="family">Family</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label className="dashboard-welcome-text">Channel List (comma separated)</Label>
-                    <Textarea 
-                      placeholder="Star Plus, Zee TV, Sony Entertainment..." 
+                    <Label className="dashboard-welcome-text">Channel List *</Label>
+                    <Textarea
+                      placeholder="Enter channel names separated by commas (e.g., Start Plus, Zee Plus, Sony Entertainment)"
                       className="dashboard-welcome-input"
-                      value={formData.channelList?.join(", ") || ""}
-                      onChange={(e) => setFormData({...formData, channelList: e.target.value.split(", ").filter(c => c.trim())})}
+                      value={formData.channelList || ""}
+                      onChange={(e) => setFormData({ ...formData, channelList: e.target.value })}
+                      required
                     />
+                    <p className="text-xs dashboard-welcome-muted mt-1">
+                      Separate multiple channels with commas
+                    </p>
                   </div>
                 </div>
               )}
@@ -804,77 +1102,77 @@ export default function PlansPage() {
                   </h3>
                   <div>
                     <Label className="dashboard-welcome-text">Plan Title</Label>
-                    <Input 
-                      placeholder="e.g., Fibre Premium Plus OTT 1599" 
+                    <Input
+                      placeholder="e.g., Fibre Premium Plus OTT 1599"
                       className="dashboard-welcome-input"
                       value={formData.title || ""}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="dashboard-welcome-text">Speed Before Limit</Label>
-                      <Input 
-                        placeholder="1000 Mbps" 
+                      <Input
+                        placeholder="1000 Mbps"
                         className="dashboard-welcome-input"
                         value={formData.speedBeforeLimit || ""}
-                        onChange={(e) => setFormData({...formData, speedBeforeLimit: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, speedBeforeLimit: e.target.value })}
                       />
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Speed After Limit</Label>
-                      <Input 
-                        placeholder="4 Mbps" 
+                      <Input
+                        placeholder="4 Mbps"
                         className="dashboard-welcome-input"
                         value={formData.speedAfterLimit || ""}
-                        onChange={(e) => setFormData({...formData, speedAfterLimit: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, speedAfterLimit: e.target.value })}
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="dashboard-welcome-text">Data Limit (GB)</Label>
-                      <Input 
-                        type="number" 
-                        placeholder="3000" 
+                      <Input
+                        type="number"
+                        placeholder="3000"
                         className="dashboard-welcome-input"
                         value={formData.dataLimitGB || ""}
-                        onChange={(e) => setFormData({...formData, dataLimitGB: parseInt(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, dataLimitGB: parseInt(e.target.value) })}
                       />
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Validity</Label>
-                      <Input 
-                        placeholder="1 Month" 
+                      <Input
+                        placeholder="1 Month"
                         className="dashboard-welcome-input"
                         value={formData.validity || ""}
-                        onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, validity: e.target.value })}
                       />
                     </div>
                     <div className="flex items-center space-x-2 pt-6">
-                      <Checkbox 
+                      <Checkbox
                         checked={formData.isUnlimited || false}
-                        onCheckedChange={(checked) => setFormData({...formData, isUnlimited: checked})}
+                        onCheckedChange={(checked) => setFormData({ ...formData, isUnlimited: checked })}
                       />
                       <Label className="dashboard-welcome-text">Unlimited</Label>
                     </div>
                   </div>
                   <div>
                     <Label className="dashboard-welcome-text">Call Benefits</Label>
-                    <Input 
-                      placeholder="Unlimited calls to any Network" 
+                    <Input
+                      placeholder="Unlimited calls to any Network"
                       className="dashboard-welcome-input"
                       value={formData.callBenefit || ""}
-                      onChange={(e) => setFormData({...formData, callBenefit: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, callBenefit: e.target.value })}
                     />
                   </div>
                   <div>
                     <Label className="dashboard-welcome-text">OTT Apps (comma separated)</Label>
-                    <Textarea 
-                      placeholder="Hotstar, Hungama, Shemaroo, Lionsgate..." 
+                    <Textarea
+                      placeholder="Hotstar, Hungama, Shemaroo, Lionsgate..."
                       className="dashboard-welcome-input"
                       value={formData.ottApps?.join(", ") || ""}
-                      onChange={(e) => setFormData({...formData, ottApps: e.target.value.split(", ").filter(a => a.trim())})}
+                      onChange={(e) => setFormData({ ...formData, ottApps: e.target.value.split(", ").filter(a => a.trim()) })}
                     />
                   </div>
                 </div>
@@ -889,45 +1187,45 @@ export default function PlansPage() {
                   </h3>
                   <div>
                     <Label className="dashboard-welcome-text">Plan Title</Label>
-                    <Input 
-                      placeholder="e.g., JioFiber Gold Plan - 1 Year" 
+                    <Input
+                      placeholder="e.g., JioFiber Gold Plan - 1 Year"
                       className="dashboard-welcome-input"
                       value={formData.title || ""}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="dashboard-welcome-text">Speed</Label>
-                      <Input 
-                        placeholder="300 Mbps" 
+                      <Input
+                        placeholder="300 Mbps"
                         className="dashboard-welcome-input"
                         value={formData.speed || ""}
-                        onChange={(e) => setFormData({...formData, speed: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, speed: e.target.value })}
                       />
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Validity</Label>
-                      <Input 
-                        placeholder="12 Months" 
+                      <Input
+                        placeholder="12 Months"
                         className="dashboard-welcome-input"
                         value={formData.validity || ""}
-                        onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, validity: e.target.value })}
                       />
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Data Limit</Label>
-                      <Input 
-                        placeholder="Unlimited" 
+                      <Input
+                        placeholder="Unlimited"
                         className="dashboard-welcome-input"
                         value={formData.dataLimit || ""}
-                        onChange={(e) => setFormData({...formData, dataLimit: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, dataLimit: e.target.value })}
                       />
                     </div>
                   </div>
                   <div>
                     <Label className="dashboard-welcome-text">Plan Type</Label>
-                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                    <Select value={formData.planType || ""} onValueChange={(value) => setFormData({ ...formData, planType: value })}>
                       <SelectTrigger className="dashboard-welcome-input">
                         <SelectValue placeholder="Select plan type" />
                       </SelectTrigger>
@@ -939,13 +1237,17 @@ export default function PlansPage() {
                     </Select>
                   </div>
                   <div>
-                    <Label className="dashboard-welcome-text">Benefits</Label>
-                    <Input 
-                      placeholder="Netflix + Prime + Disney+ Hotstar" 
+                    <Label className="dashboard-welcome-text">Benefits *</Label>
+                    <Textarea
+                      placeholder="Enter benefits separated by commas (e.g., Netflix, Prime, Disney+, Hotstar, Unlimited Calls)"
                       className="dashboard-welcome-input"
                       value={formData.benefits || ""}
-                      onChange={(e) => setFormData({...formData, benefits: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, benefits: e.target.value })}
+                      required
                     />
+                    <p className="text-xs dashboard-welcome-muted mt-1">
+                      Separate multiple benefits with commas. Examples: Netflix, Prime, Disney+, Hotstar, Unlimited Calls
+                    </p>
                   </div>
                 </div>
               )}
@@ -953,18 +1255,18 @@ export default function PlansPage() {
               {/* Common Description */}
               <div>
                 <Label className="dashboard-welcome-text">Description</Label>
-                <Textarea 
-                  placeholder="Plan description..." 
+                <Textarea
+                  placeholder="Plan description..."
                   className="dashboard-welcome-input"
                   value={formData.description || ""}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
 
               {/* Logo Upload */}
               <div className="space-y-4">
                 <Label className="dashboard-welcome-text text-lg font-semibold">Provider Logo</Label>
-                
+
                 {!logoPreview ? (
                   <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                     <div className="flex flex-col items-center gap-4">
@@ -993,9 +1295,9 @@ export default function PlansPage() {
                   <div className="relative inline-block">
                     <div className="dashboard-stats-card rounded-lg p-4">
                       <div className="flex items-center gap-4">
-                        <img 
-                          src={logoPreview} 
-                          alt="Logo preview" 
+                        <img
+                          src={logoPreview}
+                          alt="Logo preview"
                           className="h-16 w-16 object-cover rounded-lg border dashboard-welcome-muted"
                         />
                         <div className="flex-1">
@@ -1021,11 +1323,22 @@ export default function PlansPage() {
               </div>
 
               <div className="flex justify-end gap-4">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button onClick={handleAddPlan} className="dashboard-stats-card">
-                  <span className="dashboard-welcome-text">Add Plan</span>
+                <Button
+                  onClick={handleAddPlan}
+                  className="dashboard-stats-card"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <span className="dashboard-welcome-text">Adding Plan...</span>
+                    </>
+                  ) : (
+                    <span className="dashboard-welcome-text">Add Plan</span>
+                  )}
                 </Button>
               </div>
             </div>
@@ -1053,19 +1366,19 @@ export default function PlansPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="dashboard-welcome-text">Provider</Label>
-                    <Input 
-                      value={formData.provider || ""} 
+                    <Input
+                      value={formData.provider || ""}
                       className="dashboard-welcome-input"
-                      onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
                     />
                   </div>
                   <div>
                     <Label className="dashboard-welcome-text">Price (₹)</Label>
-                    <Input 
-                      type="number" 
-                      value={formData.price || ""} 
+                    <Input
+                      type="number"
+                      value={formData.price || ""}
                       className="dashboard-welcome-input"
-                      onChange={(e) => setFormData({...formData, price: parseInt(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -1079,94 +1392,102 @@ export default function PlansPage() {
                     </h3>
                     <div>
                       <Label className="dashboard-welcome-text">Plan Name</Label>
-                      <Input 
-                        value={formData.name || ""} 
+                      <Input
+                        value={formData.name || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">Total Channels</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.totalChannels || ""} 
+                        <Input
+                          type="number"
+                          value={formData.totalChannels || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, totalChannels: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, totalChannels: parseInt(e.target.value) })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Pay Channels</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.payChannels || ""} 
+                        <Input
+                          type="number"
+                          value={formData.payChannels || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, payChannels: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, payChannels: parseInt(e.target.value) })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Free to Air</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.freeToAirChannels || ""} 
+                        <Input
+                          type="number"
+                          value={formData.freeToAirChannels || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, freeToAirChannels: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, freeToAirChannels: parseInt(e.target.value) })}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">LCO Margin %</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.lcoMarginPercent || ""} 
+                        <Input
+                          type="number"
+                          value={formData.lcoMarginPercent || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, lcoMarginPercent: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, lcoMarginPercent: parseInt(e.target.value) })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Distributor Margin %</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.distributorMarginPercent || ""} 
+                        <Input
+                          type="number"
+                          value={formData.distributorMarginPercent || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, distributorMarginPercent: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, distributorMarginPercent: parseInt(e.target.value) })}
                         />
                       </div>
                       <div>
-                        <Label className="dashboard-welcome-text">Quality</Label>
-                        <Select value={formData.quality || ""} onValueChange={(value) => setFormData({...formData, quality: value})}>
+                        <Label className="dashboard-welcome-text">Quality *</Label>
+                        <Select value={formData.quality || ""} onValueChange={(value) => setFormData({ ...formData, quality: value })}>
                           <SelectTrigger className="dashboard-welcome-input">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="SD">SD</SelectItem>
                             <SelectItem value="HD">HD</SelectItem>
-                            <SelectItem value="4K">4K</SelectItem>
+                            <SelectItem value="Mixed">Mixed</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Plan Type</Label>
-                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                      <Label className="dashboard-welcome-text">Plan Type *</Label>
+                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({ ...formData, planType: value })}>
                         <SelectTrigger className="dashboard-welcome-input">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="starter">Starter</SelectItem>
                           <SelectItem value="lite">Lite</SelectItem>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="premium">Premium</SelectItem>
+                          <SelectItem value="popular">Popular</SelectItem>
+                          <SelectItem value="family">Family</SelectItem>
+                          <SelectItem value="vip">VIP</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Channel List (comma separated)</Label>
-                      <Textarea 
-                        value={formData.channelList?.join(", ") || ""} 
+                      <Label className="dashboard-welcome-text">Channel List *</Label>
+                      <Textarea
+                        value={formData.channelList || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, channelList: e.target.value.split(", ").filter(c => c.trim())})}
+                        onChange={(e) => setFormData({ ...formData, channelList: e.target.value })}
+                        placeholder="Enter channel names separated by commas"
+                        required
                       />
+                      <p className="text-xs dashboard-welcome-muted mt-1">
+                        Separate multiple channels with commas
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1180,70 +1501,70 @@ export default function PlansPage() {
                     </h3>
                     <div>
                       <Label className="dashboard-welcome-text">Plan Title</Label>
-                      <Input 
-                        value={formData.title || ""} 
+                      <Input
+                        value={formData.title || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">Speed Before Limit</Label>
-                        <Input 
-                          value={formData.speedBeforeLimit || ""} 
+                        <Input
+                          value={formData.speedBeforeLimit || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, speedBeforeLimit: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, speedBeforeLimit: e.target.value })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Speed After Limit</Label>
-                        <Input 
-                          value={formData.speedAfterLimit || ""} 
+                        <Input
+                          value={formData.speedAfterLimit || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, speedAfterLimit: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, speedAfterLimit: e.target.value })}
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">Data Limit (GB)</Label>
-                        <Input 
-                          type="number" 
-                          value={formData.dataLimitGB || ""} 
+                        <Input
+                          type="number"
+                          value={formData.dataLimitGB || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, dataLimitGB: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, dataLimitGB: parseInt(e.target.value) })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Validity</Label>
-                        <Input 
-                          value={formData.validity || ""} 
+                        <Input
+                          value={formData.validity || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, validity: e.target.value })}
                         />
                       </div>
                       <div className="flex items-center space-x-2 pt-6">
-                        <Checkbox 
+                        <Checkbox
                           checked={formData.isUnlimited || false}
-                          onCheckedChange={(checked) => setFormData({...formData, isUnlimited: checked})}
+                          onCheckedChange={(checked) => setFormData({ ...formData, isUnlimited: checked })}
                         />
                         <Label className="dashboard-welcome-text">Unlimited</Label>
                       </div>
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Call Benefits</Label>
-                      <Input 
-                        value={formData.callBenefit || ""} 
+                      <Input
+                        value={formData.callBenefit || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, callBenefit: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, callBenefit: e.target.value })}
                       />
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">OTT Apps (comma separated)</Label>
-                      <Textarea 
-                        value={formData.ottApps?.join(", ") || ""} 
+                      <Textarea
+                        value={formData.ottApps?.join(", ") || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, ottApps: e.target.value.split(", ").filter(a => a.trim())})}
+                        onChange={(e) => setFormData({ ...formData, ottApps: e.target.value.split(", ").filter(a => a.trim()) })}
                       />
                     </div>
                   </div>
@@ -1258,41 +1579,41 @@ export default function PlansPage() {
                     </h3>
                     <div>
                       <Label className="dashboard-welcome-text">Plan Title</Label>
-                      <Input 
-                        value={formData.title || ""} 
+                      <Input
+                        value={formData.title || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">Speed</Label>
-                        <Input 
-                          value={formData.speed || ""} 
+                        <Input
+                          value={formData.speed || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, speed: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, speed: e.target.value })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Validity</Label>
-                        <Input 
-                          value={formData.validity || ""} 
+                        <Input
+                          value={formData.validity || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, validity: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, validity: e.target.value })}
                         />
                       </div>
                       <div>
                         <Label className="dashboard-welcome-text">Data Limit</Label>
-                        <Input 
-                          value={formData.dataLimit || ""} 
+                        <Input
+                          value={formData.dataLimit || ""}
                           className="dashboard-welcome-input"
-                          onChange={(e) => setFormData({...formData, dataLimit: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, dataLimit: e.target.value })}
                         />
                       </div>
                     </div>
                     <div>
                       <Label className="dashboard-welcome-text">Plan Type</Label>
-                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({...formData, planType: value})}>
+                      <Select value={formData.planType || ""} onValueChange={(value) => setFormData({ ...formData, planType: value })}>
                         <SelectTrigger className="dashboard-welcome-input">
                           <SelectValue />
                         </SelectTrigger>
@@ -1304,12 +1625,17 @@ export default function PlansPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label className="dashboard-welcome-text">Benefits</Label>
-                      <Input 
-                        value={formData.benefits || ""} 
+                      <Label className="dashboard-welcome-text">Benefits *</Label>
+                      <Textarea
+                        value={formData.benefits || ""}
                         className="dashboard-welcome-input"
-                        onChange={(e) => setFormData({...formData, benefits: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, benefits: e.target.value })}
+                        placeholder="Enter benefits separated by commas"
+                        required
                       />
+                      <p className="text-xs dashboard-welcome-muted mt-1">
+                        Separate multiple benefits with commas
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1317,17 +1643,17 @@ export default function PlansPage() {
                 {/* Common Fields */}
                 <div>
                   <Label className="dashboard-welcome-text">Description</Label>
-                  <Textarea 
-                    value={formData.description || ""} 
+                  <Textarea
+                    value={formData.description || ""}
                     className="dashboard-welcome-input"
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
 
                 {/* Logo Upload for Edit */}
                 <div className="space-y-4">
                   <Label className="dashboard-welcome-text text-lg font-semibold">Provider Logo</Label>
-                  
+
                   {!logoPreview && !formData.logo ? (
                     <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
                       <div className="flex flex-col items-center gap-4">
@@ -1356,9 +1682,9 @@ export default function PlansPage() {
                     <div className="relative inline-block">
                       <div className="dashboard-stats-card rounded-lg p-4">
                         <div className="flex items-center gap-4">
-                          <img 
-                            src={logoPreview || formData.logo} 
-                            alt="Logo preview" 
+                          <img
+                            src={logoPreview || formData.logo}
+                            alt="Logo preview"
                             className="h-16 w-16 object-cover rounded-lg border dashboard-welcome-muted"
                           />
                           <div className="flex-1">
@@ -1397,9 +1723,9 @@ export default function PlansPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Checkbox 
+                  <Checkbox
                     checked={formData.isActive !== undefined ? formData.isActive : true}
-                    onCheckedChange={(checked) => setFormData({...formData, isActive: checked})}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
                   />
                   <Label className="dashboard-welcome-text">Active Plan</Label>
                 </div>
@@ -1414,6 +1740,91 @@ export default function PlansPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog && !!deletingPlan} onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) {
+            setDeletingPlan(null);
+          }
+        }}>
+          <DialogContent className="max-w-md dashboard-chart-card">
+            <DialogHeader>
+              <DialogTitle className="dashboard-welcome-text flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-500" />
+                Delete Plan
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-950/20 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-lg font-semibold dashboard-welcome-text mb-2">
+                  Are you sure you want to delete this plan?
+                </h3>
+                <p className="dashboard-welcome-muted">
+                  This action cannot be undone. The plan "{deletingPlan ? (deletingPlan.name || deletingPlan.title || 'Plan') : 'Plan'}" will be permanently removed.
+                </p>
+              </div>
+
+              {deletingPlan && (
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden">
+                      {deletingPlan.logo ? (
+                        <img
+                          src={deletingPlan.logo}
+                          alt="Plan logo"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full dashboard-welcome-icon flex items-center justify-center">
+                          {getPlanTypeIcon(detectPlanType(deletingPlan))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium dashboard-welcome-text">
+                        {deletingPlan.name || deletingPlan.title || 'Plan'}
+                      </p>
+                      <p className="text-sm dashboard-welcome-muted">
+                        {deletingPlan.provider || 'Provider'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Plan
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
