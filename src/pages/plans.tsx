@@ -49,7 +49,14 @@ import {
   useGetplansDashbaordDataQuery,
   useAddFibrePlanMutation,
   useAddOttPlanMutation,
-  useAddIptvlanMutation
+  useAddIptvlanMutation,
+  useDeleteFibrePlanMutation,
+  useDeleteIptvlanMutation,
+  useDeleteOttPlanMutation,
+  useEditFibrePlanMutation,
+  useEditIptvlanMutation,
+  useEditOttPlanMutation,
+  BASE_URL
 } from "@/api";
 
 export default function PlansPage() {
@@ -76,6 +83,16 @@ export default function PlansPage() {
   const [addFibrePlan, { isLoading: isAddingFibre }] = useAddFibrePlanMutation();
   const [addOttPlan, { isLoading: isAddingOtt }] = useAddOttPlanMutation();
   const [addIptvPlan, { isLoading: isAddingIptv }] = useAddIptvlanMutation();
+
+  // Delete Mutations
+  const [deleteFibrePlan] = useDeleteFibrePlanMutation();
+  const [deleteIptvPlan] = useDeleteIptvlanMutation();
+  const [deleteOttPlan] = useDeleteOttPlanMutation();
+
+  // Edit Mutations
+  const [editFibrePlan] = useEditFibrePlanMutation();
+  const [editIptvPlan] = useEditIptvlanMutation();
+  const [editOttPlan] = useEditOttPlanMutation();
 
   // Extract data from API response
   const summary = plansData?.data?.summary || { totalPlans: 0, iptvPlans: 0, ottPlans: 0, fibrePlans: 0 };
@@ -125,6 +142,28 @@ export default function PlansPage() {
     setShowDeleteDialog(true);
   };
 
+  // Helper function to detect plan type more reliably
+  const detectPlanTypeForDeletion = (plan: any): 'iptv' | 'ott' | 'fibre' => {
+    // First check explicit category or planType
+    if (plan.category === 'iptv' || plan.planType === 'iptv') return 'iptv';
+    if (plan.category === 'ott' || plan.planType === 'ott') return 'ott';
+    if (plan.category === 'fibre' || plan.planType === 'fibre') return 'fibre';
+
+    // Fallback: check plan structure
+    if (plan.totalChannels || plan.channelList || plan.payChannels || plan.freeToAirChannels) {
+      return 'iptv';
+    }
+    if (plan.speedBeforeLimit || plan.dataLimitGB || plan.validity) {
+      return 'ott';
+    }
+    if (plan.speed || plan.dataLimit || plan.benefits) {
+      return 'fibre';
+    }
+
+    // Default fallback
+    return 'iptv';
+  };
+
   const confirmDelete = async () => {
     if (!deletingPlan) {
       toast({
@@ -137,11 +176,32 @@ export default function PlansPage() {
 
     setIsDeleting(true);
     try {
-      // In real app, this would call the delete API
-      console.log("Deleting plan:", deletingPlan);
+      // Use helper function to determine plan type
+      const planType = detectPlanTypeForDeletion(deletingPlan);
+      let deleteResult;
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call appropriate delete API based on plan type
+      switch (planType) {
+        case 'iptv':
+          deleteResult = await deleteIptvPlan(deletingPlan.id || deletingPlan._id);
+          break;
+        case 'ott':
+          deleteResult = await deleteOttPlan(deletingPlan.id || deletingPlan._id);
+          break;
+        case 'fibre':
+          deleteResult = await deleteFibrePlan(deletingPlan.id || deletingPlan._id);
+          break;
+        default:
+          throw new Error("Unable to determine plan type for deletion");
+      }
+
+      if (deleteResult?.error) {
+        let errorMessage = "Failed to delete plan";
+        if ('data' in deleteResult.error && deleteResult.error.data && typeof deleteResult.error.data === 'object' && 'message' in deleteResult.error.data) {
+          errorMessage = String(deleteResult.error.data.message);
+        }
+        throw new Error(errorMessage);
+      }
 
       toast({
         title: "Success",
@@ -154,7 +214,7 @@ export default function PlansPage() {
       console.error("Error deleting plan:", error);
       toast({
         title: "Error",
-        description: error?.data?.message || "Failed to delete plan",
+        description: error?.message || error?.data?.message || "Failed to delete plan",
         variant: "destructive",
       });
     } finally {
@@ -202,10 +262,20 @@ export default function PlansPage() {
         return false;
       }
     } else if (selectedPlanTypeForAdd === "ott") {
-      if (!formData.title || !formData.speedBeforeLimit || !formData.speedAfterLimit || !formData.dataLimitGB || !formData.validity) {
+      if (!formData.title || !formData.price || !formData.speedBeforeLimit || !formData.speedAfterLimit || !formData.dataLimitGB || !formData.validity || !formData.provider || !formData.description) {
         toast({
           title: "OTT Plan Details Missing",
-          description: "Please fill in all OTT plan fields",
+          description: "Please fill in all OTT plan fields including title, price, speeds, data limit, validity, provider, and description",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Validate that ottApps array has at least one item
+      if (!formData.ottApps || formData.ottApps.length === 0) {
+        toast({
+          title: "OTT Apps Required",
+          description: "Please provide at least one OTT app for the plan",
           variant: "destructive",
         });
         return false;
@@ -279,7 +349,13 @@ export default function PlansPage() {
         formDataToSend.append("dataLimitGB", (formData.dataLimitGB || 0).toString());
         formDataToSend.append("isUnlimited", (formData.isUnlimited || false).toString());
         formDataToSend.append("validity", formData.validity || "");
-        formDataToSend.append("ottApps", (formData.ottApps || []).join(","));
+
+        // Handle ottApps as array with proper indexing like ottApps[0], ottApps[1], etc.
+        const ottAppsArray = formData.ottApps || [];
+        ottAppsArray.forEach((app: string, index: number) => {
+          formDataToSend.append(`ottApps[${index}]`, app);
+        });
+
         formDataToSend.append("callBenefit", formData.callBenefit || "");
         formDataToSend.append("provider", formData.provider || "");
         formDataToSend.append("description", formData.description || "");
@@ -332,11 +408,198 @@ export default function PlansPage() {
     }
   };
 
-  const handleUpdatePlan = () => {
-    console.log("Updating plan:", formData);
-    setShowEditDialog(false);
-    setFormData({});
-    setEditingPlan(null);
+  const validateEditForm = () => {
+    if (!editingPlan) {
+      toast({
+        title: "Error",
+        description: "No plan selected for editing",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const planType = detectPlanTypeForDeletion(editingPlan);
+    
+    // Debug logging
+    console.log('Validating edit form for plan type:', planType);
+    console.log('Form data:', formData);
+    console.log('Editing plan:', editingPlan);
+    
+    if (planType === 'iptv') {
+      if (!formData.name || !formData.totalChannels || !formData.payChannels || !formData.freeToAirChannels || !formData.planType || !formData.quality || !formData.channelList) {
+        toast({
+          title: "IPTV Plan Details Missing",
+          description: "Please fill in all required IPTV plan fields including plan type, quality, and channel list",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Validate that channelList has at least one channel
+      const channelList = (formData.channelList || "").split(",").map((c: string) => c.trim()).filter((c: string) => c);
+      if (channelList.length === 0) {
+        toast({
+          title: "Channel List Required",
+          description: "Please provide at least one channel for the IPTV plan",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else if (planType === 'ott') {
+      if (!formData.title || !formData.price || !formData.speedBeforeLimit || !formData.speedAfterLimit || !formData.dataLimitGB || !formData.validity || !formData.provider || !formData.description) {
+        toast({
+          title: "OTT Plan Details Missing",
+          description: "Please fill in all OTT plan fields including title, price, speeds, data limit, validity, provider, and description",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Validate that ottApps array has at least one item
+      if (!formData.ottApps || formData.ottApps.length === 0) {
+        toast({
+          title: "OTT Apps Required",
+          description: "Please provide at least one OTT app for the plan",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } else if (planType === 'fibre') {
+      if (!formData.title || !formData.price || !formData.speed || !formData.validity || !formData.dataLimit || !formData.benefits) {
+        toast({
+          title: "Fibre Plan Details Missing",
+          description: "Please fill in all Fibre plan fields including benefits",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      // Validate that benefits array has at least one item
+      console.log('Benefits field value:', formData.benefits);
+      console.log('Benefits field type:', typeof formData.benefits);
+      const benefitsArray = parseBenefits(formData.benefits);
+      console.log('Parsed benefits array:', benefitsArray);
+      if (benefitsArray.length === 0) {
+        toast({
+          title: "Benefits Required",
+          description: "Please provide at least one benefit for the Fibre plan",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const handleUpdatePlan = async () => {
+    if (!validateEditForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const formDataToSend = new FormData();
+
+      // Add logo file if changed
+      if (logoFile) {
+        formDataToSend.append("logo", logoFile);
+      }
+
+      // Determine plan type and call appropriate edit API
+      const planType = detectPlanTypeForDeletion(editingPlan);
+      
+      if (planType === 'iptv') {
+        // IPTV Plan Edit
+        formDataToSend.append("name", formData.name || "");
+        formDataToSend.append("payChannels", (formData.payChannels || 0).toString());
+        formDataToSend.append("totalChannels", (formData.totalChannels || 0).toString());
+        formDataToSend.append("freeToAirChannels", (formData.freeToAirChannels || 0).toString());
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("lcoMarginPercent", (formData.lcoMarginPercent || 10).toString());
+        formDataToSend.append("distributorMarginPercent", (formData.distributorMarginPercent || 5).toString());
+
+        // Handle channelList as array with proper indexing
+        const channelList = (formData.channelList || "").split(",").map((c: string) => c.trim()).filter((c: string) => c);
+        channelList.forEach((channel: string, index: number) => {
+          formDataToSend.append(`channelList[]`, channel);
+        });
+
+        formDataToSend.append("planType", formData.planType || "lite");
+        formDataToSend.append("quality", formData.quality || "HD");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+
+        await editIptvPlan({ id: editingPlan.id || editingPlan._id, body: formDataToSend }).unwrap();
+        toast({
+          title: "Success",
+          description: "IPTV plan updated successfully",
+        });
+      } else if (planType === 'ott') {
+        // OTT Plan Edit
+        formDataToSend.append("title", formData.title || "");
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("speedBeforeLimit", formData.speedBeforeLimit || "");
+        formDataToSend.append("speedAfterLimit", formData.speedAfterLimit || "");
+        formDataToSend.append("dataLimitGB", (formData.dataLimitGB || 0).toString());
+        formDataToSend.append("isUnlimited", (formData.isUnlimited || false).toString());
+        formDataToSend.append("validity", formData.validity || "");
+        
+        // Handle ottApps as array with proper indexing like ottApps[0], ottApps[1], etc.
+        const ottAppsArray = formData.ottApps || [];
+        ottAppsArray.forEach((app: string, index: number) => {
+          formDataToSend.append(`ottApps[${index}]`, app);
+        });
+        
+        formDataToSend.append("callBenefit", formData.callBenefit || "");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+        formDataToSend.append("planType", "ott");
+
+        await editOttPlan({ id: editingPlan.id || editingPlan._id, body: formDataToSend }).unwrap();
+        toast({
+          title: "Success",
+          description: "OTT plan updated successfully",
+        });
+      } else if (planType === 'fibre') {
+        // Fibre Plan Edit
+        formDataToSend.append("title", formData.title || "");
+        formDataToSend.append("price", (formData.price || 0).toString());
+        formDataToSend.append("validity", formData.validity || "");
+        formDataToSend.append("speed", formData.speed || "");
+        formDataToSend.append("dataLimit", formData.dataLimit || "");
+        formDataToSend.append("provider", formData.provider || "");
+        formDataToSend.append("description", formData.description || "");
+        formDataToSend.append("planType", formData.planType || "");
+        
+        // Convert benefits string to array and append each benefit
+        const benefitsArray = parseBenefits(formData.benefits || "");
+        benefitsArray.forEach((benefit: string, index: number) => {
+          formDataToSend.append(`benefits[${index}]`, benefit);
+        });
+
+        await editFibrePlan({ id: editingPlan.id || editingPlan._id, body: formDataToSend }).unwrap();
+        toast({
+          title: "Success",
+          description: "Fibre plan updated successfully",
+        });
+      }
+
+      setShowEditDialog(false);
+      setFormData({});
+      setEditingPlan(null);
+      setLogoFile(null);
+      setLogoPreview(null);
+    } catch (error: any) {
+      console.error("Error updating plan:", error);
+      toast({
+        title: "Error",
+        description: error?.message || error?.data?.message || "Failed to update plan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -362,11 +625,29 @@ export default function PlansPage() {
   };
 
   // Helper function to convert comma-separated benefits string to array
-  const parseBenefits = (benefitsString: string): string[] => {
-    return benefitsString
-      .split(",")
-      .map((benefit: string) => benefit.trim())
-      .filter((benefit: string) => benefit.length > 0);
+  const parseBenefits = (benefitsString: any): string[] => {
+    console.log('parseBenefits called with:', benefitsString);
+    console.log('Type of benefitsString:', typeof benefitsString);
+    
+    if (!benefitsString) {
+      console.log('benefitsString is falsy, returning empty array');
+      return [];
+    }
+    if (Array.isArray(benefitsString)) {
+      console.log('benefitsString is array, returning as is:', benefitsString);
+      return benefitsString;
+    }
+    if (typeof benefitsString === 'string') {
+      console.log('benefitsString is string, splitting by comma');
+      const result = benefitsString
+        .split(",")
+        .map((benefit: string) => benefit.trim())
+        .filter((benefit: string) => benefit.length > 0);
+      console.log('Parsed result:', result);
+      return result;
+    }
+    console.log('benefitsString is neither array nor string, returning empty array');
+    return [];
   };
 
   // Helper function to get plan type icon
@@ -610,7 +891,7 @@ export default function PlansPage() {
                             {plan.logo ? (
                               <>
                                 <img
-                                  src={plan.logo}
+                                  src={`${BASE_URL}${plan.logo}`}
                                   alt={`${plan.provider} logo`}
                                   className="h-full w-full object-cover"
                                   onError={(e) => {
@@ -658,7 +939,7 @@ export default function PlansPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
                         <Badge className={`${plan.category === 'premium' ? 'badge-super-admin' :
-                            plan.category === 'standard' ? 'badge-admin' : 'badge-manager'
+                          plan.category === 'standard' ? 'badge-admin' : 'badge-manager'
                           }`}>
                           {plan.category} {plan.quality}
                         </Badge>
@@ -719,7 +1000,7 @@ export default function PlansPage() {
                           {plan.logo ? (
                             <>
                               <img
-                                src={plan.logo}
+                                src={`${BASE_URL}${plan.logo}`}
                                 alt={`${plan.provider} logo`}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
@@ -827,7 +1108,7 @@ export default function PlansPage() {
                           {plan.logo ? (
                             <>
                               <img
-                                src={plan.logo}
+                                src={`${BASE_URL}${plan.logo}`}
                                 alt={`${plan.provider} logo`}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
@@ -875,7 +1156,7 @@ export default function PlansPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold dashboard-welcome-text">₹{plan.price}</span>
                       <Badge className={`${plan.category === 'Premium' ? 'badge-super-admin' :
-                          plan.category === 'Standard' ? 'badge-admin' : 'badge-manager'
+                        plan.category === 'Standard' ? 'badge-admin' : 'badge-manager'
                         }`}>
                         {plan.category}
                       </Badge>
@@ -1109,6 +1390,16 @@ export default function PlansPage() {
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
                   </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Price</Label>
+                    <Input
+                      type="number"
+                      placeholder="1599"
+                      className="dashboard-welcome-input"
+                      value={formData.price || ""}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="dashboard-welcome-text">Speed Before Limit</Label>
@@ -1173,6 +1464,24 @@ export default function PlansPage() {
                       className="dashboard-welcome-input"
                       value={formData.ottApps?.join(", ") || ""}
                       onChange={(e) => setFormData({ ...formData, ottApps: e.target.value.split(", ").filter(a => a.trim()) })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Provider</Label>
+                    <Input
+                      placeholder="e.g., My Internet"
+                      className="dashboard-welcome-input"
+                      value={formData.provider || ""}
+                      onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="dashboard-welcome-text">Description</Label>
+                    <Textarea
+                      placeholder="e.g., Up to 100 Mbps till 3000 GB, 100 Mbps beyond. Free access to 3 OTT platforms."
+                      className="dashboard-welcome-input"
+                      value={formData.description || ""}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
                   </div>
                 </div>
@@ -1358,6 +1667,9 @@ export default function PlansPage() {
               <DialogTitle className="dashboard-welcome-text flex items-center gap-2">
                 <Edit className="h-5 w-5 dashboard-welcome-icon" />
                 Edit {editingPlan?.name || editingPlan?.title || 'Plan'}
+                {isSubmitting && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 ml-2"></div>
+                )}
               </DialogTitle>
             </DialogHeader>
             {editingPlan && (
@@ -1507,6 +1819,15 @@ export default function PlansPage() {
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       />
                     </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Price</Label>
+                      <Input
+                        type="number"
+                        value={formData.price || ""}
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="dashboard-welcome-text">Speed Before Limit</Label>
@@ -1567,6 +1888,22 @@ export default function PlansPage() {
                         onChange={(e) => setFormData({ ...formData, ottApps: e.target.value.split(", ").filter(a => a.trim()) })}
                       />
                     </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Provider</Label>
+                      <Input
+                        value={formData.provider || ""}
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Description</Label>
+                      <Textarea
+                        value={formData.description || ""}
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1583,6 +1920,15 @@ export default function PlansPage() {
                         value={formData.title || ""}
                         className="dashboard-welcome-input"
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="dashboard-welcome-text">Price</Label>
+                      <Input
+                        type="number"
+                        value={formData.price || ""}
+                        className="dashboard-welcome-input"
+                        onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-4">
@@ -1683,7 +2029,7 @@ export default function PlansPage() {
                       <div className="dashboard-stats-card rounded-lg p-4">
                         <div className="flex items-center gap-4">
                           <img
-                            src={logoPreview || formData.logo}
+                            src={logoPreview || `${BASE_URL}${formData.logo}`}
                             alt="Logo preview"
                             className="h-16 w-16 object-cover rounded-lg border dashboard-welcome-muted"
                           />
@@ -1731,11 +2077,18 @@ export default function PlansPage() {
                 </div>
 
                 <div className="flex justify-end gap-4">
-                  <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button onClick={handleUpdatePlan} className="dashboard-stats-card">
-                    <span className="dashboard-welcome-text">Save Changes</span>
+                  <Button onClick={handleUpdatePlan} className="dashboard-stats-card" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <span className="dashboard-welcome-text">Save Changes</span>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1776,7 +2129,7 @@ export default function PlansPage() {
                     <div className="h-10 w-10 rounded-lg overflow-hidden">
                       {deletingPlan.logo ? (
                         <img
-                          src={deletingPlan.logo}
+                          src={`${BASE_URL}${deletingPlan.logo}`}
                           alt="Plan logo"
                           className="h-full w-full object-cover"
                         />

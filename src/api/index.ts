@@ -6,7 +6,8 @@ const Tags = {
   Advertisements: "Advertisements",
   WIFI:"WIFI",
   COMPLAINTS:"COMPLAINTS",
-  PRODUCT:"PRODUCT"
+  PRODUCT:"PRODUCT",
+  PLANS:"PLANS"
 };
 
 export const LIMIT = 20;
@@ -143,6 +144,7 @@ export const api = createApi({
         url: `/dashboard/service-plans`,
         method: "GET"
       }),
+      providesTags: [Tags.PLANS],
     }),
     addProduct: builder.mutation<any, FormData>({
       query: (formData) => ({
@@ -172,6 +174,22 @@ export const api = createApi({
         method: 'POST',
         body
       }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    editFibrePlan: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/plans/${id}`,
+        method: 'PUT',
+        body
+      }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    deleteFibrePlan: builder.mutation({
+      query: (id) => ({
+        url: `/plans/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [Tags.PLANS],
     }),
     addIptvlan: builder.mutation({
       query: (body) => ({
@@ -179,6 +197,22 @@ export const api = createApi({
         method: 'POST',
         body
       }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    editIptvlan: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/iptvplan/${id}`,
+        method: 'PUT',
+        body
+      }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    deleteIptvlan: builder.mutation({
+      query: (id) => ({
+        url: `/iptvplan/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [Tags.PLANS],
     }),
     addOttPlan: builder.mutation({
       query: (body) => ({
@@ -186,6 +220,22 @@ export const api = createApi({
         method: 'POST',
         body
       }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    deleteOttPlan: builder.mutation({
+      query: (id) => ({
+        url: `/ottplans/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [Tags.PLANS],
+    }),
+    editOttPlan: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/ottplans/${id}`,
+        method: 'PUT',
+        body
+      }),
+      invalidatesTags: [Tags.PLANS],
     }),
     updateProduct: builder.mutation({
       query: ({ id, body }) => ({
@@ -219,5 +269,11 @@ export const {
   useGetplansDashbaordDataQuery,
   useAddFibrePlanMutation,
   useAddOttPlanMutation,
-  useAddIptvlanMutation
+  useAddIptvlanMutation,
+  useDeleteFibrePlanMutation,
+  useDeleteIptvlanMutation,
+  useDeleteOttPlanMutation,
+  useEditFibrePlanMutation,
+  useEditIptvlanMutation,
+  useEditOttPlanMutation
 } = api;

@@ -38,12 +38,42 @@ import {
   Percent,
   Box,
   Phone,
-  MapPin
+  MapPin,
+  AlertCircle
 } from "lucide-react";
 import { dummyProducts, dummyOrders, dummyProductFeedback, type Product, type Order, type ProductFeedback } from "@/lib/dummyData";
 import { BASE_URL, useAddProductMutation, useDeleteProductMutation, useGetCategoriesQuery, useGetProductDashbaordDataQuery, useUpdateProductMutation } from "@/api";
 
+// Validation interface
+interface ValidationErrors {
+  title?: string;
+  description?: string;
+  price?: string;
+  discount?: string;
+  category?: string;
+  stock?: string;
+  sku?: string;
+  brand?: string;
+  tags?: string;
+  images?: string;
+  isActive?: string;
+  productType?: string;
+}
 
+// Form data interface
+interface FormData {
+  title: string;
+  description: string;
+  price: string;
+  discount: string;
+  category: string;
+  isActive: boolean;
+  stock: string;
+  sku: string;
+  brand: string;
+  tags: string[];
+  productType: string;
+}
 
 export function Products() {
   const [activeTab, setActiveTab] = useState("analytics");
@@ -69,6 +99,313 @@ export function Products() {
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteProductMutation();
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateProductMutation();
 
+  // Enhanced form state
+  const [formData, setFormData] = useState<FormData>({
+    title: '',
+    description: '',
+    price: '',
+    discount: '',
+    category: '',
+    isActive: true,
+    stock: '',
+    sku: '',
+    brand: '',
+    tags: [],
+    productType: 'user_sale'
+  });
+
+  const [images, setImages] = useState<File[]>([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
+  const [addProduct, { isLoading }] = useAddProductMutation();
+
+  // Validation functions
+  const validateField = (field: keyof FormData, value: any): string => {
+    switch (field) {
+      case 'title':
+        if (!value || value.trim().length === 0) {
+          return 'Product name is required';
+        }
+        if (value.trim().length < 3) {
+          return 'Product name must be at least 3 characters long';
+        }
+        if (value.trim().length > 100) {
+          return 'Product name cannot exceed 100 characters';
+        }
+        return '';
+      
+      case 'description':
+        if (!value || value.trim().length === 0) {
+          return 'Product description is required';
+        }
+        if (value.trim().length < 10) {
+          return 'Product description must be at least 10 characters long';
+        }
+        if (value.trim().length > 1000) {
+          return 'Product description cannot exceed 1000 characters';
+        }
+        return '';
+      
+      case 'price':
+        if (!value || value.trim().length === 0) {
+          return 'Price is required';
+        }
+        const priceNum = parseFloat(value);
+        if (isNaN(priceNum) || priceNum <= 0) {
+          return 'Price must be a positive number';
+        }
+        if (priceNum > 1000000) {
+          return 'Price cannot exceed ₹10,00,000';
+        }
+        return '';
+      
+      case 'discount':
+        if (value && value.trim().length > 0) {
+          const discountNum = parseFloat(value);
+          if (isNaN(discountNum) || discountNum < 0) {
+            return 'Discount must be a non-negative number';
+          }
+          if (discountNum > 100) {
+            return 'Discount cannot exceed 100%';
+          }
+        }
+        return '';
+      
+      case 'category':
+        if (!value || value.trim().length === 0) {
+          return 'Please select a category';
+        }
+        return '';
+      
+      case 'stock':
+        if (!value || value.trim().length === 0) {
+          return 'Stock quantity is required';
+        }
+        const stockNum = parseInt(value);
+        if (isNaN(stockNum) || stockNum < 0) {
+          return 'Stock quantity must be a non-negative number';
+        }
+        if (stockNum > 100000) {
+          return 'Stock quantity cannot exceed 100,000';
+        }
+        return '';
+      
+      case 'sku':
+        if (!value || value.trim().length === 0) {
+          return 'SKU is required';
+        }
+        if (value.trim().length < 3) {
+          return 'SKU must be at least 3 characters long';
+        }
+        if (value.trim().length > 50) {
+          return 'SKU cannot exceed 50 characters';
+        }
+        // Check for special characters
+        if (!/^[a-zA-Z0-9-_]+$/.test(value.trim())) {
+          return 'SKU can only contain letters, numbers, hyphens, and underscores';
+        }
+        return '';
+      
+      case 'brand':
+        if (!value || value.trim().length === 0) {
+          return 'Brand name is required';
+        }
+        if (value.trim().length < 2) {
+          return 'Brand name must be at least 2 characters long';
+        }
+        if (value.trim().length > 50) {
+          return 'Brand name cannot exceed 50 characters';
+        }
+        return '';
+      
+      case 'tags':
+        if (value && value.length > 0) {
+          if (value.length > 10) {
+            return 'Cannot add more than 10 tags';
+          }
+          for (let tag of value) {
+            if (tag.trim().length === 0) {
+              return 'Tags cannot be empty';
+            }
+            if (tag.trim().length > 20) {
+              return 'Each tag cannot exceed 20 characters';
+            }
+          }
+        }
+        return '';
+      
+
+      
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    let isValid = true;
+
+    // Validate all fields
+    Object.keys(formData).forEach((field) => {
+      const error = validateField(field as keyof FormData, formData[field as keyof FormData]);
+      if (error) {
+        errors[field as keyof ValidationErrors] = error;
+        isValid = false;
+      }
+    });
+
+    // Validate images separately (not part of formData)
+    if (images.length === 0) {
+      errors.images = 'At least one product image is required';
+      isValid = false;
+    } else if (images.length > 10) {
+      errors.images = 'Cannot upload more than 10 images';
+      isValid = false;
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
+  const handleFieldChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Mark field as touched
+    setTouchedFields(prev => new Set(prev).add(field));
+    
+    // Clear validation error for this field
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleFieldBlur = (field: keyof FormData) => {
+    setTouchedFields(prev => new Set(prev).add(field));
+    
+    // Validate field on blur
+    const error = validateField(field, formData[field]);
+    if (error) {
+      setValidationErrors(prev => ({ ...prev, [field]: error }));
+    } else {
+      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement> | any) => {
+    if (e.target?.files) {
+      const newFiles = Array.from(e.target.files) as File[];
+      
+      const validFiles = newFiles.filter((file: File) => {
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+          alert(`${file.name} is not an image file`);
+          return false;
+        }
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`${file.name} is too large. Maximum size is 10MB`);
+          return false;
+        }
+        return true;
+      });
+      
+      setImages((prev: any) => [...prev, ...validFiles]);
+      
+      // Clear image validation error if images are added
+      if (validationErrors.images) {
+        setValidationErrors(prev => ({ ...prev, images: undefined }));
+      }
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((prev) => {
+      const newImages = prev.filter((_, i) => i !== index);
+      
+      // Check if we need to show image validation error
+      if (newImages.length === 0) {
+        setValidationErrors(prevErrors => ({ ...prevErrors, images: 'At least one product image is required' }));
+      } else {
+        setValidationErrors(prevErrors => ({ ...prevErrors, images: undefined }));
+      }
+      
+      return newImages;
+    });
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      price: '',
+      discount: '',
+      category: '',
+      isActive: true,
+      stock: '',
+      sku: '',
+      brand: '',
+      tags: [],
+      productType: 'user_sale'
+    });
+    setImages([]);
+    setValidationErrors({});
+    setTouchedFields(new Set());
+    setIsSubmitting(false);
+  };
+
+  const handleSubmit = async () => {
+    // Mark all fields as touched
+    const allFields = Object.keys(formData) as (keyof FormData)[];
+    setTouchedFields(new Set(allFields));
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const fd = new FormData();
+      fd.append('title', formData.title.trim());
+      fd.append('description', formData.description.trim());
+      fd.append('price', formData.price);
+      fd.append('discount', formData.discount || '0');
+      fd.append('category', formData.category);
+      fd.append('isActive', String(formData.isActive));
+      fd.append('stock', formData.stock);
+      fd.append('sku', formData.sku.trim());
+      fd.append('brand', formData.brand.trim());
+      fd.append('productType', formData.productType);
+
+      if (formData.tags.length > 0) {
+        formData.tags.forEach((tag, i) => fd.append(`tags[${i}]`, tag.trim()));
+      }
+      
+      images.forEach((file) => fd.append('images', file));
+
+      await addProduct(fd).unwrap();
+      
+      // Success - close modal and reset form
+      setIsAddProductOpen(false);
+      resetForm();
+      
+      // TODO: Show success toast notification
+      
+    } catch (err) {
+      console.error('Error adding product:', err);
+      // TODO: Show error toast notification
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const closeAddProductModal = () => {
+    setIsAddProductOpen(false);
+    resetForm();
+  };
 
   console.log("AllCategories", AllCategories);
 
@@ -301,133 +638,63 @@ export function Products() {
     }
   };
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    discount: '',
-    category: '',
-    isActive: true,
-    stock: '',
-    sku: '',
-    brand: '',
-    tags: [],
-  });
-  const [images, setImages] = useState<File[]>([]);
-
-  const [addProduct, { isLoading }] = useAddProductMutation();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement> | any) => {
-    if (e.target?.files) {
-      const newFiles = Array.from(e.target.files) as File[];
-      
-      const validFiles = newFiles.filter((file: File) => {
-        // Check file type
-        if (!file.type.startsWith('image/')) {
-          alert(`${file.name} is not an image file`);
-          return false;
-        }
-        // Check file size (10MB limit)
-        if (file.size > 10 * 1024 * 1024) {
-          alert(`${file.name} is too large. Maximum size is 10MB`);
-          return false;
-        }
-        return true; // This was missing!
-      });
-      
-      setImages((prev: any) => [...prev, ...validFiles]);
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    console.log('Removing image at index:', index); // Debug log
-    setImages((prev) => {
-      const newImages = prev.filter((_, i) => i !== index);
-      console.log('New images array after removal:', newImages); // Debug log
-      return newImages;
-    });
-  };
-
-  const handleSubmit = async () => {
-    const fd = new FormData();
-    fd.append('title', formData.title);
-    fd.append('description', formData.description);
-    fd.append('price', formData.price);
-    fd.append('discount', formData.discount);
-    fd.append('category', formData.category);
-    fd.append('isActive', String(formData.isActive));
-    fd.append('stock', formData.stock);
-    fd.append('sku', formData.sku);
-    fd.append('brand', formData.brand);
-
-    formData.tags.forEach((tag, i) => fd.append(`tags[${i}]`, tag));
-    images.forEach((file) => fd.append('images', file));
-
-    try {
-      await addProduct(fd).unwrap();
-      setIsAddProductOpen(false);
-      setFormData({
-        title: '',
-        description: '',
-        price: '',
-        discount: '',
-        category: '',
-        isActive: true,
-        stock: '',
-        sku: '',
-        brand: '',
-        tags: [],
-      });
-      setImages([]);
-    } catch (err) {
-      console.error('Error adding product:', err);
-    }
-  };
-
   // Handle edit form changes
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setEditingProduct({ ...editingProduct, [e.target.id]: e.target.value });
+    if (editingProduct) {
+      setEditingProduct({ ...editingProduct, [e.target.name]: e.target.value });
+    }
   };
 
   // Handle edit form submit
   const handleEditSubmit = async () => {
-    if (!editingProduct) return;
+    if (!editingProduct) {
+      console.error('No product selected for editing');
+      return;
+    }
+
+    console.log('Submitting edit for product:', editingProduct);
 
     const fd = new FormData();
-    fd.append('title', editingProduct.title);
-    fd.append('description', editingProduct.description);
-    fd.append('price', editingProduct.price);
-    fd.append('discount', editingProduct.discount);
-    fd.append('category', editingProduct.category);
-    fd.append('isActive', String(editingProduct.isActive));
-    fd.append('stock', editingProduct.stock);
-    fd.append('sku', editingProduct.sku);
-    fd.append('brand', editingProduct.brand);
-    fd.append('productType', editingProduct.productType);
+    fd.append('title', editingProduct.title || '');
+    fd.append('description', editingProduct.description || '');
+    fd.append('price', String(editingProduct.price || 0));
+    fd.append('discount', String(editingProduct.discount || 0));
+    fd.append('category', editingProduct.category || '');
+    fd.append('isActive', String(editingProduct.isActive || true));
+    fd.append('stock', String(editingProduct.stock || 0));
+    fd.append('sku', editingProduct.sku || '');
+    fd.append('brand', editingProduct.brand || '');
+    fd.append('productType', editingProduct.productType || 'user_sale');
 
-    editingProduct.tags.forEach((tag: any, i: number) => fd.append(`tags[${i}]`, tag));
+    if (editingProduct.tags && editingProduct.tags.length > 0) {
+      editingProduct.tags.forEach((tag: any, i: number) => fd.append(`tags[${i}]`, tag));
+    }
 
     // Add new images if any
-    images.forEach((file) => fd.append('images', file));
+    if (images && images.length > 0) {
+      images.forEach((file) => fd.append('images', file));
+    }
 
     try {
+      console.log('Sending update request for product ID:', editingProduct._id);
+      
       // Call the actual update API
-      await updateProduct({ id: editingProduct._id, body: fd }).unwrap();
+      const result = await updateProduct({ id: editingProduct._id, body: fd }).unwrap();
+      
+      console.log('Update successful:', result);
       
       // Close modal and reset
       setIsEditProductOpen(false);
       setEditingProduct(null);
       setImages([]);
       
-      // Show success message or refresh data
+      // TODO: Refresh the products list after successful update
       // You can add toast notification here
+      alert('Product updated successfully!');
       
     } catch (err) {
       console.error('Error updating product:', err);
+      alert('Failed to update product. Please try again.');
     }
   };
 
@@ -746,92 +1013,326 @@ export function Products() {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader className="text-center sm:text-left">
-                    <div className="mx-auto sm:mx-0 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 mb-4">
-                      <Plus className="h-6 w-6 text-primary" />
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="mx-auto sm:mx-0 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20">
+                        <Plus className="h-6 w-6 text-primary" />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={closeAddProductModal}
+                        className="absolute right-4 top-4 h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                     <DialogTitle className="text-xl font-semibold text-foreground">Add New Product</DialogTitle>
                     <DialogDescription className="text-muted-foreground">
-                      Add a new WiFi equipment product to your inventory.
+                      Add a new WiFi equipment product to your inventory. All fields marked with * are required.
                     </DialogDescription>
+                    
+                    {/* Form Progress Indicator */}
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Form Completion</span>
+                        <span className="font-medium">
+                          {Math.round((Object.keys(formData).filter(key => {
+                            const value = formData[key as keyof FormData];
+                            if (key === 'tags') return Array.isArray(value) && value.length > 0;
+                            if (key === 'discount') return true; // Optional field
+                            if (key === 'isActive' || key === 'productType') return true; // Has default values
+                            return value && value.toString().trim().length > 0;
+                          }).length / Object.keys(formData).length) * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${(Object.keys(formData).filter(key => {
+                              const value = formData[key as keyof FormData];
+                              if (key === 'tags') return Array.isArray(value) && value.length > 0;
+                              if (key === 'discount') return true; // Optional field
+                              if (key === 'isActive' || key === 'productType') return true; // Has default values
+                              return value && value.toString().trim().length > 0;
+                            }).length / Object.keys(formData).length) * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
                   </DialogHeader>
 
                   <div className="grid gap-4 py-4">
                     {/* Title & SKU */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="title">Product Name</Label>
-                        <Input id="title" placeholder="Enter product name" value={formData.title} onChange={handleChange} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="sku">SKU</Label>
-                        <Input id="sku" placeholder="Enter SKU" value={formData.sku} onChange={handleChange} />
-                      </div>
+                                              <div className="space-y-2">
+                          <Label htmlFor="title">Product Name *</Label>
+                          <Input 
+                            id="title" 
+                            placeholder="Enter product name" 
+                            value={formData.title} 
+                            onChange={(e) => handleFieldChange('title', e.target.value)}
+                            onBlur={() => handleFieldBlur('title')}
+                            className={validationErrors.title && touchedFields.has('title') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.title && touchedFields.has('title') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.title}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              {formData.title.length}/100 characters
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="sku">SKU *</Label>
+                          <Input 
+                            id="sku" 
+                            placeholder="Enter SKU" 
+                            value={formData.sku} 
+                            onChange={(e) => handleFieldChange('sku', e.target.value)}
+                            onBlur={() => handleFieldBlur('sku')}
+                            className={validationErrors.sku && touchedFields.has('sku') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.sku && touchedFields.has('sku') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.sku}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              {formData.sku.length}/50 characters
+                            </div>
+                          </div>
+                        </div>
                     </div>
 
                     {/* Brand & Category */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="brand">Brand</Label>
-                        <Input id="brand" placeholder="Enter brand name" value={formData.brand} onChange={handleChange} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category">Category</Label>
-                        <Select
-                          value={formData.category}
-                          onValueChange={(value: any) => setFormData({ ...formData, category: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AllCategories?.data?.map((cat: any) => (
-                              <SelectItem key={cat._id} value={cat._id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                                              <div className="space-y-2">
+                          <Label htmlFor="brand">Brand *</Label>
+                          <Input 
+                            id="brand" 
+                            placeholder="Enter brand name" 
+                            value={formData.brand} 
+                            onChange={(e) => handleFieldChange('brand', e.target.value)}
+                            onBlur={() => handleFieldBlur('brand')}
+                            className={validationErrors.brand && touchedFields.has('brand') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.brand && touchedFields.has('brand') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.brand}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              {formData.brand.length}/50 characters
+                            </div>
+                          </div>
+                        </div>
+                                              <div className="space-y-2">
+                          <Label htmlFor="category">Category *</Label>
+                          <Select
+                            value={formData.category}
+                            onValueChange={(value: any) => handleFieldChange('category', value)}
+                          >
+                            <SelectTrigger className={validationErrors.category && touchedFields.has('category') ? 'border-red-500' : ''}>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AllCategories?.data?.map((cat: any) => (
+                                <SelectItem key={cat._id} value={cat._id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {validationErrors.category && touchedFields.has('category') && (
+                            <div className="flex items-center gap-1 text-sm text-red-500">
+                              <AlertCircle className="h-4 w-4" />
+                              {validationErrors.category}
+                            </div>
+                          )}
+                        </div>
 
                     </div>
 
                     {/* Price & Discount */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="price">Price (₹)</Label>
-                        <Input id="price" type="number" placeholder="Enter price" value={formData.price} onChange={handleChange} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="discount">Discount (%)</Label>
-                        <Input id="discount" type="number" placeholder="Enter discount" value={formData.discount} onChange={handleChange} />
-                      </div>
+                                              <div className="space-y-2">
+                          <Label htmlFor="price">Price (₹) *</Label>
+                          <Input 
+                            id="price" 
+                            type="number" 
+                            placeholder="Enter price" 
+                            value={formData.price} 
+                            onChange={(e) => handleFieldChange('price', e.target.value)}
+                            onBlur={() => handleFieldBlur('price')}
+                            className={validationErrors.price && touchedFields.has('price') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.price && touchedFields.has('price') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.price}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              Range: ₹1 - ₹10,00,000
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="discount">Discount (%)</Label>
+                          <Input 
+                            id="discount" 
+                            type="number" 
+                            placeholder="Enter discount" 
+                            value={formData.discount} 
+                            onChange={(e) => handleFieldChange('discount', e.target.value)}
+                            onBlur={() => handleFieldBlur('discount')}
+                            className={validationErrors.discount && touchedFields.has('discount') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.discount && touchedFields.has('discount') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.discount}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              Range: 0% - 100%
+                            </div>
+                          </div>
+                        </div>
                     </div>
 
                     {/* Stock & Tags */}
                     <div className="grid grid-cols-2 gap-4">
+                                              <div className="space-y-2">
+                          <Label htmlFor="stock">Stock Quantity *</Label>
+                          <Input 
+                            id="stock" 
+                            type="number" 
+                            placeholder="Enter stock quantity" 
+                            value={formData.stock} 
+                            onChange={(e) => handleFieldChange('stock', e.target.value)}
+                            onBlur={() => handleFieldBlur('stock')}
+                            className={validationErrors.stock && touchedFields.has('stock') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.stock && touchedFields.has('stock') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.stock}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              Range: 0 - 100,000
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="tags">Tags</Label>
+                          <Input
+                            id="tags"
+                            placeholder="Comma separated tags"
+                            onChange={(e: any) => handleFieldChange('tags', e.target.value.split(',').map((t: any) => t.trim()))}
+                            onBlur={() => handleFieldBlur('tags')}
+                            className={validationErrors.tags && touchedFields.has('tags') ? 'border-red-500' : ''}
+                          />
+                          <div className="flex items-center justify-between">
+                            {validationErrors.tags && touchedFields.has('tags') && (
+                              <div className="flex items-center gap-1 text-sm text-red-500">
+                                <AlertCircle className="h-4 w-4" />
+                                {validationErrors.tags}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground ml-auto">
+                              {formData.tags.length}/10 tags
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+
+                    {/* Product Type & Status */}
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="stock">Stock Quantity</Label>
-                        <Input id="stock" type="number" placeholder="Enter stock quantity" value={formData.stock} onChange={handleChange} />
+                        <Label htmlFor="productType">Product Type</Label>
+                        <Select
+                          value={formData.productType}
+                          onValueChange={(value: any) => handleFieldChange('productType', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user_sale">User Sale</SelectItem>
+                            <SelectItem value="engineer_only">Engineer Only</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="tags">Tags</Label>
-                        <Input
-                          id="tags"
-                          placeholder="Comma separated tags"
-                          onChange={(e: any) => setFormData({ ...formData, tags: e.target.value.split(',').map((t: any) => t.trim()) })}
-                        />
+                        <Label htmlFor="isActive">Status</Label>
+                        <Select
+                          value={formData.isActive.toString()}
+                          onValueChange={(value: any) => handleFieldChange('isActive', value === 'true')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">Active</SelectItem>
+                            <SelectItem value="false">Inactive</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
                     {/* Description */}
                     <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea id="description" placeholder="Enter product description" rows={3} value={formData.description} onChange={handleChange} />
+                      <Label htmlFor="description">Description *</Label>
+                      <Textarea 
+                        id="description" 
+                        placeholder="Enter product description" 
+                        rows={3} 
+                        value={formData.description} 
+                        onChange={(e) => handleFieldChange('description', e.target.value)}
+                        onBlur={() => handleFieldBlur('description')}
+                        className={validationErrors.description && touchedFields.has('description') ? 'border-red-500' : ''}
+                      />
+                      <div className="flex items-center justify-between">
+                        {validationErrors.description && touchedFields.has('description') && (
+                          <div className="flex items-center gap-1 text-sm text-red-500">
+                            <AlertCircle className="h-4 w-4" />
+                            {validationErrors.description}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground ml-auto">
+                          {formData.description.length}/1000 characters
+                        </div>
+                      </div>
                     </div>
 
                     {/* Image Upload with Preview */}
                     <div className="space-y-4">
-                      <Label htmlFor="images">Product Images</Label>
+                      <Label htmlFor="images">Product Images *</Label>
+                      <div className="flex items-center justify-between">
+                        {validationErrors.images && touchedFields.has('images') && (
+                          <div className="flex items-center gap-1 text-sm text-red-500">
+                            <AlertCircle className="h-4 w-4" />
+                            {validationErrors.images}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground ml-auto">
+                          {images.length}/10 images (Max 10MB each)
+                        </div>
+                      </div>
                       
                       {/* File Upload Area */}
                       <div className="relative">
@@ -954,14 +1455,47 @@ export function Products() {
                     </div>
                   </div>
 
+                  {/* Form Validation Summary */}
+                  {Object.keys(validationErrors).length > 0 && (
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                        <span className="text-sm font-medium text-destructive">Please fix the following errors:</span>
+                      </div>
+                      <ul className="text-sm text-destructive space-y-1">
+                        {Object.entries(validationErrors).map(([field, error]) => (
+                          <li key={field} className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-destructive rounded-full"></span>
+                            <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').toLowerCase()}: {error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Help Text */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Tips for better product listings:</span>
+                    </div>
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      <li>• Use clear, descriptive product names that customers can easily search for</li>
+                      <li>• Include detailed descriptions highlighting key features and benefits</li>
+                      <li>• Upload high-quality images from multiple angles</li>
+                      <li>• Set competitive pricing and reasonable discount percentages</li>
+                      <li>• Use relevant tags to improve product discoverability</li>
+                    </ul>
+                  </div>
+
                   <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                     <Button
                       type="button"
                       onClick={handleSubmit}
-                      disabled={isLoading}
+                      disabled={isLoading || isSubmitting}
                       className="w-full sm:w-auto min-w-[120px]"
                     >
-                      {isLoading ? (
+                      {isLoading || isSubmitting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
                           Adding...
@@ -997,7 +1531,28 @@ export function Products() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{product.title}</div>
-                          <div className="text-sm text-muted-foreground">{product.brand} - {product.sku}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {product.brand} - 
+                            {product.sku ? (
+                              <>
+                                <span className="ml-1">
+                                  {product.sku.length > 8 ? product.sku.substring(0, 8) + '...' : product.sku}
+                                </span>
+                                {product.sku.length > 8 && (
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="p-0 h-auto text-xs text-primary hover:text-primary/80 ml-1"
+                                    onClick={() => handleViewProduct(product)}
+                                  >
+                                    View More
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <span className="ml-1 italic">No SKU</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -1458,11 +2013,21 @@ export function Products() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editTitle">Product Name</Label>
-                  <Input id="editTitle" placeholder="Enter product name" value={editingProduct?.title} onChange={handleEditChange} />
+                  <Input 
+                    name="title" 
+                    placeholder="Enter product name" 
+                    value={editingProduct?.title || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editSku">SKU</Label>
-                  <Input id="editSku" placeholder="Enter SKU" value={editingProduct?.sku} onChange={handleEditChange} />
+                  <Input 
+                    name="sku" 
+                    placeholder="Enter SKU" 
+                    value={editingProduct?.sku || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
               </div>
 
@@ -1470,12 +2035,17 @@ export function Products() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editBrand">Brand</Label>
-                  <Input id="editBrand" placeholder="Enter brand name" value={editingProduct?.brand} onChange={handleEditChange} />
+                  <Input 
+                    name="brand" 
+                    placeholder="Enter brand name" 
+                    value={editingProduct?.brand || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editCategory">Category</Label>
                   <Select
-                    value={editingProduct?.category}
+                    value={editingProduct?.category || ''}
                     onValueChange={(value: any) => setEditingProduct({ ...editingProduct, category: value })}
                   >
                     <SelectTrigger id="editCategory">
@@ -1496,11 +2066,23 @@ export function Products() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editPrice">Price (₹)</Label>
-                  <Input id="editPrice" type="number" placeholder="Enter price" value={editingProduct?.price} onChange={handleEditChange} />
+                  <Input 
+                    name="price" 
+                    type="number" 
+                    placeholder="Enter price" 
+                    value={editingProduct?.price || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editDiscount">Discount (%)</Label>
-                  <Input id="editDiscount" type="number" placeholder="Enter discount" value={editingProduct?.discount} onChange={handleEditChange} />
+                  <Input 
+                    name="discount" 
+                    type="number" 
+                    placeholder="Enter discount" 
+                    value={editingProduct?.discount || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
               </div>
 
@@ -1508,12 +2090,18 @@ export function Products() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editStock">Stock Quantity</Label>
-                  <Input id="editStock" type="number" placeholder="Enter stock quantity" value={editingProduct?.stock} onChange={handleEditChange} />
+                  <Input 
+                    name="stock" 
+                    type="number" 
+                    placeholder="Enter stock quantity" 
+                    value={editingProduct?.stock || ''} 
+                    onChange={handleEditChange} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="editTags">Tags</Label>
                   <Input
-                    id="editTags"
+                    name="tags"
                     placeholder="Comma separated tags"
                     value={editingProduct?.tags?.join(', ') || ''}
                     onChange={(e: any) => setEditingProduct({ ...editingProduct, tags: e.target.value.split(',').map((t: any) => t.trim()) })}
@@ -1526,7 +2114,7 @@ export function Products() {
                 <div className="space-y-2">
                   <Label htmlFor="editProductType">Product Type</Label>
                   <Select
-                    value={editingProduct?.productType}
+                    value={editingProduct?.productType || ''}
                     onValueChange={(value: any) => setEditingProduct({ ...editingProduct, productType: value })}
                   >
                     <SelectTrigger id="editProductType">
@@ -1541,7 +2129,7 @@ export function Products() {
                 <div className="space-y-2">
                   <Label htmlFor="editIsActive">Status</Label>
                   <Select
-                    value={editingProduct?.isActive?.toString()}
+                    value={editingProduct?.isActive?.toString() || 'true'}
                     onValueChange={(value: any) => setEditingProduct({ ...editingProduct, isActive: value === 'true' })}
                   >
                     <SelectTrigger id="editIsActive">
@@ -1558,7 +2146,13 @@ export function Products() {
               {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="editDescription">Description</Label>
-                <Textarea id="editDescription" placeholder="Enter product description" rows={3} value={editingProduct?.description} onChange={handleEditChange} />
+                <Textarea 
+                  name="description" 
+                  placeholder="Enter product description" 
+                  rows={3} 
+                  value={editingProduct?.description || ''} 
+                  onChange={handleEditChange} 
+                />
               </div>
 
               {/* Image Upload Section */}
