@@ -31,6 +31,12 @@ export function GlobalSearch() {
       return;
     }
 
+    console.log('🔍 Performing search for:', searchQuery);
+    console.log('📊 Available dummy data:');
+    console.log('Customers:', dummyCustomers.length, dummyCustomers.slice(0, 2));
+    console.log('Engineers:', dummyEngineers.length, dummyEngineers.slice(0, 2));
+    console.log('Complaints:', dummyComplaints.length, dummyComplaints.slice(0, 2));
+
     const searchResults: SearchResult[] = [];
     const lowercaseQuery = searchQuery.toLowerCase();
 
@@ -96,6 +102,8 @@ export function GlobalSearch() {
       }
     });
 
+    console.log('✅ Search results found:', searchResults.length, searchResults);
+
     // Sort results by relevance (exact matches first)
     searchResults.sort((a, b) => {
       const aExact = a.title.toLowerCase().startsWith(lowercaseQuery) ? 1 : 0;
@@ -147,7 +155,7 @@ export function GlobalSearch() {
   // Handle result click
   const handleResultClick = (result: SearchResult) => {
     let path = '';
-    
+
     switch (result.type) {
       case 'user':
         path = `/users/${result.id}`;
@@ -159,7 +167,7 @@ export function GlobalSearch() {
         path = `/complaints/${result.id}`;
         break;
     }
-    
+
     navigate(path);
     setIsOpen(false);
     setQuery('');
@@ -194,7 +202,7 @@ export function GlobalSearch() {
           return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
       }
     }
-    
+
     if (status) {
       switch (status) {
         case 'active':
@@ -210,7 +218,7 @@ export function GlobalSearch() {
           return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
       }
     }
-    
+
     return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
   };
 
@@ -224,10 +232,23 @@ export function GlobalSearch() {
           type="text"
           placeholder="Search complaints, users, engineers..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          onKeyDown={handleKeyDown}
+          onChange={(e) => {
+            console.log('🔤 Input change:', e.target.value);
+            setQuery(e.target.value);
+          }}
+          onFocus={() => {
+            console.log('🎯 Input focused');
+            setIsOpen(true);
+          }}
+          onKeyDown={(e) => {
+            console.log('⌨️ Key pressed:', e.key);
+            handleKeyDown(e);
+          }}
+          onInput={(e) => {
+            console.log('📝 Input event:', (e.target as HTMLInputElement).value);
+          }}
           className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          style={{ zIndex: 1000 }}
         />
         {query && (
           <button
@@ -246,12 +267,13 @@ export function GlobalSearch() {
       {/* Search Results Dropdown */}
       {isOpen && (query || results.length > 0) && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - positioned to not block the input */}
           <div
-            className="fixed inset-0 bg-black/10 dark:bg-black/20 z-40"
+            className="fixed inset-0 bg-black/10 dark:bg-black/20 z-30"
+            style={{ top: '100px' }} // Don't cover the header area
             onClick={() => setIsOpen(false)}
           />
-          
+
           {/* Results Panel */}
           <div
             ref={resultsRef}
@@ -263,6 +285,10 @@ export function GlobalSearch() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     Found {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
                   </p>
+                  {/* Debug info */}
+                  <div className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    <p>📊 Data sources: {dummyCustomers.length} customers, {dummyEngineers.length} engineers, {dummyComplaints.length} complaints</p>
+                  </div>
                 </div>
                 <div className="py-2">
                   {results.map((result, index) => (
@@ -278,7 +304,7 @@ export function GlobalSearch() {
                       <div className="flex-shrink-0 p-2 bg-gray-100 dark:bg-gray-800 rounded-lg group-hover:bg-white dark:group-hover:bg-gray-700 transition-colors">
                         {getIcon(result.type)}
                       </div>
-                      
+
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -301,7 +327,7 @@ export function GlobalSearch() {
                           {result.details}
                         </p>
                       </div>
-                      
+
                       {/* Arrow */}
                       <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
                         <ChevronRight className="h-4 w-4" />
@@ -321,6 +347,17 @@ export function GlobalSearch() {
                 <Search className="h-8 w-8 mx-auto mb-3 opacity-50" />
                 <p className="text-sm">Search across all data</p>
                 <p className="text-xs mt-1">Find complaints, users, and engineers instantly</p>
+
+                {/* Sample search suggestions */}
+                <div className="mt-4 text-left">
+                  <p className="text-xs font-medium mb-2 text-gray-600 dark:text-gray-300">Try searching for:</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">• Names: "Rajesh", "Mike", "Priya"</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">• Locations: "Mumbai", "Delhi", "Bangalore"</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">• Issues: "Internet", "WiFi", "Router"</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">• Specializations: "Network", "Hardware", "Software"</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>

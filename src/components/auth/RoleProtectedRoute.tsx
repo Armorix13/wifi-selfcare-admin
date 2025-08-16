@@ -45,7 +45,7 @@ export function RouteGuard({ children }: { children: ReactNode }) {
   // Check if user can access the current route
   if (!canAccessRoute(location.pathname, user.role)) {
     // Redirect to dashboard if user doesn't have access to current route
-            return <Navigate to="/admin/dashboard" replace />;
+            return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
