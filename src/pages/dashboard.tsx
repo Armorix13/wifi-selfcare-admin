@@ -215,7 +215,7 @@ export default function Dashboard() {
                 <ComplaintChart title="Network Performance" />
               </CardContent>
             </Card>
-            
+
             {/* Enhanced Status Distribution */}
             <Card className="dashboard-chart-card shadow-2xl">
               <CardHeader className="pb-2">
@@ -282,8 +282,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold dashboard-welcome-icon">
                         JS
-                      </div>
-                      <div>
+                  </div>
+                  <div>
                         <p className="text-sm font-medium dashboard-welcome-text">Jane Smith</p>
                         <p className="text-xs dashboard-welcome-muted">18 resolved</p>
                       </div>
@@ -315,10 +315,10 @@ export default function Dashboard() {
                   <Activity className="h-5 w-5 dashboard-welcome-icon" />
                   Recent Activities
                   <Heart className="h-4 w-4 dashboard-welcome-icon animate-pulse" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                   <div className="flex items-start space-x-4 p-4 rounded-lg dashboard-stats-card hover:scale-105 transition-transform duration-300">
                     <div className="flex-shrink-0">
                       <div className="h-12 w-12 rounded-full flex items-center justify-center shadow-lg sparkle-animation dashboard-welcome-icon">
@@ -344,7 +344,7 @@ export default function Dashboard() {
                     <div className="flex-shrink-0">
                       <div className="h-12 w-12 rounded-full flex items-center justify-center shadow-lg dashboard-welcome-icon">
                         <UserPlus className="h-6 w-6 text-white" />
-                      </div>
+              </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium dashboard-welcome-text">New engineer Raj Patel assigned to Delhi region</p>
@@ -402,28 +402,28 @@ export default function Dashboard() {
                       <div>
                         <p className="font-medium dashboard-welcome-text">Core Network</p>
                         <p className="text-xs dashboard-welcome-muted">All systems operational</p>
-                      </div>
+                </div>
                     </div>
                     <Badge className="badge-super-admin shadow-sm">
                       <Sparkles className="h-3 w-3 mr-1" />
                       Online
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center justify-between p-4 rounded-lg dashboard-stats-card hover:scale-105 transition-transform duration-300">
                     <div className="flex items-center gap-3">
                       <Signal className="h-6 w-6 dashboard-welcome-icon" />
                       <div>
                         <p className="font-medium dashboard-welcome-text">Regional Towers</p>
                         <p className="text-xs dashboard-welcome-muted">847/852 towers active</p>
-                      </div>
+                </div>
                     </div>
                     <Badge className="badge-admin shadow-sm">
                       <TrendingUp className="h-3 w-3 mr-1" />
                       99.4%
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center justify-between p-4 rounded-lg dashboard-stats-card hover:scale-105 transition-transform duration-300">
                     <div className="flex items-center gap-3">
                       <Wifi className="h-6 w-6 dashboard-welcome-icon" />

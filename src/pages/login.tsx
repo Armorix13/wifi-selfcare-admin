@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Wifi, Lock, Eye, EyeOff, Zap, Palette, Sun, Moon } from "lucide-react";
@@ -12,6 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
 import { z } from "zod";
+import { useLoginMutation } from "@/api";
+import { Role, User } from "@/lib/types/auth";
+import { getRoutesForRole } from "@/lib/routes";
+import { TokenManager } from "@/lib/tokenManager";
 
 // Local type definitions
 const loginSchema = z.object({
@@ -23,20 +27,36 @@ type LoginData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const [loginMutation] = useLoginMutation();
 
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "admin@company.com",
-      password: "password123",
+      email: "",
+      password: "",
     },
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Load saved credentials on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+    
+    if (savedRememberMe && savedEmail && savedPassword) {
+      form.setValue('email', savedEmail);
+      form.setValue('password', savedPassword);
+      setRememberMe(true);
+    }
+  }, [form]);
 
   const themes = [
     { id: "light", name: "Light", icon: Sun },
@@ -45,55 +65,84 @@ export default function Login() {
     { id: "neon", name: "Neon", icon: Palette },
   ] as const;
 
-  // Dummy user data
-  const dummyUsers = {
-    "admin@company.com": {
-      id: 1,
-      email: "admin@company.com",
-      username: "admin",
-      role: "super-admin" as const,
-      password: "password123"
-    },
-    "manager@company.com": {
-      id: 2,
-      email: "manager@company.com", 
-      username: "manager",
-      role: "manager" as const,
-      password: "password123"
-    },
-    "staff@company.com": {
-      id: 3,
-      email: "staff@company.com",
-      username: "staff", 
-      role: "admin" as const,
-      password: "password123"
+  const getDefaultRouteForRole = (role: Role): string => {
+    const routes = getRoutesForRole(role);
+    return routes.length > 0 ? routes[0].path : '/dashboard';
+  };
+
+  const handleSuccessfulLogin = (user: User) => {
+    // Store tokens using TokenManager
+    if (user.accessToken) {
+      TokenManager.setAccessToken(user.accessToken);
+    }
+    if (user.refreshToken) {
+      TokenManager.setRefreshToken(user.refreshToken);
+    }
+
+    // Handle remember me functionality
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', form.getValues('email'));
+      localStorage.setItem('rememberedPassword', form.getValues('password'));
+      localStorage.setItem('rememberMe', 'true');
+    } else {
+      // Clear saved credentials if remember me is unchecked
+      localStorage.removeItem('rememberedEmail');
+      localStorage.removeItem('rememberedPassword');
+      localStorage.removeItem('rememberMe');
+    }
+
+    // Login to auth context
+    login(user);
+
+    // Show success message
+    toast({
+      title: "Success",
+      description: `Welcome back, ${user.firstName}!`,
+    });
+
+    // Redirect based on role
+    const defaultRoute = getDefaultRouteForRole(user.role);
+    const from = location.state?.from?.pathname;
+    navigate(from || defaultRoute, { replace: true });
+  };
+
+  const handleRememberMeChange = (checked: boolean) => {
+    setRememberMe(checked);
+    
+    // If unchecking, clear saved credentials immediately
+    if (!checked) {
+      localStorage.removeItem('rememberedEmail');
+      localStorage.removeItem('rememberedPassword');
+      localStorage.removeItem('rememberMe');
     }
   };
 
-  const onSubmit = (data: LoginData) => {
+  const onSubmit = async (data: LoginData) => {
     setIsLoading(true);
     
-    // Completely local dummy login - no API calls needed
-    setTimeout(() => {
-      const user = dummyUsers[data.email as keyof typeof dummyUsers];
+    try {
+      const response = await loginMutation(data).unwrap();
       
-      if (user && user.password === data.password) {
-        const { password, ...userWithoutPassword } = user;
-        login(userWithoutPassword, "dummy-token-123");
-        toast({
-          title: "Success",
-          description: "Login successful",
-        });
-        navigate("/dashboard");
+      if (response.success) {
+        // Handle successful API login
+        handleSuccessfulLogin(response.data);
       } else {
         toast({
           title: "Error", 
-          description: "Invalid email or password",
+          description: response.message || "Login failed",
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Error", 
+        description: "Invalid email or password",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -280,6 +329,8 @@ export default function Login() {
                     <Checkbox 
                       id="remember-me" 
                       className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary" 
+                      checked={rememberMe}
+                      onCheckedChange={handleRememberMeChange}
                     />
                     <Label 
                       htmlFor="remember-me" 

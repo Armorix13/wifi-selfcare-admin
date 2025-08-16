@@ -16,9 +16,11 @@ export const LIMIT = 20;
 const baseQuery = fetchBaseQuery({
   baseUrl: `${BASE_URL}/api/v1`,
   prepareHeaders: (headers) => {
-    const auth =`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODkyMmYyMGRjNTk0N2U0NjhkMmNiYTciLCJyb2xlIjoic3VwZXJhZG1pbiIsImp0aSI6Ik5kRlFFc2JLIiwiaWF0IjoxNzU0NTAxMzk3LCJleHAiOjE3NTcwOTMzOTd9.gpsA_mL9gUQXPKyEWkiTOhU6AC9r9la33ufpwfKKa_w`;
-    if (auth) {
-      headers.set("Authorization", `Bearer ${auth}`);
+    // Get access token from localStorage
+    const accessToken = localStorage.getItem('accessToken');
+    
+    if (accessToken) {
+      headers.set("Authorization", `Bearer ${accessToken}`);
     }
     return headers;
   },
@@ -26,6 +28,15 @@ const baseQuery = fetchBaseQuery({
 
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions);
+  
+  // Handle 401 unauthorized responses
+  if (result.error && result.error.status === 401) {
+    // Token expired or invalid, redirect to login
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    window.location.href = '/login';
+  }
+  
   return result;
 };
 
@@ -34,6 +45,13 @@ export const api = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: [...Object.values(Tags)],
   endpoints: (builder) => ({
+    login: builder.mutation({
+      query: (body) => ({
+        url: `/client/admin-login`,
+        method: "POST",
+        body,
+      }),
+    }),
     addAdvertisement: builder.mutation({
       query: (body) => ({
         url: `/advertisements`,
@@ -94,7 +112,6 @@ export const api = createApi({
         method: "GET",
       }),
       providesTags: [Tags.WIFI],
-      keepUnusedDataFor: 300, // Keep data for 5 minutes
     }),
     updateInstallationRequestStatus: builder.mutation({
       query: ({ id, status, remarks, assignedEngineer }) => ({
@@ -123,6 +140,7 @@ export const api = createApi({
         url: `/complaints/complaint-dashboard`,
         method: "GET"
       }),
+      providesTags:[Tags.COMPLAINTS]
     }),
     assignEngineerToComplaint: builder.mutation({
       query: ({ id, engineerId, priority }) => ({
@@ -167,6 +185,7 @@ export const api = createApi({
         url: '/categories',
         method: 'GET',
       }),
+      providesTags:[Tags.PRODUCT]
     }),
     addFibrePlan: builder.mutation({
       query: (body) => ({
@@ -187,7 +206,7 @@ export const api = createApi({
     deleteFibrePlan: builder.mutation({
       query: (id) => ({
         url: `/plans/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
       invalidatesTags: [Tags.PLANS],
     }),
@@ -210,7 +229,7 @@ export const api = createApi({
     deleteIptvlan: builder.mutation({
       query: (id) => ({
         url: `/iptvplan/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
       invalidatesTags: [Tags.PLANS],
     }),
@@ -225,14 +244,14 @@ export const api = createApi({
     deleteOttPlan: builder.mutation({
       query: (id) => ({
         url: `/ottplans/${id}`,
-        method: 'DELETE',
+        method: "DELETE",
       }),
       invalidatesTags: [Tags.PLANS],
     }),
     editOttPlan: builder.mutation({
       query: ({ id, body }) => ({
         url: `/ottplans/${id}`,
-        method: 'PUT',
+        method: "PUT",
         body
       }),
       invalidatesTags: [Tags.PLANS],
@@ -249,6 +268,7 @@ export const api = createApi({
 });
 
 export const {
+  useLoginMutation,
   useAddAdvertisementMutation,
   useGetAdvertisementsQuery,
   useUpdateAdvertisementMutation,
@@ -262,10 +282,6 @@ export const {
   useAssignEngineerToComplaintMutation,
   useGetAllComplaintDasboardQuery,
   useGetProductDashbaordDataQuery,
-  useAddProductMutation,
-  useGetCategoriesQuery,
-  useDeleteProductMutation,
-  useUpdateProductMutation,
   useGetplansDashbaordDataQuery,
   useAddFibrePlanMutation,
   useAddOttPlanMutation,
@@ -275,5 +291,9 @@ export const {
   useDeleteOttPlanMutation,
   useEditFibrePlanMutation,
   useEditIptvlanMutation,
-  useEditOttPlanMutation
+  useEditOttPlanMutation,
+  useUpdateProductMutation,
+  useGetCategoriesQuery,
+  useAddProductMutation,
+  useDeleteProductMutation
 } = api;

@@ -18,7 +18,7 @@ import {
 } from "recharts";
 
 interface ComplaintChartProps {
-  title: string;
+  title?: string;
   data?: any[];
   type?: "line" | "bar" | "area";
 }
@@ -118,7 +118,10 @@ export function ComplaintChart({ title, data = [], type = "line" }: ComplaintCha
   const [chartType, setChartType] = useState<"line" | "bar" | "area">(type);
   const [isLoading, setIsLoading] = useState(false);
   
-  const chartData = title.toLowerCase().includes("network") 
+  // Safety check for title prop - handle undefined, null, or empty string
+  const safeTitle = title && typeof title === 'string' ? title : "Chart";
+  
+  const chartData = safeTitle.toLowerCase().includes("network") 
     ? generateNetworkData(parseInt(timeRange))
     : generateComplaintData(parseInt(timeRange));
 
@@ -160,7 +163,7 @@ export function ComplaintChart({ title, data = [], type = "line" }: ComplaintCha
       margin: { top: 5, right: 30, left: 20, bottom: 5 },
     };
 
-    if (title.toLowerCase().includes("network")) {
+    if (safeTitle.toLowerCase().includes("network")) {
       if (chartType === "line") {
         return (
           <LineChart {...chartProps}>
@@ -256,7 +259,7 @@ export function ComplaintChart({ title, data = [], type = "line" }: ComplaintCha
               <SelectItem value="90">Last 3 months</SelectItem>
             </SelectContent>
           </Select>
-          {title.toLowerCase().includes("network") && (
+          {safeTitle.toLowerCase().includes("network") && (
             <Select value={chartType} onValueChange={handleChartTypeChange} disabled={isLoading}>
               <SelectTrigger className="w-[120px] h-8 text-sm border-border/50 hover:border-border transition-colors">
                 <SelectValue placeholder="Chart type" />
@@ -287,7 +290,7 @@ export function ComplaintChart({ title, data = [], type = "line" }: ComplaintCha
       {/* Chart Summary */}
       <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
         <div className="flex items-center gap-4">
-          {title.toLowerCase().includes("network") ? (
+          {safeTitle.toLowerCase().includes("network") ? (
             <>
               <div className="flex items-center gap-1">
                 <TrendingUp className="h-4 w-4 text-green-500" />

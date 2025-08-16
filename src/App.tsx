@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
+import { RouteGuard, RoleProtectedRoute } from "@/components/auth/RoleProtectedRoute";
+import { Role } from "@/lib/types/auth";
 
 // Import modern themes
 import "@/styles/modern-themes.css";
@@ -52,106 +54,106 @@ function Router() {
       } />
       
       <Route path="/dashboard" element={
-        <ProtectedRoute>
+        <RouteGuard>
           <Dashboard />
-        </ProtectedRoute>
+        </RouteGuard>
       } />
       
       <Route path="/complaints" element={
-        <ProtectedRoute>
+        <RouteGuard>
           <Complaints />
-        </ProtectedRoute>
+        </RouteGuard>
       } />
       
       <Route path="/engineers" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Engineers />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/users" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Users />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/products" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Products />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/plans" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Plans />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/analytics" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <Analytics />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/notifications" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Notifications />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/support" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <Support />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/settings" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
           <Settings />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/installations" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <Installations />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/leads" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <Leads />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/installations-leads" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <InstallationsLeads />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
-      {/* Detail Pages */}
+      {/* Detail Routes */}
       <Route path="/users/:id" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <UserDetail />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/engineers/:id" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <EngineerDetail />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       <Route path="/complaints/:id" element={
-        <ProtectedRoute>
+        <RouteGuard>
           <ComplaintDetail />
-        </ProtectedRoute>
+        </RouteGuard>
       } />
       
       <Route path="/plans/:id" element={
-        <ProtectedRoute>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <PlanDetail />
-        </ProtectedRoute>
+        </RoleProtectedRoute>
       } />
       
       {/* Fallback to 404 */}

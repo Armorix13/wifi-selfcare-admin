@@ -117,7 +117,7 @@ export default function PlanDetail() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <Button variant="outline" onClick={() => navigate("/plans")}>
+                      <Button variant="outline" onClick={() => navigate("/plans")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Plans
           </Button>

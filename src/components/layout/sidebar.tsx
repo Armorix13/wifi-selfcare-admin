@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
+import { getRoutesForRole } from "@/lib/routes";
 import {
   LayoutDashboard,
   AlertCircle,
@@ -14,7 +15,6 @@ import {
   Settings,
   Wifi,
   LogOut,
-  Palette,
   Sun,
   Moon,
   Zap,
@@ -22,7 +22,6 @@ import {
   X,
   Package,
   HardHat,
-  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +74,21 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   const ThemeIcon = themeIcons[theme];
+
+  // Get routes based on user role for role-based filtering
+  const userRoutes = user ? getRoutesForRole(user.role) : [];
+  const userRoutePaths = userRoutes.map(route => route.path);
+
+  // Filter navigation based on both permissions and role-based routes
+  const filteredNavigation = navigation.filter(item => {
+    // Check if user has permission
+    const hasUserPermission = hasPermission(item.permission);
+    
+    // Check if route is accessible based on user role
+    const isRouteAccessible = userRoutePaths.includes(item.href);
+    
+    return hasUserPermission && isRouteAccessible;
+  });
 
   return (
     <div className={cn(
@@ -150,12 +164,32 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </DropdownMenu>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-          {navigation.map((item, index) => {
-            if (!hasPermission(item.permission)) return null;
+        {/* User Info */}
+        {user && (
+          <div className="px-4 py-3 border-b border-[var(--sidebar-border)]">
+            <div className="flex items-center space-x-3">
+              <div className="h-10 w-10 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">
+                  {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--sidebar-text)] truncate">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-xs text-[var(--sidebar-text-muted)] capitalize">
+                  {user.role}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+                  {/* Navigation */}
+          <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+            {filteredNavigation.map((item, index) => {
             
-                          const isActive = location.pathname === item.href;
+            const isActive = location.pathname === item.href;
             return (
               <Link key={item.name} to={item.href}>
                 <div
@@ -209,13 +243,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex items-center p-3 rounded-xl bg-[var(--sidebar-item-hover)] border border-[var(--sidebar-border)]">
             <div className="h-10 w-10 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-md">
               <span className="text-primary-foreground font-semibold text-sm">
-                {user?.role === "super-admin" ? "SA" : user?.role === "admin" ? "A" : "M"}
+                {user?.role === "superadmin" ? "SA" : user?.role === "admin" ? "A" : "M"}
               </span>
             </div>
             <div className="ml-3 flex-1 min-w-0">
               <p className="text-sm font-semibold text-[var(--sidebar-text)] truncate">
-                {user?.role === "super-admin" ? "Super Admin" : 
-                 user?.role === "admin" ? "Admin" : "Manager"}
+                {user?.role === "superadmin" ? "Super Admin" : 
+                 user?.role === "admin" ? "Admin" : 
+                 user?.role === "manager" ? "Manager" : "Agent"}
               </p>
               <p className="text-xs text-[var(--sidebar-text)] opacity-70 truncate">{user?.email}</p>
             </div>
@@ -236,12 +271,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Button 
                   variant="outline" 
                   className="w-full justify-between text-[var(--sidebar-text)] border-[var(--sidebar-border)] hover:bg-[var(--sidebar-item-hover)]"
-                >
+          >
                   <span className="flex items-center">
                     <ThemeIcon className="h-4 w-4 mr-2" />
                     Theme
                   </span>
-                </Button>
+          </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="theme-dropdown w-40">
                 <DropdownMenuItem 

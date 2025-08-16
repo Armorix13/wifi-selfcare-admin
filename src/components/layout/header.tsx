@@ -302,7 +302,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <Link to="/settings">Settings</Link>
               </DropdownMenuItem>
               
-              {user?.role === "super-admin" && (
+              {user?.role === "superadmin" && (
                 <DropdownMenuItem 
                   className="cursor-pointer transition-all duration-200"
                   style={{ color: "var(--dropdown-item)" }}
