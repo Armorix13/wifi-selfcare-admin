@@ -7,7 +7,8 @@ const Tags = {
   WIFI:"WIFI",
   COMPLAINTS:"COMPLAINTS",
   PRODUCT:"PRODUCT",
-  PLANS:"PLANS"
+  PLANS:"PLANS",
+  ENGINEER:"ENGINEER"
 };
 
 export const LIMIT = 20;
@@ -34,7 +35,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
     // Token expired or invalid, redirect to login
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
-    window.location.href = '/login';
+    window.location.href = '/admin/login';
   }
   
   return result;
@@ -157,12 +158,35 @@ export const api = createApi({
       }),
       providesTags:[Tags.PRODUCT]
     }),
+    getEngineerDashbaordData: builder.query({
+      query: ()=> ({
+        url: `/dashboard/engineer-analytics`,
+        method: "GET"
+      }),
+      providesTags:[Tags.ENGINEER]
+    }),
     getplansDashbaordData: builder.query({
       query: ()=> ({
         url: `/dashboard/service-plans`,
         method: "GET"
       }),
       providesTags: [Tags.PLANS],
+    }),
+    addEngineerData: builder.mutation({
+      query: (body)=> ({
+        url: `/dashboard/add-engineer`,
+        method: "POST",
+        body
+      }),
+      invalidatesTags:[Tags.ENGINEER]
+    }),
+    updateEngineerData: builder.mutation({
+      query: (body)=> ({
+        url: `/dashboard/update-engineer`,
+        method: "PUT",
+        body
+      }),
+      invalidatesTags:[Tags.ENGINEER]
     }),
     addProduct: builder.mutation<any, FormData>({
       query: (formData) => ({
@@ -264,6 +288,13 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.PRODUCT]
     }),
+    deleteEngineer: builder.mutation({
+      query: (id) => ({
+        url: `/dashboard/engineers/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [Tags.ENGINEER],
+    }),
   }),
 });
 
@@ -295,5 +326,9 @@ export const {
   useUpdateProductMutation,
   useGetCategoriesQuery,
   useAddProductMutation,
-  useDeleteProductMutation
+  useDeleteProductMutation,
+  useGetEngineerDashbaordDataQuery,
+  useAddEngineerDataMutation,
+   useUpdateEngineerDataMutation,
+   useDeleteEngineerMutation
 } = api;
