@@ -15,23 +15,7 @@ export function RoleProtectedRoute({
   allowedRoles, 
   fallbackPath = '/dashboard' 
 }: RoleProtectedRouteProps) {
-  const { user, isAuthenticated } = useAuth();
-  const location = useLocation();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (!user || !allowedRoles.includes(user.role)) {
-    // Redirect to fallback path if user doesn't have required role
-    return <Navigate to={fallbackPath} replace />;
-  }
-
-  return <>{children}</>;
-}
-
-export function RouteGuard({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, hasPermission } = useAuth();
   const location = useLocation();
 
   if (!isAuthenticated) {
@@ -42,10 +26,47 @@ export function RouteGuard({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user can access the current route
-  if (!canAccessRoute(location.pathname, user.role)) {
+  // Check if user has any of the required roles by checking permissions
+  const hasRequiredRole = allowedRoles.some(role => {
+    // For each role, check if user has the corresponding permission
+    switch (role) {
+      case Role.SUPERADMIN:
+        return hasPermission('manage-all') || hasPermission('system-settings');
+      case Role.ADMIN:
+        return hasPermission('manage-users') || hasPermission('manage-engineers');
+      case Role.MANAGER:
+        return hasPermission('manage-installations') || hasPermission('manage-leads');
+      case Role.AGENT:
+        return hasPermission('view-complaints') || hasPermission('update-complaints');
+      default:
+        return false;
+    }
+  });
+
+  if (!hasRequiredRole) {
+    // Redirect to fallback path if user doesn't have required role
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+export function RouteGuard({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated, canAccessRoute: userCanAccessRoute } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if user can access the current route using the auth hook
+  if (!userCanAccessRoute(location.pathname)) {
     // Redirect to dashboard if user doesn't have access to current route
-            return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

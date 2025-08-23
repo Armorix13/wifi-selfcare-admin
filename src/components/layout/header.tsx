@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Menu, User, Settings, LogOut, Shield, Mail, Phone, Search } from "lucide-react";
+import { Bell, ChevronDown, Menu, User, Settings, LogOut, Shield, Mail, Phone, Search, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { useGetCompanyProfileQuery, BASE_URL } from "@/api/index";
 
 interface HeaderProps {
   title: string;
@@ -29,7 +30,20 @@ interface HeaderProps {
 export function Header({ title, onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   
+  // Fetch company profile if user is admin
+  const { data: companyProfileData } = useGetCompanyProfileQuery({}, {
+    skip: user?.role !== "admin"
+  });
+
+  // Update company logo when profile data is received
+  useEffect(() => {
+    if (companyProfileData?.data?.companyProfile?.companyLogo && user?.role === "admin") {
+      setCompanyLogo(companyProfileData.data.companyProfile.companyLogo);
+    }
+  }, [companyProfileData, user?.role]);
+
   // Mock notifications data
   const notifications = [
     {
@@ -69,6 +83,11 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   const unreadCount = notifications.filter(n => n.unread).length;
 
   const getRoleDisplayName = (role: string) => {
+    // If user is admin and we have company profile data, show company name
+    if (role === "admin" && companyProfileData?.data?.companyProfile?.companyName) {
+      return companyProfileData.data.companyProfile.companyName;
+    }
+    
     switch (role) {
       case "super-admin":
         return "Super Admin";
@@ -124,6 +143,25 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
+          
+          {/* Company Logo - Only show for admin users */}
+          {user?.role === "admin" && companyLogo && (
+            <div className="flex items-center mr-4">
+              <img 
+                src={`${BASE_URL}${companyLogo}`} 
+                alt="Company Logo" 
+                className="h-8 w-8 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-700"
+                onError={(e) => {
+                  // Fallback to building icon if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <Building2 className="h-8 w-8 text-gray-400 hidden" />
+            </div>
+          )}
+          
           <h1 
             className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight mr-4 transition-colors duration-200"
             style={{ color: "var(--header-text)" }}
@@ -292,15 +330,18 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <Link to="/profile">Profile</Link>
               </DropdownMenuItem>
               
-              <DropdownMenuItem 
-                className="cursor-pointer transition-all duration-200"
-                style={{ color: "var(--dropdown-item)" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                <Link to="/settings">Settings</Link>
-              </DropdownMenuItem>
+              {/* Settings - Hidden for admin users */}
+              {user?.role !== "admin" && (
+                <DropdownMenuItem 
+                  className="cursor-pointer transition-all duration-200"
+                  style={{ color: "var(--dropdown-item)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  <Link to="/settings">Settings</Link>
+                </DropdownMenuItem>
+              )}
               
               {user?.role === "superadmin" && (
                 <DropdownMenuItem 
@@ -326,15 +367,18 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <span>Support</span>
               </DropdownMenuItem>
               
-              <DropdownMenuItem 
-                className="cursor-pointer transition-all duration-200"
-                style={{ color: "var(--dropdown-item)" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-              >
-                <Phone className="mr-2 h-4 w-4" />
-                <span>Contact</span>
-              </DropdownMenuItem>
+              {/* Contact - Hidden for admin users */}
+              {user?.role !== "admin" && (
+                <DropdownMenuItem 
+                  className="cursor-pointer transition-all duration-200"
+                  style={{ color: "var(--dropdown-item)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  <span>Contact</span>
+                </DropdownMenuItem>
+              )}
               
               <DropdownMenuSeparator style={{ backgroundColor: "var(--dropdown-border)" }} />
               

@@ -14,7 +14,25 @@ interface AuthState {
   canAccessRoute: (path: string) => boolean;
   getAccessToken: () => string | null;
   setAccessToken: (token: string) => void;
+  refreshUserRole: () => void;
 }
+
+// Helper function to normalize role string to enum value
+const normalizeRole = (roleString: string): Role => {
+  const normalizedRole = roleString.toLowerCase();
+  switch (normalizedRole) {
+    case 'superadmin':
+      return Role.SUPERADMIN;
+    case 'admin':
+      return Role.ADMIN;
+    case 'manager':
+      return Role.MANAGER;
+    case 'agent':
+      return Role.AGENT;
+    default:
+      return Role.AGENT; // fallback to lowest role
+  }
+};
 
 const permissions = {
   [Role.SUPERADMIN]: [
@@ -30,28 +48,32 @@ const permissions = {
     'view-analytics',
     'system-settings',
     'manage-support',
+    'manage-admin',
+    'manage-advertisements',
     'manage-all',
+    'view-leads'  // Only SUPERADMIN can see the "Leads" section
   ],
   [Role.ADMIN]: [
     'view-dashboard',
     'manage-engineers',
     'assign-complaints',
     'manage-users',
-    'manage-products',
     'manage-plans',
     'manage-installations',
-    'manage-leads',
+    'manage-leads',  // ADMIN can see "Company Leads" section
     'manage-notifications',
     'view-analytics',
     'manage-support',
+    // Note: ADMIN does NOT have 'view-leads' permission
   ],
   [Role.MANAGER]: [
     'view-dashboard',
     'assign-complaints',
     'manage-installations',
-    'manage-leads',
+    'manage-leads',  // MANAGER can see "Company Leads" section
     'view-analytics',
     'manage-support',
+    // Note: MANAGER does NOT have 'view-leads' permission
   ],
   [Role.AGENT]: [
     'view-dashboard',
@@ -67,17 +89,28 @@ export const useAuth = create<AuthState>()(
       accessToken: null,
       isAuthenticated: false,
       login: (user) => {
+        // Normalize the role to ensure proper enum matching
+        const normalizedUser = {
+          ...user,
+          role: normalizeRole(user.role)
+        };
+        
+        // Debug logging
+        console.log('Login - Original role:', user.role);
+        console.log('Login - Normalized role:', normalizedUser.role);
+        console.log('Login - Role enum values:', Object.values(Role));
+        
         // Store tokens using TokenManager
-        if (user.accessToken) {
-          TokenManager.setAccessToken(user.accessToken);
+        if (normalizedUser.accessToken) {
+          TokenManager.setAccessToken(normalizedUser.accessToken);
         }
-        if (user.refreshToken) {
-          TokenManager.setRefreshToken(user.refreshToken);
+        if (normalizedUser.refreshToken) {
+          TokenManager.setRefreshToken(normalizedUser.refreshToken);
         }
         
         set({
-          user,
-          accessToken: user.accessToken,
+          user: normalizedUser,
+          accessToken: normalizedUser.accessToken,
           isAuthenticated: true,
         });
       },
@@ -94,13 +127,28 @@ export const useAuth = create<AuthState>()(
       hasPermission: (permission) => {
         const { user } = get();
         if (!user) return false;
-        return permissions[user.role]?.includes(permission) || false;
+        
+        // Ensure role is normalized
+        const normalizedRole = normalizeRole(user.role);
+        
+        // Debug logging
+        console.log('hasPermission check:', {
+          permission,
+          userRole: user.role,
+          normalizedRole,
+          availablePermissions: permissions[normalizedRole],
+          hasPermission: permissions[normalizedRole]?.includes(permission)
+        });
+        
+        return permissions[normalizedRole]?.includes(permission) || false;
       },
       canAccessRoute: (path) => {
         const { user } = get();
         if (!user) return false;
         
-        return canAccessRoute(path, user.role);
+        // Ensure role is normalized
+        const normalizedRole = normalizeRole(user.role);
+        return canAccessRoute(path, normalizedRole);
       },
       getAccessToken: () => {
         // First try to get from state, then from TokenManager
@@ -119,6 +167,25 @@ export const useAuth = create<AuthState>()(
       setAccessToken: (token: string) => {
         TokenManager.setAccessToken(token);
         set({ accessToken: token });
+      },
+      refreshUserRole: () => {
+        const { user } = get();
+        if (user) {
+          const normalizedRole = normalizeRole(user.role);
+          console.log('Refreshing user role:', {
+            originalRole: user.role,
+            normalizedRole,
+            availablePermissions: permissions[normalizedRole],
+          });
+          
+          // Update the user with normalized role
+          const updatedUser = {
+            ...user,
+            role: normalizedRole
+          };
+          
+          set({ user: updatedUser });
+        }
       },
     }),
     {

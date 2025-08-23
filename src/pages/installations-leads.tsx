@@ -42,16 +42,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  dummyNewInstallations, 
-  dummyLeads, 
-  dummyApplicationForms, 
-  dummyWifiInstallationRequests, 
+import {
+  dummyNewInstallations,
+  dummyLeads,
+  dummyApplicationForms,
+  dummyWifiInstallationRequests,
   dummyEngineers,
-  type NewInstallation, 
+  type NewInstallation,
   type Lead,
   type ApplicationForm,
-  type WifiInstallationRequest 
+  type WifiInstallationRequest
 } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
 import { api } from "@/api/index";
@@ -83,12 +83,12 @@ export default function InstallationsLeads() {
   console.log("applications", applications);
   console.log("installation requests", installationRequestsData);
   console.log("engineers", engineers);
-  
+
 
   // Transform API applications data to match our structure
   const transformedApplications = useMemo(() => {
     if (!applications?.data) return [];
-    
+
     return applications.data.map((app: any) => ({
       id: app._id,
       applicationId: app.applicationId,
@@ -120,7 +120,7 @@ export default function InstallationsLeads() {
   // Transform API installation requests data to match our structure
   const transformedInstallationRequests = useMemo(() => {
     if (!installationRequestsData?.data?.requests) return [];
-    
+
     return installationRequestsData.data.requests.map((req: any) => ({
       id: req._id,
       name: req.name,
@@ -174,8 +174,8 @@ export default function InstallationsLeads() {
 
   // Action handlers for installations
   const updateInstallationStatus = (id: number, status: 'pending' | 'confirmed' | 'rejected') => {
-    setInstallations(prev => prev.map(installation => 
-      installation.id === id 
+    setInstallations(prev => prev.map(installation =>
+      installation.id === id
         ? { ...installation, status, updatedAt: new Date().toISOString() }
         : installation
     ));
@@ -183,8 +183,8 @@ export default function InstallationsLeads() {
 
   // Action handlers for leads
   const updateLeadStatus = (id: number, status: 'new' | 'contacted' | 'qualified' | 'converted' | 'closed') => {
-    setLeads(prev => prev.map(lead => 
-      lead.id === id 
+    setLeads(prev => prev.map(lead =>
+      lead.id === id
         ? { ...lead, status, updatedAt: new Date().toISOString() }
         : lead
     ));
@@ -204,10 +204,10 @@ export default function InstallationsLeads() {
         remarks: assignmentRemarks || "Engineer assigned for installation",
         assignedEngineer: selectedEngineer
       });
-      
+
       console.log("Installation request approved and engineer assigned:", selectedInstallationRequest.id);
       alert("Engineer assigned successfully!");
-      
+
       // Reset modal state
       setShowEngineerAssignmentModal(false);
       setShowInstallationRequestModal(false);
@@ -235,10 +235,10 @@ export default function InstallationsLeads() {
         remarks: "Installation request rejected",
         assignedEngineer: null
       });
-      
+
       console.log("Installation request rejected:", selectedInstallationRequest.id);
       alert("Installation request rejected successfully!");
-      
+
       // Reset modal state
       setShowInstallationRequestModal(false);
       setSelectedInstallationRequest(null);
@@ -288,7 +288,7 @@ export default function InstallationsLeads() {
   // Filter installations
   const filteredInstallations = useMemo(() => {
     return installations.filter((installation) => {
-      const matchesSearch = 
+      const matchesSearch =
         installation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         installation.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
         installation.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,7 +296,7 @@ export default function InstallationsLeads() {
 
       const matchesStatus = statusFilter === "all" || installation.status === statusFilter;
       const matchesPriority = priorityFilter === "all" || installation.priority === priorityFilter;
-      
+
       let matchesDate = true;
       if (dateFilter.from && dateFilter.to) {
         const installationDate = parseISO(installation.createdAt);
@@ -312,7 +312,7 @@ export default function InstallationsLeads() {
   // Filter leads
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
-      const matchesSearch = 
+      const matchesSearch =
         lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         lead.phone.includes(searchTerm) ||
         (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -320,7 +320,7 @@ export default function InstallationsLeads() {
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
       const matchesPriority = priorityFilter === "all" || lead.priority === priorityFilter;
-      
+
       let matchesDate = true;
       if (dateFilter.from && dateFilter.to) {
         const leadDate = parseISO(lead.createdAt);
@@ -466,14 +466,14 @@ export default function InstallationsLeads() {
     ];
 
     return allForms.filter((form) => {
-      const matchesSearch = 
+      const matchesSearch =
         form.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         form.displayContact.toLowerCase().includes(searchTerm.toLowerCase()) ||
         form.displayAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
         form.displayId.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === "all" || form.displayStatus === statusFilter;
-      
+
       let matchesDate = true;
       if (dateFilter.from && dateFilter.to) {
         const formDate = parseISO(form.displayDate);
@@ -650,7 +650,7 @@ export default function InstallationsLeads() {
                 {applicationsLoading ? "Loading..." : "In review applications"}
               </div>
               <div className="mt-3 space-y-2">
-                                {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 3).map((app: any) => (
+                {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 3).map((app: any) => (
                   <div key={app.id} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex-1 min-w-0">
@@ -658,12 +658,12 @@ export default function InstallationsLeads() {
                         <div className="text-xs text-gray-500">{app.applicationType}</div>
                       </div>
                       <Badge className={`${getStatusColor(app.status)} text-xs ml-2`}>
-                      {app.status}
-                    </Badge>
-                  </div>
+                        {app.status}
+                      </Badge>
+                    </div>
                     <div className="flex gap-1 mt-2">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6"
                         onClick={async () => {
                           try {
@@ -677,8 +677,8 @@ export default function InstallationsLeads() {
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Accept
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant="destructive"
                         className="text-xs px-2 py-1 h-6"
                         onClick={async () => {
@@ -693,14 +693,14 @@ export default function InstallationsLeads() {
                         <XCircle className="h-3 w-3 mr-1" />
                         Reject
                       </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
               </div>
             </CardContent>
           </Card>
 
-                    {/* Installation Requests Stats */}
+          {/* Installation Requests Stats */}
           <Card className="shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
@@ -713,7 +713,7 @@ export default function InstallationsLeads() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="text-2xl lg:text-3xl font-bold text-green-600">
-                {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req:any)=> req.status === 'approved').length}
+                {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}
               </div>
               <div className="text-xs lg:text-sm text-gray-600 mt-1">
                 {installationRequestsLoading ? "Loading..." : "Approved requests"}
@@ -734,8 +734,8 @@ export default function InstallationsLeads() {
                         </Badge>
                       </div>
                       <div className="flex gap-1 mt-2">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6"
                           onClick={() => {
                             setSelectedInstallationRequest(req);
@@ -745,14 +745,13 @@ export default function InstallationsLeads() {
                           <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
-                          className={`text-xs px-2 py-1 h-6 ${
-                            req.status === 'approved' 
-                              ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500' 
+                          className={`text-xs px-2 py-1 h-6 ${req.status === 'approved'
+                              ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500'
                               : 'hover:bg-blue-50'
-                          }`}
+                            }`}
                           onClick={() => {
                             if (req.status !== 'approved') {
                               setSelectedInstallationRequest(req);
@@ -887,22 +886,22 @@ export default function InstallationsLeads() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
-                                  {[...transformedApplications, ...transformedInstallationRequests, ...installationRequests, ...installations, ...leads]
-                    .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
-                    .slice(0, 5)
-                    .map((item, index) => (
-                      <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs lg:text-sm font-medium truncate">
-                            {'name' in item ? item.name : 'customerName' in item ? item.customerName : 'applicationId' in item ? (item as ApplicationForm).applicationId : 'New Entry'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {format(new Date(item.createdAt || item.updatedAt), "MMM dd, HH:mm")}
-                          </div>
+                {[...transformedApplications, ...transformedInstallationRequests, ...installationRequests, ...installations, ...leads]
+                  .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
+                  .slice(0, 5)
+                  .map((item, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs lg:text-sm font-medium truncate">
+                          {'name' in item ? item.name : 'customerName' in item ? item.customerName : 'applicationId' in item ? (item as ApplicationForm).applicationId : 'New Entry'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {format(new Date(item.createdAt || item.updatedAt), "MMM dd, HH:mm")}
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
               </div>
             </CardContent>
           </Card>
@@ -1023,292 +1022,291 @@ export default function InstallationsLeads() {
                             </TableRow>
                           ) : (
                             filteredAllInstallationForms.map((form) => (
-                            <TableRow key={`${form.type}-${form.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                              <TableCell className="py-3">
-                                <Badge variant="outline" className="capitalize text-xs">
-                                  {form.type.replace('_', ' ')}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="font-medium text-xs lg:text-sm">{form.displayId}</div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div>
-                                  <div className="font-medium text-xs lg:text-sm">{form.displayName}</div>
-                                  <div className="text-xs text-gray-500 hidden lg:block">{form.displayVillage || form.displayAddress}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div>
-                                  <div className="text-xs lg:text-sm">{form.displayContact}</div>
-                                  {form.displayAlternatePhone && (
-                                    <div className="text-xs text-gray-500 hidden lg:block">{form.displayAlternatePhone}</div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <Badge className={`${getTypeColor(form.displayType)} text-xs`}>
-                                  {form.displayType}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <Badge className={`${getStatusColor(form.displayStatus)} text-xs`}>
-                                  {form.displayStatus}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="text-xs text-gray-600 max-w-xs truncate">
-                                  {form.displayAddress}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="text-xs lg:text-sm">
-                                  {format(parseISO(form.displayDate), "MMM dd, yyyy")}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="flex gap-1">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                        <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                      <DialogHeader>
-                                        <DialogTitle className="text-lg lg:text-xl">
-                                          {form.type.replace('_', ' ').toUpperCase()} Details - {form.displayName}
-                                        </DialogTitle>
-                                        <DialogDescription className="text-sm">
-                                          Complete form information and documents
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <div>
-                                          <Label className="text-sm font-medium">Form Type</Label>
-                                          <p className="text-sm capitalize">{form.type.replace('_', ' ')}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">ID</Label>
-                                          <p className="text-sm">{form.displayId}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Customer Name</Label>
-                                          <p className="text-sm">{form.displayName}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Contact Number</Label>
-                                          <p className="text-sm">{form.displayContact}</p>
-                                        </div>
-                                        {form.displayAlternatePhone && (
+                              <TableRow key={`${form.type}-${form.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <TableCell className="py-3">
+                                  <Badge variant="outline" className="capitalize text-xs">
+                                    {form.type.replace('_', ' ')}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div className="font-medium text-xs lg:text-sm">{form.displayId}</div>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div>
+                                    <div className="font-medium text-xs lg:text-sm">{form.displayName}</div>
+                                    <div className="text-xs text-gray-500 hidden lg:block">{form.displayVillage || form.displayAddress}</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div>
+                                    <div className="text-xs lg:text-sm">{form.displayContact}</div>
+                                    {form.displayAlternatePhone && (
+                                      <div className="text-xs text-gray-500 hidden lg:block">{form.displayAlternatePhone}</div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <Badge className={`${getTypeColor(form.displayType)} text-xs`}>
+                                    {form.displayType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <Badge className={`${getStatusColor(form.displayStatus)} text-xs`}>
+                                    {form.displayStatus}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div className="text-xs text-gray-600 max-w-xs truncate">
+                                    {form.displayAddress}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div className="text-xs lg:text-sm">
+                                    {format(parseISO(form.displayDate), "MMM dd, yyyy")}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <div className="flex gap-1">
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                          <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                        <DialogHeader>
+                                          <DialogTitle className="text-lg lg:text-xl">
+                                            {form.type.replace('_', ' ').toUpperCase()} Details - {form.displayName}
+                                          </DialogTitle>
+                                          <DialogDescription className="text-sm">
+                                            Complete form information and documents
+                                          </DialogDescription>
+                                        </DialogHeader>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                           <div>
-                                            <Label className="text-sm font-medium">Alternate Phone</Label>
-                                            <p className="text-sm">{form.displayAlternatePhone}</p>
+                                            <Label className="text-sm font-medium">Form Type</Label>
+                                            <p className="text-sm capitalize">{form.type.replace('_', ' ')}</p>
                                           </div>
-                                        )}
-                                        <div>
-                                          <Label className="text-sm font-medium">Type</Label>
-                                          <p className="text-sm capitalize">{form.displayType}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Status</Label>
-                                          <div className="text-sm">{getStatusBadge(form.displayStatus, "installation")}</div>
-                                        </div>
-                                        <div className="lg:col-span-2">
-                                          <Label className="text-sm font-medium">Address</Label>
-                                          <p className="text-sm">{form.displayAddress}</p>
-                                        </div>
-                                        {form.displayVillage && (
                                           <div>
-                                            <Label className="text-sm font-medium">Village/Area</Label>
-                                            <p className="text-sm">{form.displayVillage}</p>
+                                            <Label className="text-sm font-medium">ID</Label>
+                                            <p className="text-sm">{form.displayId}</p>
                                           </div>
-                                        )}
-                                        {form.displayPincode && (
                                           <div>
-                                            <Label className="text-sm font-medium">Pincode</Label>
-                                            <p className="text-sm">{form.displayPincode}</p>
+                                            <Label className="text-sm font-medium">Customer Name</Label>
+                                            <p className="text-sm">{form.displayName}</p>
                                           </div>
-                                        )}
-                                        {form.displayRemarks && (
+                                          <div>
+                                            <Label className="text-sm font-medium">Contact Number</Label>
+                                            <p className="text-sm">{form.displayContact}</p>
+                                          </div>
+                                          {form.displayAlternatePhone && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Alternate Phone</Label>
+                                              <p className="text-sm">{form.displayAlternatePhone}</p>
+                                            </div>
+                                          )}
+                                          <div>
+                                            <Label className="text-sm font-medium">Type</Label>
+                                            <p className="text-sm capitalize">{form.displayType}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm font-medium">Status</Label>
+                                            <div className="text-sm">{getStatusBadge(form.displayStatus, "installation")}</div>
+                                          </div>
                                           <div className="lg:col-span-2">
-                                            <Label className="text-sm font-medium">Remarks</Label>
-                                            <p className="text-sm">{form.displayRemarks}</p>
+                                            <Label className="text-sm font-medium">Address</Label>
+                                            <p className="text-sm">{form.displayAddress}</p>
                                           </div>
-                                        )}
-                                        {form.displayAcceptedAt && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Accepted/Approved Date</Label>
-                                            <p className="text-sm">{format(parseISO(form.displayAcceptedAt), "MMM dd, yyyy")}</p>
-                                          </div>
-                                        )}
-                                        {form.displayRejectedAt && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Rejected Date</Label>
-                                            <p className="text-sm">{form.displayRejectedAt}</p>
-                                          </div>
-                                        )}
-                                        {form.displayEngineer && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Assigned Engineer</Label>
-                                            <p className="text-sm">{getEngineerName(form.displayEngineer as number)}</p>
-                                          </div>
-                                        )}
-                                        {form.displayInstallationDate && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Installation Date</Label>
-                                            <p className="text-sm">{format(parseISO(form.displayInstallationDate as string), "MMM dd, yyyy")}</p>
-                                          </div>
-                                        )}
-                                        {form.displayCompletedDate && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Completed Date</Label>
-                                            <p className="text-sm">{format(parseISO(form.displayCompletedDate as string), "MMM dd, yyyy")}</p>
-                                          </div>
-                                        )}
-                                        {form.displayPriority && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Priority</Label>
-                                            <p className="text-sm">{getPriorityBadge(form.displayPriority as string)}</p>
-                                          </div>
-                                        )}
-                                        {form.displayEstimatedCost && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Estimated Cost</Label>
-                                            <p className="text-sm">₹{form.displayEstimatedCost}</p>
-                                          </div>
-                                        )}
-                                        {form.displayPreferredPlan && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Preferred Plan</Label>
-                                            <p className="text-sm">{form.displayPreferredPlan}</p>
-                                          </div>
-                                        )}
-                                        {form.displayScheduledDate && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Scheduled Date</Label>
-                                            <p className="text-sm">{format(parseISO(form.displayScheduledDate), "MMM dd, yyyy")}</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                      
-                                      {/* Document Section */}
-                                      <div className="mt-6">
-                                        <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                          {form.displayAadhaarFront && (
-                                            <div className="text-center">
-                                              <Label className="text-sm font-medium">Aadhaar Front</Label>
-                                              <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                <p className="text-xs mt-1">Uploaded</p>
-                                              </div>
+                                          {form.displayVillage && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Village/Area</Label>
+                                              <p className="text-sm">{form.displayVillage}</p>
                                             </div>
                                           )}
-                                          {form.displayAadhaarBack && (
-                                            <div className="text-center">
-                                              <Label className="text-sm font-medium">Aadhaar Back</Label>
-                                              <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                <p className="text-xs mt-1">Uploaded</p>
-                                              </div>
+                                          {form.displayPincode && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Pincode</Label>
+                                              <p className="text-sm">{form.displayPincode}</p>
                                             </div>
                                           )}
-                                          {form.displayPassportPhoto && (
-                                            <div className="text-center">
-                                              <Label className="text-sm font-medium">Passport Photo</Label>
-                                              <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                <p className="text-xs mt-1">Uploaded</p>
-                                              </div>
+                                          {form.displayRemarks && (
+                                            <div className="lg:col-span-2">
+                                              <Label className="text-sm font-medium">Remarks</Label>
+                                              <p className="text-sm">{form.displayRemarks}</p>
+                                            </div>
+                                          )}
+                                          {form.displayAcceptedAt && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Accepted/Approved Date</Label>
+                                              <p className="text-sm">{format(parseISO(form.displayAcceptedAt), "MMM dd, yyyy")}</p>
+                                            </div>
+                                          )}
+                                          {form.displayRejectedAt && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Rejected Date</Label>
+                                              <p className="text-sm">{form.displayRejectedAt}</p>
+                                            </div>
+                                          )}
+                                          {form.displayEngineer && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                              <p className="text-sm">{getEngineerName(form.displayEngineer as number)}</p>
+                                            </div>
+                                          )}
+                                          {form.displayInstallationDate && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Installation Date</Label>
+                                              <p className="text-sm">{format(parseISO(form.displayInstallationDate as string), "MMM dd, yyyy")}</p>
+                                            </div>
+                                          )}
+                                          {form.displayCompletedDate && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Completed Date</Label>
+                                              <p className="text-sm">{format(parseISO(form.displayCompletedDate as string), "MMM dd, yyyy")}</p>
+                                            </div>
+                                          )}
+                                          {form.displayPriority && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Priority</Label>
+                                              <p className="text-sm">{getPriorityBadge(form.displayPriority as string)}</p>
+                                            </div>
+                                          )}
+                                          {form.displayEstimatedCost && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Estimated Cost</Label>
+                                              <p className="text-sm">₹{form.displayEstimatedCost}</p>
+                                            </div>
+                                          )}
+                                          {form.displayPreferredPlan && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Preferred Plan</Label>
+                                              <p className="text-sm">{form.displayPreferredPlan}</p>
+                                            </div>
+                                          )}
+                                          {form.displayScheduledDate && (
+                                            <div>
+                                              <Label className="text-sm font-medium">Scheduled Date</Label>
+                                              <p className="text-sm">{format(parseISO(form.displayScheduledDate), "MMM dd, yyyy")}</p>
                                             </div>
                                           )}
                                         </div>
-                                      </div>
 
-                                      {/* Action Buttons for In Review Items */}
-                                      {(form.displayStatus === 'inreview' || form.displayStatus === 'pending') && form.type === 'wifi_application' && (
-                                        <div className="mt-6 pt-4 border-t">
-                                          <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
-                                          <div className="flex flex-col sm:flex-row gap-2">
-                                            <Button 
-                                              className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                              onClick={async () => {
-                                                try {
-                                                  await updateApplicationStatus({ id: form.id, status: 'accept' });
-                                                  console.log("Application accepted:", form.displayId);
-                                                  alert("Application accepted successfully!");
-                                                } catch (error) {
-                                                  console.error("Error accepting application:", error);
-                                                  alert("Error accepting application. Please try again.");
-                                                }
-                                              }}
-                                            >
-                                              <CheckCircle className="h-4 w-4 mr-2" />
-                                              Accept WiFi Application
-                                            </Button>
-                                            <Button 
-                                              variant="destructive"
-                                              className="text-sm"
-                                              onClick={async () => {
-                                                try {
-                                                  await updateApplicationStatus({ id: form.id, status: 'reject' });
-                                                  console.log("Application rejected:", form.displayId);
-                                                } catch (error) {
-                                                  console.error("Error rejecting application:", error);
-                                                }
-                                              }}
-                                            >
-                                              <XCircle className="h-4 w-4 mr-2" />
-                                              Reject WiFi Application
-                                            </Button>
+                                        {/* Document Section */}
+                                        <div className="mt-6">
+                                          <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
+                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            {form.displayAadhaarFront && (
+                                              <div className="text-center">
+                                                <Label className="text-sm font-medium">Aadhaar Front</Label>
+                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                  <p className="text-xs mt-1">Uploaded</p>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {form.displayAadhaarBack && (
+                                              <div className="text-center">
+                                                <Label className="text-sm font-medium">Aadhaar Back</Label>
+                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                  <p className="text-xs mt-1">Uploaded</p>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {form.displayPassportPhoto && (
+                                              <div className="text-center">
+                                                <Label className="text-sm font-medium">Passport Photo</Label>
+                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                  <p className="text-xs mt-1">Uploaded</p>
+                                                </div>
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
-                                      )}
 
-                                      {/* Action Buttons for Installation Requests */}
-                                      {form.type === 'installation_request' && (
-                                        <div className="mt-6 pt-4 border-t">
-                                          <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
-                                          <div className="flex flex-col sm:flex-row gap-2">
-                                            <Button 
-                                              className={`text-sm ${
-                                                form.displayStatus === 'approved' 
-                                                  ? 'bg-gray-400 cursor-not-allowed' 
-                                                  : 'bg-green-600 hover:bg-green-700'
-                                              } text-white`}
-                                              onClick={() => {
-                                                if (form.displayStatus !== 'approved') {
+                                        {/* Action Buttons for In Review Items */}
+                                        {(form.displayStatus === 'inreview' || form.displayStatus === 'pending') && form.type === 'wifi_application' && (
+                                          <div className="mt-6 pt-4 border-t">
+                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                              <Button
+                                                className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                                                onClick={async () => {
+                                                  try {
+                                                    await updateApplicationStatus({ id: form.id, status: 'accept' });
+                                                    console.log("Application accepted:", form.displayId);
+                                                    alert("Application accepted successfully!");
+                                                  } catch (error) {
+                                                    console.error("Error accepting application:", error);
+                                                    alert("Error accepting application. Please try again.");
+                                                  }
+                                                }}
+                                              >
+                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                Accept WiFi Application
+                                              </Button>
+                                              <Button
+                                                variant="destructive"
+                                                className="text-sm"
+                                                onClick={async () => {
+                                                  try {
+                                                    await updateApplicationStatus({ id: form.id, status: 'reject' });
+                                                    console.log("Application rejected:", form.displayId);
+                                                  } catch (error) {
+                                                    console.error("Error rejecting application:", error);
+                                                  }
+                                                }}
+                                              >
+                                                <XCircle className="h-4 w-4 mr-2" />
+                                                Reject WiFi Application
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Action Buttons for Installation Requests */}
+                                        {form.type === 'installation_request' && (
+                                          <div className="mt-6 pt-4 border-t">
+                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                              <Button
+                                                className={`text-sm ${form.displayStatus === 'approved'
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-green-600 hover:bg-green-700'
+                                                  } text-white`}
+                                                onClick={() => {
+                                                  if (form.displayStatus !== 'approved') {
+                                                    setSelectedInstallationRequest(form);
+                                                    setShowInstallationRequestModal(true);
+                                                  }
+                                                }}
+                                                disabled={form.displayStatus === 'approved'}
+                                              >
+                                                <HardHat className="h-4 w-4 mr-2" />
+                                                Assign Engineer
+                                              </Button>
+                                              <Button
+                                                variant="outline"
+                                                className="text-sm"
+                                                onClick={() => {
                                                   setSelectedInstallationRequest(form);
                                                   setShowInstallationRequestModal(true);
-                                                }
-                                              }}
-                                              disabled={form.displayStatus === 'approved'}
-                                            >
-                                              <HardHat className="h-4 w-4 mr-2" />
-                                              Assign Engineer
-                                            </Button>
-                                            <Button 
-                                              variant="outline"
-                                              className="text-sm"
-                                              onClick={() => {
-                                                setSelectedInstallationRequest(form);
-                                                setShowInstallationRequestModal(true);
-                                              }}
-                                            >
-                                              <Eye className="h-4 w-4 mr-2" />
-                                              View Details
-                                            </Button>
+                                                }}
+                                              >
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                View Details
+                                              </Button>
+                                            </div>
                                           </div>
-                                        </div>
-                                      )}
-                                    </DialogContent>
-                                  </Dialog>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
+                                        )}
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
                     </div>
@@ -1325,119 +1323,119 @@ export default function InstallationsLeads() {
                     <HardHat className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                        <div className="text-xl lg:text-2xl font-bold">{analytics.totalInstallations}</div>
-                        <p className="text-xs lg:text-sm text-muted-foreground">
+                    <div className="text-xl lg:text-2xl font-bold">{analytics.totalInstallations}</div>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
                       {analytics.installationSuccessRate}% success rate
                     </p>
                   </CardContent>
                 </Card>
-                
-                    <Card className="shadow-sm">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <CardTitle className="text-sm lg:text-base font-medium">Pending Installations</CardTitle>
-                        <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+
+                <Card className="shadow-sm">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm lg:text-base font-medium">Pending Installations</CardTitle>
+                    <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                        <div className="text-xl lg:text-2xl font-bold">{analytics.pendingInstallations}</div>
-                        <p className="text-xs lg:text-sm text-muted-foreground">
+                    <div className="text-xl lg:text-2xl font-bold">{analytics.pendingInstallations}</div>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
                       Awaiting confirmation
                     </p>
                   </CardContent>
                 </Card>
 
-                    <Card className="shadow-sm">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <CardTitle className="text-sm lg:text-base font-medium">Total Leads</CardTitle>
-                        <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                <Card className="shadow-sm">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm lg:text-base font-medium">Total Leads</CardTitle>
+                    <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                        <div className="text-xl lg:text-2xl font-bold">{analytics.totalLeads}</div>
-                        <p className="text-xs lg:text-sm text-muted-foreground">
+                    <div className="text-xl lg:text-2xl font-bold">{analytics.totalLeads}</div>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
                       {analytics.conversionRate}% conversion rate
                     </p>
                   </CardContent>
                 </Card>
 
-                    <Card className="shadow-sm">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                        <CardTitle className="text-sm lg:text-base font-medium">Manager Contact Rate</CardTitle>
-                        <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                <Card className="shadow-sm">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm lg:text-base font-medium">Manager Contact Rate</CardTitle>
+                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                        <div className="text-xl lg:text-2xl font-bold">{analytics.contactRate}%</div>
-                        <p className="text-xs lg:text-sm text-muted-foreground">
+                    <div className="text-xl lg:text-2xl font-bold">{analytics.contactRate}%</div>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
                       {analytics.contactedLeads} leads contacted
                     </p>
                   </CardContent>
                 </Card>
               </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                    <Card className="shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                <Card className="shadow-sm">
                   <CardHeader>
-                        <CardTitle className="text-base lg:text-lg">Installation Status Distribution</CardTitle>
+                    <CardTitle className="text-base lg:text-lg">Installation Status Distribution</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">Pending</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.pendingInstallations}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">Pending</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.pendingInstallations}</span>
                       </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.pendingInstallations / analytics.totalInstallations) * 100}%` }}></div>
-                      </div>
-                    </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">Confirmed</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.confirmedInstallations}</span>
-                      </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.confirmedInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.pendingInstallations / analytics.totalInstallations) * 100}%` }}></div>
                       </div>
                     </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">Rejected</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.rejectedInstallations}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">Confirmed</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.confirmedInstallations}</span>
                       </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.rejectedInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.confirmedInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">Rejected</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.rejectedInstallations}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.rejectedInstallations / analytics.totalInstallations) * 100}%` }}></div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                    <Card className="shadow-sm">
+                <Card className="shadow-sm">
                   <CardHeader>
-                        <CardTitle className="text-base lg:text-lg">Lead Status Distribution</CardTitle>
+                    <CardTitle className="text-base lg:text-lg">Lead Status Distribution</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">New Leads</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.newLeads}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">New Leads</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.newLeads}</span>
                       </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.newLeads / analytics.totalLeads) * 100}%` }}></div>
-                      </div>
-                    </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">Contacted</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.contactedLeads}</span>
-                      </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.contactedLeads / analytics.totalLeads) * 100}%` }}></div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.newLeads / analytics.totalLeads) * 100}%` }}></div>
                       </div>
                     </div>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm lg:text-base">Converted</span>
-                            <span className="text-sm lg:text-base font-medium">{analytics.convertedLeads}</span>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">Contacted</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.contactedLeads}</span>
                       </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.convertedLeads / analytics.totalLeads) * 100}%` }}></div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.contactedLeads / analytics.totalLeads) * 100}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm lg:text-base">Converted</span>
+                        <span className="text-sm lg:text-base font-medium">{analytics.convertedLeads}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.convertedLeads / analytics.totalLeads) * 100}%` }}></div>
                       </div>
                     </div>
                   </CardContent>
@@ -1449,137 +1447,137 @@ export default function InstallationsLeads() {
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
+                    <div>
                       <CardTitle className="text-lg lg:text-xl">New Installation Requests</CardTitle>
                       <CardDescription className="text-sm">Manage customer installation applications</CardDescription>
-                </div>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
+                      <Dialog>
+                        <DialogTrigger asChild>
                           <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm px-3 py-2">
                             <HardHat className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        New Installation
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
+                            New Installation
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
                             <DialogTitle className="text-lg lg:text-xl">New Installation Request</DialogTitle>
                             <DialogDescription className="text-sm">
-                          Fill in customer details and upload required documents
-                        </DialogDescription>
-                      </DialogHeader>
+                              Fill in customer details and upload required documents
+                            </DialogDescription>
+                          </DialogHeader>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
+                            <div>
                               <Label className="text-sm font-medium">Customer Name</Label>
                               <Input placeholder="Enter full name" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Email</Label>
                               <Input type="email" placeholder="customer@email.com" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Phone Number (with country code)</Label>
                               <Input placeholder="+91 98765 43210" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Alternate Phone Number</Label>
                               <Input placeholder="+91 98765 43211" className="text-sm" />
-                        </div>
+                            </div>
                             <div className="sm:col-span-2">
                               <Label className="text-sm font-medium">Address</Label>
                               <Input placeholder="Complete address with area and city" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Aadhar Card - Front Side</Label>
                               <Input type="file" accept="image/*" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Aadhar Card - Back Side</Label>
                               <Input type="file" accept="image/*" className="text-sm" />
-                        </div>
+                            </div>
                             <div className="sm:col-span-2">
                               <Label className="text-sm font-medium">Passport Size Photo</Label>
                               <Input type="file" accept="image/*" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Request Type</Label>
-                          <Select>
+                              <Select>
                                 <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="residential">Residential</SelectItem>
-                              <SelectItem value="commercial">Commercial</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="residential">Residential</SelectItem>
+                                  <SelectItem value="commercial">Commercial</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Priority</Label>
-                          <Select>
+                              <Select>
                                 <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2 pt-4">
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                  <SelectItem value="urgent">Urgent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4">
                             <Button variant="outline" className="text-sm">Cancel</Button>
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm">Submit Request</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       <Button onClick={exportInstallationsToExcel} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
                         <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                    Export Excel
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Search installations..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search installations..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="max-w-sm text-sm"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                    <SelectValue placeholder="Filter by priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                        <SelectValue placeholder="Filter by priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priority</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div className="rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+                      <Table>
+                        <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800">
                             <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
@@ -1589,288 +1587,288 @@ export default function InstallationsLeads() {
                             <TableHead className="text-xs lg:text-sm font-medium hidden sm:table-cell">Priority</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInstallations.map((installation) => (
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredInstallations.map((installation) => (
                             <TableRow key={installation.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                               <TableCell className="py-3">
-                          <div>
+                                <div>
                                   <div className="font-medium text-xs lg:text-sm">{installation.customerName}</div>
                                   <div className="text-xs text-gray-500 hidden lg:block">{installation.email}</div>
-                          </div>
-                        </TableCell>
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3">
                                 <div className="text-xs lg:text-sm">{installation.phone}</div>
-                        </TableCell>
+                              </TableCell>
                               <TableCell className="py-3 hidden lg:table-cell">
-                          <div className="flex items-center">
+                                <div className="flex items-center">
                                   <MapPin className="h-3 w-3 mr-1 text-gray-500" />
                                   <span className="text-xs lg:text-sm">{installation.location}</span>
-                          </div>
-                        </TableCell>
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3">
                                 <Badge variant={installation.requestType === 'commercial' ? 'default' : 'secondary'} className="text-xs">
-                            {installation.requestType}
-                          </Badge>
-                        </TableCell>
+                                  {installation.requestType}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="py-3">
-                          {getStatusBadge(installation.status, "installation")}
-                        </TableCell>
+                                {getStatusBadge(installation.status, "installation")}
+                              </TableCell>
                               <TableCell className="py-3 hidden sm:table-cell">
-                          {getPriorityBadge(installation.priority)}
-                        </TableCell>
+                                {getPriorityBadge(installation.priority)}
+                              </TableCell>
                               <TableCell className="py-3">
                                 <div className="text-xs lg:text-sm">
-                          {format(parseISO(installation.createdAt), "MMM dd, yyyy")}
+                                  {format(parseISO(installation.createdAt), "MMM dd, yyyy")}
                                 </div>
-                        </TableCell>
+                              </TableCell>
                               <TableCell className="py-3">
                                 <div className="flex gap-1">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                          <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                                  <DialogHeader>
-                                          <DialogTitle className="text-lg lg:text-xl">Installation Details - {installation.customerName}</DialogTitle>
-                                          <DialogDescription className="text-sm">
-                                      View installation request details and update status
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                            <Label className="text-sm font-medium">Customer Name</Label>
-                                      <p className="text-sm">{installation.customerName}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Email</Label>
-                                      <p className="text-sm">{installation.email}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Phone</Label>
-                                      <p className="text-sm">{installation.phone}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Alternate Phone</Label>
-                                      <p className="text-sm">{installation.alternatePhone || "Not provided"}</p>
-                                    </div>
-                                          <div className="sm:col-span-2">
-                                            <Label className="text-sm font-medium">Address</Label>
-                                      <p className="text-sm">{installation.address}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Request Type</Label>
-                                      <p className="text-sm capitalize">{installation.requestType}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Current Status</Label>
-                                      <div className="text-sm">{getStatusBadge(installation.status, "installation")}</div>
-                                    </div>
-                                    {installation.aadharFront && (
-                                      <div>
-                                              <Label className="text-sm font-medium">Aadhar Front</Label>
-                                        <p className="text-sm text-blue-600">Document uploaded</p>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                        <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                                      <DialogHeader>
+                                        <DialogTitle className="text-lg lg:text-xl">Installation Details - {installation.customerName}</DialogTitle>
+                                        <DialogDescription className="text-sm">
+                                          View installation request details and update status
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                          <Label className="text-sm font-medium">Customer Name</Label>
+                                          <p className="text-sm">{installation.customerName}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Email</Label>
+                                          <p className="text-sm">{installation.email}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Phone</Label>
+                                          <p className="text-sm">{installation.phone}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Alternate Phone</Label>
+                                          <p className="text-sm">{installation.alternatePhone || "Not provided"}</p>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                          <Label className="text-sm font-medium">Address</Label>
+                                          <p className="text-sm">{installation.address}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Request Type</Label>
+                                          <p className="text-sm capitalize">{installation.requestType}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Current Status</Label>
+                                          <div className="text-sm">{getStatusBadge(installation.status, "installation")}</div>
+                                        </div>
+                                        {installation.aadharFront && (
+                                          <div>
+                                            <Label className="text-sm font-medium">Aadhar Front</Label>
+                                            <p className="text-sm text-blue-600">Document uploaded</p>
+                                          </div>
+                                        )}
+                                        {installation.aadharBack && (
+                                          <div>
+                                            <Label className="text-sm font-medium">Aadhar Back</Label>
+                                            <p className="text-sm text-blue-600">Document uploaded</p>
+                                          </div>
+                                        )}
+                                        {installation.passportPhoto && (
+                                          <div>
+                                            <Label className="text-sm font-medium">Passport Photo</Label>
+                                            <p className="text-sm text-blue-600">Photo uploaded</p>
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
-                                    {installation.aadharBack && (
-                                      <div>
-                                              <Label className="text-sm font-medium">Aadhar Back</Label>
-                                        <p className="text-sm text-blue-600">Document uploaded</p>
+                                      <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                                        <Button
+                                          onClick={() => updateInstallationStatus(installation.id, 'confirmed')}
+                                          variant={installation.status === 'confirmed' ? 'default' : 'outline'}
+                                          className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                                        >
+                                          <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Confirm
+                                        </Button>
+                                        <Button
+                                          onClick={() => updateInstallationStatus(installation.id, 'rejected')}
+                                          variant={installation.status === 'rejected' ? 'destructive' : 'outline'}
+                                          className="bg-red-600 hover:bg-red-700 text-white text-sm"
+                                        >
+                                          <XCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Reject
+                                        </Button>
+                                        <Button
+                                          onClick={() => updateInstallationStatus(installation.id, 'pending')}
+                                          variant={installation.status === 'pending' ? 'default' : 'outline'}
+                                          className="text-sm"
+                                        >
+                                          <Clock className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Set Pending
+                                        </Button>
                                       </div>
-                                    )}
-                                    {installation.passportPhoto && (
-                                      <div>
-                                              <Label className="text-sm font-medium">Passport Photo</Label>
-                                        <p className="text-sm text-blue-600">Photo uploaded</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                        <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                    <Button 
-                                      onClick={() => updateInstallationStatus(installation.id, 'confirmed')}
-                                      variant={installation.status === 'confirmed' ? 'default' : 'outline'}
-                                            className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                    >
-                                            <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Confirm
-                                    </Button>
-                                    <Button 
-                                      onClick={() => updateInstallationStatus(installation.id, 'rejected')}
-                                      variant={installation.status === 'rejected' ? 'destructive' : 'outline'}
-                                            className="bg-red-600 hover:bg-red-700 text-white text-sm"
-                                    >
-                                            <XCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Reject
-                                    </Button>
-                                    <Button 
-                                      onClick={() => updateInstallationStatus(installation.id, 'pending')}
-                                      variant={installation.status === 'pending' ? 'default' : 'outline'}
-                                            className="text-sm"
-                                    >
-                                            <Clock className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Set Pending
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                      </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                                    </DialogContent>
+                                  </Dialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="leads" className="space-y-4 lg:space-y-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
+                    <div>
                       <CardTitle className="text-lg lg:text-xl">Lead Management</CardTitle>
                       <CardDescription className="text-sm">Track customer inquiries from various sources</CardDescription>
-                </div>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-2">
-                  <Dialog>
-                    <DialogTrigger asChild>
+                      <Dialog>
+                        <DialogTrigger asChild>
                           <Button className="bg-purple-600 hover:bg-purple-700 text-white text-xs lg:text-sm px-3 py-2">
                             <Users className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        New Lead
-                      </Button>
-                    </DialogTrigger>
+                            New Lead
+                          </Button>
+                        </DialogTrigger>
                         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <DialogHeader>
+                          <DialogHeader>
                             <DialogTitle className="text-lg lg:text-xl">Add New Lead</DialogTitle>
                             <DialogDescription className="text-sm">
-                          Register a new customer inquiry
-                        </DialogDescription>
-                      </DialogHeader>
+                              Register a new customer inquiry
+                            </DialogDescription>
+                          </DialogHeader>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
+                            <div>
                               <Label className="text-sm font-medium">Full Name</Label>
                               <Input placeholder="Enter customer name" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Phone Number</Label>
                               <Input placeholder="+91 98765 43210" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Email (Optional)</Label>
                               <Input type="email" placeholder="customer@email.com" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Source</Label>
-                          <Select>
+                              <Select>
                                 <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select source" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="website">Website</SelectItem>
-                              <SelectItem value="ivr">IVR Call</SelectItem>
-                              <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                              <SelectItem value="referral">Referral</SelectItem>
-                              <SelectItem value="social_media">Social Media</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                                  <SelectValue placeholder="Select source" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="website">Website</SelectItem>
+                                  <SelectItem value="ivr">IVR Call</SelectItem>
+                                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                  <SelectItem value="referral">Referral</SelectItem>
+                                  <SelectItem value="social_media">Social Media</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                             <div className="sm:col-span-2">
                               <Label className="text-sm font-medium">Address</Label>
                               <Input placeholder="Complete address" className="text-sm" />
-                        </div>
-                        <div>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Inquiry Type</Label>
-                          <Select>
+                              <Select>
                                 <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="general">General</SelectItem>
-                              <SelectItem value="pricing">Pricing</SelectItem>
-                              <SelectItem value="technical">Technical</SelectItem>
-                              <SelectItem value="support">Support</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="general">General</SelectItem>
+                                  <SelectItem value="pricing">Pricing</SelectItem>
+                                  <SelectItem value="technical">Technical</SelectItem>
+                                  <SelectItem value="support">Support</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium">Priority</Label>
-                          <Select>
+                              <Select>
                                 <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                  <SelectItem value="urgent">Urgent</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                             <div className="sm:col-span-2">
                               <Label className="text-sm font-medium">Message (Optional)</Label>
                               <Input placeholder="Customer inquiry or message" className="text-sm" />
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2 pt-4">
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4">
                             <Button variant="outline" className="text-sm">Cancel</Button>
                             <Button className="bg-purple-600 hover:bg-purple-700 text-white text-sm">Add Lead</Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                       <Button onClick={exportLeadsToExcel} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
                         <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                    Export Excel
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                        Export Excel
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Search leads..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search leads..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="max-w-sm text-sm"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="contacted">Contacted</SelectItem>
-                    <SelectItem value="qualified">Qualified</SelectItem>
-                    <SelectItem value="converted">Converted</SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="new">New</SelectItem>
+                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="qualified">Qualified</SelectItem>
+                        <SelectItem value="converted">Converted</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                    <SelectValue placeholder="Filter by source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    <SelectItem value="ivr">IVR Call</SelectItem>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="website">Website</SelectItem>
-                    <SelectItem value="referral">Referral</SelectItem>
-                    <SelectItem value="social_media">Social Media</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                        <SelectValue placeholder="Filter by source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        <SelectItem value="ivr">IVR Call</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="referral">Referral</SelectItem>
+                        <SelectItem value="social_media">Social Media</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div className="rounded-lg border overflow-hidden">
                     <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+                      <Table>
+                        <TableHeader>
                           <TableRow className="bg-gray-50 dark:bg-gray-800">
                             <TableHead className="text-xs lg:text-sm font-medium">Lead</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
@@ -1881,139 +1879,139 @@ export default function InstallationsLeads() {
                             <TableHead className="text-xs lg:text-sm font-medium hidden xl:table-cell">Address</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
                             <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLeads.map((lead) => (
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredLeads.map((lead) => (
                             <TableRow key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                               <TableCell className="py-3">
-                          <div>
+                                <div>
                                   <div className="font-medium text-xs lg:text-sm">{lead.name}</div>
                                   <div className="text-xs text-gray-500 hidden lg:block">{lead.inquiryType}</div>
-                          </div>
-                        </TableCell>
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3">
-                          <div>
+                                <div>
                                   <div className="text-xs lg:text-sm">{lead.phone}</div>
                                   <div className="text-xs text-gray-500 hidden lg:block">{lead.email || "No email"}</div>
-                          </div>
-                        </TableCell>
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3 hidden lg:table-cell">
-                          <div className="flex items-center">
-                            {getSourceIcon(lead.source)}
+                                <div className="flex items-center">
+                                  {getSourceIcon(lead.source)}
                                   <span className="ml-2 capitalize text-xs lg:text-sm">{lead.source.replace('_', ' ')}</span>
-                          </div>
-                        </TableCell>
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3">
-                          {getStatusBadge(lead.status, "lead")}
-                        </TableCell>
+                                {getStatusBadge(lead.status, "lead")}
+                              </TableCell>
                               <TableCell className="py-3 hidden sm:table-cell">
-                          {getPriorityBadge(lead.priority)}
-                        </TableCell>
+                                {getPriorityBadge(lead.priority)}
+                              </TableCell>
                               <TableCell className="py-3 hidden lg:table-cell">
                                 <Badge variant={lead.isContactedByManager ? "default" : "secondary"} className="text-xs">
-                            {lead.isContactedByManager ? "Yes" : "No"}
-                          </Badge>
-                        </TableCell>
+                                  {lead.isContactedByManager ? "Yes" : "No"}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="py-3 hidden xl:table-cell">
                                 <div className="text-xs text-gray-600 max-w-xs truncate">
-                            {lead.address}
-                          </div>
-                        </TableCell>
+                                  {lead.address}
+                                </div>
+                              </TableCell>
                               <TableCell className="py-3">
                                 <div className="text-xs lg:text-sm">
-                          {format(parseISO(lead.createdAt), "MMM dd, yyyy")}
-                        </div>
+                                  {format(parseISO(lead.createdAt), "MMM dd, yyyy")}
+                                </div>
                               </TableCell>
                               <TableCell className="py-3">
                                 <div className="flex gap-1">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                          <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                  <DialogHeader>
-                                          <DialogTitle className="text-lg lg:text-xl">Lead Details - {lead.name}</DialogTitle>
-                                          <DialogDescription className="text-sm">
-                                      View and manage lead information
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                            <Label className="text-sm font-medium">Name</Label>
-                                      <p className="text-sm">{lead.name}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Phone</Label>
-                                      <p className="text-sm">{lead.phone}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Email</Label>
-                                      <p className="text-sm">{lead.email || "Not provided"}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Source</Label>
-                                      <p className="text-sm capitalize">{lead.source.replace('_', ' ')}</p>
-                                    </div>
-                                    <div>
-                                            <Label className="text-sm font-medium">Status</Label>
-                                      <p className="text-sm">{lead.status}</p>
-                                    </div>
-                                          <div>
-                                            <Label className="text-sm font-medium">Priority</Label>
-                                            <p className="text-sm">{getPriorityBadge(lead.priority)}</p>
-                                          </div>
-                                          <div className="sm:col-span-2">
-                                            <Label className="text-sm font-medium">Address</Label>
-                                            <p className="text-sm">{lead.address}</p>
-                                          </div>
-                                          <div className="sm:col-span-2">
-                                            <Label className="text-sm font-medium">Message</Label>
-                                      <p className="text-sm">{lead.message || "No message provided"}</p>
-                                    </div>
-                                  </div>
-                                        <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                    <Button 
-                                      onClick={() => updateLeadStatus(lead.id, 'contacted')}
-                                      variant={lead.status === 'contacted' ? 'default' : 'outline'}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                                    >
-                                            <Phone className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Mark Contacted
-                                    </Button>
-                                    <Button 
-                                      onClick={() => updateLeadStatus(lead.id, 'qualified')}
-                                      variant={lead.status === 'qualified' ? 'default' : 'outline'}
-                                            className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
-                                    >
-                                            <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Mark Qualified
-                                    </Button>
-                                    <Button 
-                                      onClick={() => updateLeadStatus(lead.id, 'converted')}
-                                      variant={lead.status === 'converted' ? 'default' : 'outline'}
-                                            className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                    >
-                                            <Star className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                      Convert
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                      </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-                </Tabs>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                        <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                      <DialogHeader>
+                                        <DialogTitle className="text-lg lg:text-xl">Lead Details - {lead.name}</DialogTitle>
+                                        <DialogDescription className="text-sm">
+                                          View and manage lead information
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                          <Label className="text-sm font-medium">Name</Label>
+                                          <p className="text-sm">{lead.name}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Phone</Label>
+                                          <p className="text-sm">{lead.phone}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Email</Label>
+                                          <p className="text-sm">{lead.email || "Not provided"}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Source</Label>
+                                          <p className="text-sm capitalize">{lead.source.replace('_', ' ')}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Status</Label>
+                                          <p className="text-sm">{lead.status}</p>
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm font-medium">Priority</Label>
+                                          <p className="text-sm">{getPriorityBadge(lead.priority)}</p>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                          <Label className="text-sm font-medium">Address</Label>
+                                          <p className="text-sm">{lead.address}</p>
+                                        </div>
+                                        <div className="sm:col-span-2">
+                                          <Label className="text-sm font-medium">Message</Label>
+                                          <p className="text-sm">{lead.message || "No message provided"}</p>
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-col sm:flex-row gap-2 pt-4">
+                                        <Button
+                                          onClick={() => updateLeadStatus(lead.id, 'contacted')}
+                                          variant={lead.status === 'contacted' ? 'default' : 'outline'}
+                                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                                        >
+                                          <Phone className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Mark Contacted
+                                        </Button>
+                                        <Button
+                                          onClick={() => updateLeadStatus(lead.id, 'qualified')}
+                                          variant={lead.status === 'qualified' ? 'default' : 'outline'}
+                                          className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
+                                        >
+                                          <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Mark Qualified
+                                        </Button>
+                                        <Button
+                                          onClick={() => updateLeadStatus(lead.id, 'converted')}
+                                          variant={lead.status === 'converted' ? 'default' : 'outline'}
+                                          className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                                        >
+                                          <Star className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
+                                          Convert
+                                        </Button>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
@@ -2026,7 +2024,7 @@ export default function InstallationsLeads() {
               Review and manage installation request
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedInstallationRequest && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2113,10 +2111,10 @@ export default function InstallationsLeads() {
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowInstallationRequestModal(false);
                 setSelectedInstallationRequest(null);
@@ -2128,7 +2126,7 @@ export default function InstallationsLeads() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleRejectInstallationRequest}
               className="text-sm"
@@ -2136,7 +2134,7 @@ export default function InstallationsLeads() {
               <XCircle className="h-4 w-4 mr-2" />
               Reject
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowEngineerAssignmentModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
             >
@@ -2144,7 +2142,7 @@ export default function InstallationsLeads() {
               Select Engineer
             </Button>
             {isEngineerSelected && (
-              <Button 
+              <Button
                 onClick={handleEngineerAssignment}
                 className="bg-green-600 hover:bg-green-700 text-white text-sm"
               >
@@ -2165,7 +2163,7 @@ export default function InstallationsLeads() {
               Choose an engineer to assign to this installation request
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label className="text-sm font-medium">Available Engineers</Label>
@@ -2183,11 +2181,10 @@ export default function InstallationsLeads() {
                   engineers.data.engineers.map((engineer: any) => (
                     <div
                       key={engineer._id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedEngineer === engineer._id
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedEngineer === engineer._id
                           ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300'
                           : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                      }`}
+                        }`}
                       onClick={() => handleEngineerSelection(engineer._id)}
                     >
                       <div className="flex items-center justify-between">
@@ -2212,16 +2209,16 @@ export default function InstallationsLeads() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex justify-end gap-2 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowEngineerAssignmentModal(false)}
               className="text-sm"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowEngineerAssignmentModal(false)}
               disabled={!selectedEngineer}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm"

@@ -12,11 +12,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, List, Eye, Edit, Trash2, ChevronLeft, ChevronRight, User, Activity, CheckCircle, TrendingUp, WifiOff, AlertTriangle, CreditCard, Download, Upload, X, Shield, ShieldOff, FilterX, BarChart, Settings, Users2, Megaphone, Plus, Image as ImageIcon } from "lucide-react";
+import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, List, Eye, Edit, Trash2, ChevronLeft, ChevronRight, User, Activity, CheckCircle, TrendingUp, WifiOff, AlertTriangle, CreditCard, Download, Upload, X, Shield, ShieldOff, FilterX, BarChart, Settings, Users2, Plus, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { generateDummyCustomers, type Customer } from "@/lib/dummyData";
-import { useAddAdvertisementMutation, useGetAdvertisementsQuery, useUpdateAdvertisementMutation, useDeleteAdvertisementMutation, BASE_URL } from "@/api/index";
 
 // Define user schema for form validation
 const userSchema = z.object({
@@ -39,22 +38,7 @@ const userSchema = z.object({
   profileImageUrl: z.any().optional(),
 });
 
-// Define advertisement schema for form validation
-const advertisementSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  type: z.enum(["CCTV", "WIFI"]),
-  image: z.any().optional(),
-});
-
 type UserData = Customer;
-type AdvertisementData = z.infer<typeof advertisementSchema> & {
-  id?: string;
-  _id?: string;
-  imageUrl?: string;
-  createdAt?: string;
-  status?: "active" | "inactive";
-};
 
 export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,50 +57,6 @@ export default function Users() {
   // Image handling states for user profile
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-
-  // Advertisement states
-  // RTK Query hooks
-  const { data: advertisementsData, isLoading: isLoadingAdvertisements } = useGetAdvertisementsQuery({});
-  const [addAdvertisement, { isLoading: isAddingAdvertisement }] = useAddAdvertisementMutation();
-  const [updateAdvertisement, { isLoading: isUpdatingAdvertisement }] = useUpdateAdvertisementMutation();
-  const [deleteAdvertisement, { isLoading: isDeletingAdvertisement }] = useDeleteAdvertisementMutation();
-
-  // Transform API data to flat array and use fallback to dummy data
-  const advertisements = advertisementsData?.data ? [
-    ...(advertisementsData.data.cctv || []),
-    ...(advertisementsData.data.wifi || [])
-  ] : [
-    {
-      id: "1",
-      title: "CP Plus 4 Channel HD DVR Kit with Cameras",
-      description: "Complete CCTV surveillance kit with 4 HD cameras and a 4-channel DVR. Includes power supply, cables, and supports remote viewing via mobile app.",
-      type: "CCTV",
-      imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-      createdAt: "2024-01-15",
-      status: "active"
-    },
-    {
-      id: "2",
-      title: "High-Speed Fiber Internet Package",
-      description: "Get lightning-fast internet speeds up to 1Gbps with our premium fiber package. Includes free installation and 24/7 support.",
-      type: "WIFI",
-      imageUrl: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop",
-      createdAt: "2024-01-10",
-      status: "active"
-    },
-    {
-      id: "3",
-      title: "Business WiFi Solutions",
-      description: "Professional WiFi systems for businesses of all sizes. Features include high-speed connectivity, secure networks, and 24/7 support.",
-      type: "WIFI",
-      imageUrl: "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=300&fit=crop",
-      createdAt: "2024-01-05",
-      status: "inactive"
-    }
-  ];
-  const [isCreateAdDialogOpen, setIsCreateAdDialogOpen] = useState(false);
-  const [isEditAdDialogOpen, setIsEditAdDialogOpen] = useState(false);
-  const [selectedAdvertisement, setSelectedAdvertisement] = useState<AdvertisementData | null>(null);
 
   const { toast } = useToast();
 
@@ -157,16 +97,6 @@ export default function Users() {
       mode: "online",
       isActive: true,
       balanceDue: 0,
-    },
-  });
-
-  const advertisementForm = useForm<AdvertisementData>({
-    resolver: zodResolver(advertisementSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      
-      type: "CCTV",
     },
   });
 
@@ -237,80 +167,6 @@ export default function Users() {
     });
   };
 
-  // Advertisement handlers
-  const handleCreateAdvertisement = async (data: AdvertisementData) => {
-    try {
-      const formData = new FormData();
-      formData.append("title", data.title);
-      formData.append("description", data.description);
-      formData.append("type", data.type);
-      if (data.image) {
-        formData.append("image", data.image);
-      }
-
-      await addAdvertisement(formData).unwrap();
-      
-      setIsCreateAdDialogOpen(false);
-      advertisementForm.reset();
-      toast({
-        title: "Advertisement created",
-        description: "Advertisement has been successfully created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create advertisement. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditAdvertisement = async (data: AdvertisementData) => {
-    if (selectedAdvertisement) {
-      try {
-        const formData = new FormData();
-        formData.append("title", data.title);
-        formData.append("description", data.description);
-        formData.append("type", data.type);
-        if (data.image) {
-          formData.append("image", data.image);
-        }
-
-        await updateAdvertisement({ id: selectedAdvertisement._id || selectedAdvertisement.id, body: formData }).unwrap();
-        
-        setIsEditAdDialogOpen(false);
-        setSelectedAdvertisement(null);
-        advertisementForm.reset();
-        toast({
-          title: "Advertisement updated",
-          description: "Advertisement has been successfully updated.",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to update advertisement. Please try again.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleDeleteAdvertisement = async (adId: string) => {
-    try {
-      await deleteAdvertisement(adId).unwrap();
-      toast({
-        title: "Advertisement deleted",
-        description: "Advertisement has been successfully deleted.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete advertisement. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       active: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
@@ -342,7 +198,7 @@ export default function Users() {
       <div className="space-y-6">
         {/* Enhanced Tabbed Interface */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 lg:w-fit lg:grid-cols-5 gap-2 mb-6">
+          <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4 gap-2 mb-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -354,10 +210,6 @@ export default function Users() {
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               <span className="hidden sm:inline">Analytics</span>
-            </TabsTrigger>
-            <TabsTrigger value="advertisements" className="flex items-center gap-2">
-              <Megaphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Advertisements</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
@@ -907,235 +759,6 @@ export default function Users() {
               </CardContent>
             </Card>
           </TabsContent>
-
-          {/* Advertisements Tab */}
-          <TabsContent value="advertisements" className="space-y-6">
-            {/* Advertisement Header */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold">Advertisement Management</h2>
-                    <p className="text-muted-foreground">Manage your advertisements and promotional content</p>
-                  </div>
-                  <Dialog open={isCreateAdDialogOpen} onOpenChange={setIsCreateAdDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Advertisement
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New Advertisement</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <Label htmlFor="ad-title">Title</Label>
-                          <Input {...advertisementForm.register("title")} placeholder="Enter advertisement title" />
-                        </div>
-                        <div>
-                          <Label htmlFor="ad-description">Description</Label>
-                          <textarea
-                            {...advertisementForm.register("description")}
-                            className="w-full min-h-[100px] p-3 border border-input rounded-md resize-none"
-                            placeholder="Enter advertisement description"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="ad-type">Type</Label>
-                          <Select 
-                            value={advertisementForm.watch("type")} 
-                            onValueChange={(value) => advertisementForm.setValue("type", value as any)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CCTV">CCTV</SelectItem>
-                              <SelectItem value="WIFI">WIFI</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="ad-image">Image</Label>
-                          {!advertisementForm.watch("image") ? (
-                            <div 
-                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                              onClick={() => document.getElementById('ad-image-upload')?.click()}
-                            >
-                              <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                              <p className="text-sm text-gray-500">Click to upload image or drag and drop</p>
-                              <input
-                                id="ad-image-upload"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    advertisementForm.setValue("image", file);
-                                  }
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <div className="relative inline-block">
-                              <div className="bg-muted rounded-lg p-4">
-                                <div className="flex items-center gap-4">
-                                  <img 
-                                    src={URL.createObjectURL(advertisementForm.watch("image"))} 
-                                    alt="Advertisement preview" 
-                                    className="h-16 w-16 object-cover rounded-lg border"
-                                  />
-                                  <div className="flex-1">
-                                    <p className="font-medium">
-                                      {advertisementForm.watch("image")?.name}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {advertisementForm.watch("image") ? (advertisementForm.watch("image").size / 1024 / 1024).toFixed(2) : '0'} MB
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => advertisementForm.setValue("image", null)}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" onClick={() => setIsCreateAdDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button 
-                          onClick={advertisementForm.handleSubmit(handleCreateAdvertisement)}
-                          disabled={isAddingAdvertisement}
-                        >
-                          {isAddingAdvertisement ? "Creating..." : "Create Advertisement"}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Loading State */}
-            {isLoadingAdvertisements && (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading advertisements...</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Advertisements Grid */}
-            {!isLoadingAdvertisements && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                             {advertisements.map((ad:any) => (
-                 <Card key={ad._id || ad.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-0">
-                    <div className="relative">
-                                             {ad.imageUrl ? (
-                         <img
-                           src={`${BASE_URL}${ad.imageUrl}`}
-                           alt={ad.title}
-                           className="w-full h-48 object-cover rounded-t-lg"
-                         />
-                       ) : (
-                         <div className="w-full h-48 bg-muted flex items-center justify-center rounded-t-lg">
-                           <ImageIcon className="w-12 h-12 text-muted-foreground" />
-                         </div>
-                       )}
-                      <div className="absolute top-2 right-2">
-                        <Badge variant={ad.status === "active" ? "default" : "secondary"}>
-                          {ad.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-1">{ad.title}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">{ad.description}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Badge variant="outline">{ad.type}</Badge>
-                            <span>•</span>
-                            <span>{ad.createdAt}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2 mt-4">
-                                                 <Button 
-                           variant="outline" 
-                           size="sm"
-                           onClick={() => {
-                             setSelectedAdvertisement(ad);
-                             advertisementForm.reset({
-                               title: ad.title,
-                               description: ad.description,
-                               type: ad.type,
-                             });
-                             setIsEditAdDialogOpen(true);
-                           }}
-                         >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Advertisement</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this advertisement? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteAdvertisement(ad._id || ad.id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            )}
-
-            {/* Empty State */}
-            {!isLoadingAdvertisements && advertisements.length === 0 && (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Megaphone className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Advertisements</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Get started by creating your first advertisement to promote your services.
-                  </p>
-                  <Button onClick={() => setIsCreateAdDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Advertisement
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
         </Tabs>
 
         {/* Edit User Dialog */}
@@ -1414,130 +1037,6 @@ export default function Users() {
             <div className="flex justify-end">
               <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                 Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Advertisement Dialog */}
-        <Dialog open={isEditAdDialogOpen} onOpenChange={setIsEditAdDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Advertisement</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="edit-ad-title">Title</Label>
-                <Input 
-                  {...advertisementForm.register("title")} 
-                  placeholder="Enter advertisement title"
-                  defaultValue={selectedAdvertisement?.title || ""}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-ad-description">Description</Label>
-                <textarea
-                  {...advertisementForm.register("description")}
-                  className="w-full min-h-[100px] p-3 border border-input rounded-md resize-none"
-                  placeholder="Enter advertisement description"
-                  defaultValue={selectedAdvertisement?.description || ""}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-ad-type">Type</Label>
-                <Select 
-                  value={advertisementForm.watch("type")} 
-                  onValueChange={(value) => advertisementForm.setValue("type", value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CCTV">CCTV</SelectItem>
-                    <SelectItem value="WIFI">WIFI</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-ad-image">Image</Label>
-                {!advertisementForm.watch("image") && !selectedAdvertisement?.imageUrl ? (
-                  <div 
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                    onClick={() => document.getElementById('edit-ad-image-upload')?.click()}
-                  >
-                    <ImageIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">Click to upload new image or drag and drop</p>
-                    <input
-                      id="edit-ad-image-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          advertisementForm.setValue("image", file);
-                        }
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="relative inline-block">
-                    <div className="bg-muted rounded-lg p-4">
-                      <div className="flex items-center gap-4">
-                        <img 
-                          src={advertisementForm.watch("image") ? URL.createObjectURL(advertisementForm.watch("image")) : `${BASE_URL}${selectedAdvertisement?.imageUrl}`} 
-                          alt="Advertisement preview" 
-                          className="h-16 w-16 object-cover rounded-lg border"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {advertisementForm.watch("image")?.name || 'Current advertisement image'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {advertisementForm.watch("image") ? (advertisementForm.watch("image").size / 1024 / 1024).toFixed(2) + ' MB' : 'Existing image'}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <label className="cursor-pointer">
-                            <span className="inline-flex items-center px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm transition-colors">
-                              Change
-                            </span>
-                            <input
-                              type="file"
-                              className="hidden"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  advertisementForm.setValue("image", file);
-                                }
-                              }}
-                            />
-                          </label>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => advertisementForm.setValue("image", null)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsEditAdDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={advertisementForm.handleSubmit(handleEditAdvertisement)}
-                disabled={isUpdatingAdvertisement}
-              >
-                {isUpdatingAdvertisement ? "Updating..." : "Update Advertisement"}
               </Button>
             </div>
           </DialogContent>

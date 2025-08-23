@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
-import { getRoutesForRole } from "@/lib/routes";
 import {
   LayoutDashboard,
   AlertCircle,
@@ -22,6 +21,10 @@ import {
   X,
   Package,
   HardHat,
+  Target,
+  Building,
+  Megaphone,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,19 +33,25 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import React from "react";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view-dashboard" },
   { name: "Complaints", href: "/complaints", icon: AlertCircle, permission: "assign-complaints" },
-  { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
+  // { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
   { name: "Engineers", href: "/engineers", icon: Users, permission: "manage-engineers" },
+  { name: "Admin", href: "/manage-admin", icon: Users, permission: "manage-admin" },
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
   { name: "Products", href: "/products", icon: Package, permission: "manage-products" },
   { name: "Service Plans", href: "/plans", icon: CreditCard, permission: "manage-plans" },
   { name: "Analytics", href: "/analytics", icon: BarChart3, permission: "view-analytics" },
   { name: "Notifications", href: "/notifications", icon: Bell, permission: "manage-notifications" },
   { name: "Support & Rating", href: "/support", icon: Headphones, permission: "manage-support" },
+  { name: "Profile", href: "/profile", icon: User, permission: "view-dashboard" },
   { name: "Settings", href: "/settings", icon: Settings, permission: "system-settings" },
+  { name: "Leads", href: "/leads", icon: Target, permission: "view-leads" },
+  { name: "Company Leads", href: "/company-leads", icon: Building, permission: "manage-leads" },
+  { name: "Advertisements", href: "/advertisements", icon: Megaphone, permission: "manage-advertisements" },
 ];
 
 interface SidebarProps {
@@ -52,8 +61,17 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, refreshUserRole } = useAuth();
   const { theme, setTheme } = useTheme();
+
+  // Debug: Log user permissions
+  React.useEffect(() => {
+    if (user) {
+      console.log("Current user:", {
+        role: user.role
+      });
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -75,19 +93,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const ThemeIcon = themeIcons[theme];
 
-  // Get routes based on user role for role-based filtering
-  const userRoutes = user ? getRoutesForRole(user.role) : [];
-  const userRoutePaths = userRoutes.map(route => route.path);
-
-  // Filter navigation based on both permissions and role-based routes
+  // Filter navigation based on permissions only
   const filteredNavigation = navigation.filter(item => {
     // Check if user has permission
     const hasUserPermission = hasPermission(item.permission);
     
-    // Check if route is accessible based on user role
-    const isRouteAccessible = userRoutePaths.includes(item.href);
+    // Debug logging for Leads section
+    if (item.name === "Leads") {
+      console.log('Leads navigation item check:', {
+        name: item.name,
+        permission: item.permission,
+        hasUserPermission,
+        userRole: user?.role
+      });
+    }
     
-    return hasUserPermission && isRouteAccessible;
+    return hasUserPermission;
   });
 
   return (
@@ -105,6 +126,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
             <span className="text-[var(--sidebar-text)] font-bold text-xl tracking-tight">WiFiCare</span>
           </div>
+          
+          {/* Debug button - temporary */}
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-2 text-xs text-yellow-500 hover:text-yellow-400"
+              onClick={refreshUserRole}
+              title="Refresh User Role (Debug)"
+            >
+              🔄
+            </Button>
+          )}
           
           {/* Mobile close button */}
           <Button 

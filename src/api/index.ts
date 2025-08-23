@@ -8,7 +8,8 @@ const Tags = {
   COMPLAINTS:"COMPLAINTS",
   PRODUCT:"PRODUCT",
   PLANS:"PLANS",
-  ENGINEER:"ENGINEER"
+  ENGINEER:"ENGINEER",
+  ADMIN:"ADMIN"
 };
 
 export const LIMIT = 20;
@@ -82,6 +83,21 @@ export const api = createApi({
         method: "DELETE",
       }),
       invalidatesTags: [Tags.Advertisements],
+    }),
+    getCompanyProfile: builder.query({
+      query: () => ({
+        url: `/client/company-profile`,
+        method: "GET",
+      }),
+      providesTags: [Tags.ADMIN],
+    }),
+    updateCompanyProfile: builder.mutation({
+      query: (body) => ({
+        url: `/client/company-profile`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: [Tags.ADMIN],
     }),
     getAllApplications: builder.query({
       query: () => ({
@@ -295,6 +311,45 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.ENGINEER],
     }),
+    // Admin endpoints
+    getAdminDashboardData: builder.query({
+      query: () => ({
+        url: `/dashboard/admin-analytics`,
+        method: "GET",
+      }),
+      providesTags: [Tags.ADMIN],
+    }),
+    addAdminData: builder.mutation({
+      query: (body) => ({
+        url: `/dashboard/add-admin`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [Tags.ADMIN],
+    }),
+    updateAdminData: builder.mutation({
+      query: (body) => ({
+        url: `/dashboard/update-admin`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: [Tags.ADMIN],
+    }),
+    deleteAdmin: builder.mutation({
+      query: (id) => ({
+        url: `/dashboard/admins/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [Tags.ADMIN],
+    }),
+    activateAdmin: builder.mutation({
+      query: ({ id, body }) => ({
+        url: `/dashboard/admins/${id}/activate`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [Tags.ADMIN],
+    }),
   }),
 });
 
@@ -330,5 +385,13 @@ export const {
   useGetEngineerDashbaordDataQuery,
   useAddEngineerDataMutation,
    useUpdateEngineerDataMutation,
-   useDeleteEngineerMutation
+   useDeleteEngineerMutation,
+  // Admin hooks
+  useGetAdminDashboardDataQuery,
+  useAddAdminDataMutation,
+  useUpdateAdminDataMutation,
+  useDeleteAdminMutation,
+  useActivateAdminMutation,
+  useGetCompanyProfileQuery,
+  useUpdateCompanyProfileMutation
 } = api;

@@ -28,6 +28,12 @@ export const ROUTES: RouteConfig[] = [
     icon: 'engineers'
   },
   {
+    path: '/manage-admin',
+    roles: [Role.SUPERADMIN],
+    title: 'Admin',
+    icon: 'admin'
+  },
+  {
     path: '/users',
     roles: [Role.SUPERADMIN, Role.ADMIN],
     title: 'Users',
@@ -35,7 +41,7 @@ export const ROUTES: RouteConfig[] = [
   },
   {
     path: '/products',
-    roles: [Role.SUPERADMIN, Role.ADMIN],
+    roles: [Role.SUPERADMIN],
     title: 'Products',
     icon: 'products'
   },
@@ -64,8 +70,14 @@ export const ROUTES: RouteConfig[] = [
     icon: 'support'
   },
   {
+    path: '/profile',
+    roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER, Role.AGENT],
+    title: 'Profile',
+    icon: 'profile'
+  },
+  {
     path: '/settings',
-    roles: [Role.SUPERADMIN],
+    roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
     title: 'Settings',
     icon: 'settings'
   },
@@ -77,17 +89,30 @@ export const ROUTES: RouteConfig[] = [
   },
   {
     path: '/leads',
-    roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
+    roles: [Role.SUPERADMIN],
     title: 'Leads',
     icon: 'leads'
   },
   {
-    path: '/installations-leads',
+    path: '/company-leads',
     roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
-    title: 'Installation Leads',
-    icon: 'installation-leads'
-  }
+    title: 'Company Leads',
+    icon: 'company-leads'
+  },
+  {
+    path: '/advertisements',
+    roles: [Role.SUPERADMIN],
+    title: 'Advertisements',
+    icon: 'advertisements'
+  },
+  // {
+  //   path: '/installations-leads',
+  //   roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
+  //   title: 'Installation Leads',
+  //   icon: 'installation-leads'
+  // }
 ];
+
 
 export const DETAIL_ROUTES: RouteConfig[] = [
   {

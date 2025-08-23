@@ -22,13 +22,17 @@ import Analytics from "@/pages/analytics";
 import Notifications from "@/pages/notifications";
 import Support from "@/pages/support";
 import Settings from "@/pages/settings";
+import Profile from "@/pages/profile";
 import UserDetail from "@/pages/user-detail";
 import EngineerDetail from "@/pages/engineer-detail";
 import ComplaintDetail from "@/pages/complaint-detail";
 import PlanDetail from "@/pages/plan-detail";
 import Installations from "@/pages/installations";
 import Leads from "@/pages/leads";
+import CompanyLeads from "@/pages/company-leads";
+import Advertisements from "@/pages/advertisements";
 import InstallationsLeads from "@/pages/installations-leads";
+import Admin from "@/pages/Admin";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -71,6 +75,12 @@ function Router() {
         </RoleProtectedRoute>
       } />
       
+      <Route path="/manage-admin" element={
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+          <Admin />
+        </RoleProtectedRoute>
+      } />
+      
       <Route path="/users" element={
         <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
           <Users />
@@ -78,7 +88,7 @@ function Router() {
       } />
       
       <Route path="/products" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
           <Products />
         </RoleProtectedRoute>
       } />
@@ -107,6 +117,12 @@ function Router() {
         </RoleProtectedRoute>
       } />
       
+      <Route path="/profile" element={
+        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+          <Profile />
+        </RoleProtectedRoute>
+      } />
+      
       <Route path="/settings" element={
         <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
           <Settings />
@@ -122,6 +138,18 @@ function Router() {
       <Route path="/leads" element={
         <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
           <Leads />
+        </RoleProtectedRoute>
+      } />
+      
+      <Route path="/company-leads" element={
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+          <CompanyLeads />
+        </RoleProtectedRoute>
+      } />
+      
+      <Route path="/advertisements" element={
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+          <Advertisements />
         </RoleProtectedRoute>
       } />
       
