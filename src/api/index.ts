@@ -99,6 +99,14 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.ADMIN],
     }),
+    addCompanyProfile: builder.mutation({
+      query: (body) => ({
+        url: `/client/add-company`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [Tags.ADMIN],
+    }),
     getAllApplications: builder.query({
       query: () => ({
         url: `/applications`,
@@ -335,6 +343,13 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.ADMIN],
     }),
+    getAnalyticsAdminData: builder.query({
+      query: (body) => ({
+        url: `/client/admin-dashboard`,
+        method: "GET",
+      }),
+      providesTags: [Tags.ADMIN],
+    }),
     deleteAdmin: builder.mutation({
       query: (id) => ({
         url: `/dashboard/admins/${id}`,
@@ -393,5 +408,7 @@ export const {
   useDeleteAdminMutation,
   useActivateAdminMutation,
   useGetCompanyProfileQuery,
-  useUpdateCompanyProfileMutation
+  useUpdateCompanyProfileMutation,
+  useAddCompanyProfileMutation,
+  useGetAnalyticsAdminDataQuery
 } = api;

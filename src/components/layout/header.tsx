@@ -2,18 +2,18 @@ import { Bell, ChevronDown, Menu, User, Settings, LogOut, Shield, Mail, Phone, S
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
@@ -31,7 +31,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  
+
   // Fetch company profile if user is admin
   const { data: companyProfileData } = useGetCompanyProfileQuery({}, {
     skip: user?.role !== "admin"
@@ -87,7 +87,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
     if (role === "admin" && companyProfileData?.data?.companyProfile?.companyName) {
       return companyProfileData.data.companyProfile.companyName;
     }
-    
+
     switch (role) {
       case "super-admin":
         return "Super Admin";
@@ -120,7 +120,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header 
+    <header
       className="backdrop-blur-md border-b sticky top-0 z-50 transition-all duration-300"
       style={{
         background: "var(--header-bg)",
@@ -130,9 +130,9 @@ export function Header({ title, onMenuClick }: HeaderProps) {
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         {/* Left Section */}
         <div className="flex items-center flex-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="lg:hidden mr-2 sm:mr-4 transition-all duration-200"
             style={{
               color: "var(--header-icon)",
@@ -143,13 +143,13 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          
+
           {/* Company Logo - Only show for admin users */}
           {user?.role === "admin" && companyLogo && (
             <div className="flex items-center mr-4">
-              <img 
-                src={`${BASE_URL}${companyLogo}`} 
-                alt="Company Logo" 
+              <img
+                src={`${BASE_URL}${companyLogo}`}
+                alt="Company Logo"
                 className="h-8 w-8 rounded-lg object-cover border-2 border-gray-200 dark:border-gray-700"
                 onError={(e) => {
                   // Fallback to building icon if image fails to load
@@ -161,14 +161,14 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               <Building2 className="h-8 w-8 text-gray-400 hidden" />
             </div>
           )}
-          
-          <h1 
+
+          <h1
             className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight mr-4 transition-colors duration-200"
             style={{ color: "var(--header-text)" }}
           >
             {title}
           </h1>
-          
+
           {/* Global Search - Hidden on small screens */}
           <div className="hidden md:flex items-center flex-1 max-w-md ml-4">
             <GlobalSearch />
@@ -178,9 +178,9 @@ export function Header({ title, onMenuClick }: HeaderProps) {
         {/* Right Section */}
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Search Button - Mobile Only */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="md:hidden transition-all duration-200"
             style={{ color: "var(--header-icon)" }}
             onMouseEnter={(e) => e.currentTarget.style.color = "var(--header-icon-hover)"}
@@ -192,9 +192,9 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           {/* Notifications */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="relative transition-all duration-200"
                 style={{ color: "var(--header-icon)" }}
                 onMouseEnter={(e) => e.currentTarget.style.color = "var(--header-icon-hover)"}
@@ -202,8 +202,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs animate-pulse"
                   >
                     {unreadCount}
@@ -211,8 +211,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent 
-              className="w-80 p-0 shadow-xl border-0" 
+            <PopoverContent
+              className="w-80 p-0 shadow-xl border-0"
               align="end"
               style={{
                 background: "var(--dropdown-bg)",
@@ -227,10 +227,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               </div>
               <div className="max-h-80 overflow-y-auto">
                 {notifications.map((notification) => (
-                  <div 
+                  <div
                     key={notification.id}
                     className="p-4 border-b cursor-pointer transition-all duration-200"
-                    style={{ 
+                    style={{
                       borderColor: "var(--dropdown-border)",
                       background: notification.unread ? "var(--dropdown-item-hover)" : "transparent"
                     }}
@@ -270,8 +270,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="flex items-center space-x-2 p-2 transition-all duration-200"
                 style={{ color: "var(--header-text)" }}
                 onMouseEnter={(e) => {
@@ -300,8 +300,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <ChevronDown className="h-4 w-4 opacity-70" style={{ color: "var(--header-icon)" }} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              className="w-56 shadow-xl border-0" 
+            <DropdownMenuContent
+              className="w-56 shadow-xl border-0"
               align="end"
               style={{
                 background: "var(--dropdown-bg)",
@@ -320,19 +320,22 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               </DropdownMenuLabel>
               <DropdownMenuSeparator style={{ backgroundColor: "var(--dropdown-border)" }} />
               
-              <DropdownMenuItem 
-                className="cursor-pointer transition-all duration-200"
-                style={{ color: "var(--dropdown-item)" }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
-              >
-                <User className="mr-2 h-4 w-4" />
-                <Link to="/profile">Profile</Link>
-              </DropdownMenuItem>
-              
+              {/* Profile - Only for admin users */}
+              {user?.role === "admin" && (
+                <DropdownMenuItem 
+                  className="cursor-pointer transition-all duration-200"
+                  style={{ color: "var(--dropdown-item)" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  <Link to="/profile">Profile</Link>
+                </DropdownMenuItem>
+              )}
+
               {/* Settings - Hidden for admin users */}
               {user?.role !== "admin" && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="cursor-pointer transition-all duration-200"
                   style={{ color: "var(--dropdown-item)" }}
                   onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
@@ -342,9 +345,9 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                   <Link to="/settings">Settings</Link>
                 </DropdownMenuItem>
               )}
-              
+
               {user?.role === "superadmin" && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="cursor-pointer transition-all duration-200"
                   style={{ color: "var(--dropdown-item)" }}
                   onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
@@ -354,10 +357,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                   <span>Admin Panel</span>
                 </DropdownMenuItem>
               )}
-              
+
               <DropdownMenuSeparator style={{ backgroundColor: "var(--dropdown-border)" }} />
-              
-              <DropdownMenuItem 
+
+              <DropdownMenuItem
                 className="cursor-pointer transition-all duration-200"
                 style={{ color: "var(--dropdown-item)" }}
                 onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
@@ -366,10 +369,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 <Mail className="mr-2 h-4 w-4" />
                 <span>Support</span>
               </DropdownMenuItem>
-              
+
               {/* Contact - Hidden for admin users */}
               {user?.role !== "admin" && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="cursor-pointer transition-all duration-200"
                   style={{ color: "var(--dropdown-item)" }}
                   onMouseEnter={(e) => e.currentTarget.style.background = "var(--dropdown-item-hover)"}
@@ -379,10 +382,10 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                   <span>Contact</span>
                 </DropdownMenuItem>
               )}
-              
+
               <DropdownMenuSeparator style={{ backgroundColor: "var(--dropdown-border)" }} />
-              
-              <DropdownMenuItem 
+
+              <DropdownMenuItem
                 className="cursor-pointer transition-all duration-200 text-red-600 focus:text-red-600"
                 onClick={logout}
                 onMouseEnter={(e) => {

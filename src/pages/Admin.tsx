@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -14,60 +14,53 @@ import { Badge } from "@/components/ui/badge";
 import { UserPlus, MapPin, Phone, Mail, Star, Edit, Trash2, Search, Filter, Grid, List, Eye, Settings, Activity, Users, CheckCircle, TrendingUp, ChevronLeft, ChevronRight, User, X, Calendar, Clock, Shield, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { dummyAdminData } from "@/lib/dummyData";
 import { Role } from "@/lib/types/auth";
+import { useAddCompanyProfileMutation, useGetAnalyticsAdminDataQuery } from "@/api/index";
 
 // API Response Types
-interface AdminAccountStatus {
-  isDeactivated: boolean;
-  isSuspended: boolean;
-  isAccountVerified: boolean;
-}
-
 interface Admin {
   _id: string;
   firstName: string;
   lastName: string;
-  fullName: string;
   email: string;
-  phoneNumber: string;
-  countryCode: string;
-  role: Role;
-  status?: string;
-  department?: string;
-  permissions?: string[];
-  lastLogin: string;
+  companyName: string;
+  companyAddress: string;
+  companyPhone: string;
+  companyEmail: string;
+  companyWebsite: string;
+  companyLogo: string;
+  contactPerson: string;
+  internetProviders: string[];
+  isActivated: boolean;
+  isDeactivated: boolean;
+  isSuspended: boolean;
   createdAt: string;
-  updatedAt?: string;
-  isActive: boolean;
-  accountStatus: AdminAccountStatus;
-  // ISP Company Information
-  companyName?: string;
-  companyAddress?: string;
-  internetProviders?: string[];
+  lastLogin: string;
 }
 
-interface AdminAnalytics {
-  summary: {
+interface AdminDashboardData {
+  dashboardSummary: {
     totalAdmins: number;
     activeAdmins: number;
-    inactive: number;
-    superAdmins: number;
-    regularAdmins: number;
+    inactiveAdmins: number;
+    ispCompanies: number;
+  };
+  adminPerformance: {
+    avgResponseTime: string;
+    tasksCompleted: string;
+    userSatisfaction: string;
+  };
+  ispCompanyStats: {
+    activeCompanies: number;
+    totalProviders: number;
+    newThisMonth: number;
+  };
+  recentActivity: {
+    newAdmins: number;
+    companyUpdates: number;
+    activeSessions: number;
   };
   admins: Admin[];
-  analytics: {
-    roleDistribution: Array<{
-      role: Role;
-      count: number;
-    }>;
-    departmentDistribution: any[];
-    recentActivity: number;
-  };
-  filters: {
-    availableDepartments: string[];
-    availableRoles: Role[];
-  };
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -87,7 +80,6 @@ const insertAdminSchema = z.object({
   countryCode: z.string().min(1, "Country code is required"),
   role: z.nativeEnum(Role),
   status: z.enum(["active", "inactive", "suspended"]).default("active"),
-  department: z.string().optional(),
   permissions: z.array(z.string()).optional(),
   // ISP Company Information
   companyName: z.string().min(1, "Company name is required"),
@@ -98,103 +90,143 @@ const insertAdminSchema = z.object({
 type InsertAdmin = z.infer<typeof insertAdminSchema>;
 
 export default function Admin() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"card" | "table">("table");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(6);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [newProvider, setNewProvider] = useState("");
   const [availableProviders, setAvailableProviders] = useState([
     "Jio Fiber", "Airtel", "BSNL", "ACT Fibernet", "Hathway", "You Broadband", "Tikona", "MTNL"
   ]);
 
-  // Using dummy data instead of API calls
-  const adminDashboardData = { data: dummyAdminData };
-  const isLoading = false;
-  const error = null;
-  const refetch = () => {}; // No-op function
+  // Fetch admin dashboard data with pagination
+  const { data: adminDashboardData, isLoading: isLoadingDashboard, error: dashboardError, refetch } = useGetAnalyticsAdminDataQuery({
+    page: currentPage,
+    limit: pageSize,
+  });
   
   // Mock loading states for demo purposes
-  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
   const [isDeletingAdmin, setIsDeletingAdmin] = useState(false);
   const [isActivatingAdmin, setIsActivatingAdmin] = useState(false);
   const { toast } = useToast();
+  const [addCompanyProfile, { isLoading: isAddingAdmin }] = useAddCompanyProfileMutation();
+  
+  // State for form data
+  const [formData, setFormData] = useState<InsertAdmin>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    countryCode: "+91",
+    role: Role.ADMIN, // Default to Admin role only
+    status: "active",
+    permissions: [],
+    companyName: "",
+    companyAddress: "",
+    internetProviders: [],
+  });
 
   const form = useForm<InsertAdmin>({
     resolver: zodResolver(insertAdminSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phoneNumber: "",
-      countryCode: "+91",
-      role: Role.ADMIN, // Default to Admin role only
-      status: "active",
-      department: "",
-      permissions: [],
-      companyName: "",
-      companyAddress: "",
-      internetProviders: [],
-    },
+    defaultValues: formData,
   });
+
+  // Update form when formData changes
+  useEffect(() => {
+    form.reset(formData);
+  }, [formData, form]);
 
   const editForm = useForm<InsertAdmin>({
     resolver: zodResolver(insertAdminSchema),
+    defaultValues: formData,
   });
 
   // Extract data from API response
-  const admins = adminDashboardData?.data?.admins || [];
-  const summary = adminDashboardData?.data?.summary;
-  const pagination = adminDashboardData?.data?.pagination;
-  const filters = adminDashboardData?.data?.filters;
+  const { admins, dashboardSummary, adminPerformance, ispCompanyStats, recentActivity, pagination } = adminDashboardData?.data || {
+    admins: [],
+    dashboardSummary: { totalAdmins: 0, activeAdmins: 0, inactiveAdmins: 0, ispCompanies: 0 },
+    adminPerformance: { avgResponseTime: "0", tasksCompleted: "0%", userSatisfaction: "0/5" },
+    ispCompanyStats: { activeCompanies: 0, totalProviders: 0, newThisMonth: 0 },
+    recentActivity: { newAdmins: 0, companyUpdates: 0, activeSessions: 0 },
+    pagination: { currentPage: 1, totalPages: 1, totalItems: 0, itemsPerPage: 6, hasNextPage: false, hasPrevPage: false }
+  };
 
-  // Filter admins to show only Admin roles (not Super Admin)
-  const filteredAdmins = admins.filter((admin: Admin) => {
-    // Only show Admin roles, not Super Admin
-    if (admin.role === Role.SUPERADMIN) return false;
+    // Filter admins based on search and filters
+  const filteredAdmins = useMemo(() => {
+    return admins.filter((admin: Admin) => {
+      const searchTerm = searchQuery.toLowerCase();
+      const matchesSearch = 
+        `${admin.firstName} ${admin.lastName}`.toLowerCase().includes(searchTerm) ||
+        admin.email.toLowerCase().includes(searchTerm) ||
+        admin.companyName.toLowerCase().includes(searchTerm) ||
+        admin.companyPhone.includes(searchTerm);
     
-    const matchesSearch = 
-      admin.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      admin.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      admin.phoneNumber.includes(searchQuery);
-    
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "active" && admin.isActive) ||
-      (statusFilter === "inactive" && !admin.isActive);
-    
-    const matchesRole = roleFilter === "all" || admin.role === roleFilter;
-    const matchesDepartment = departmentFilter === "all" || admin.department === departmentFilter;
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "active" && !admin.isDeactivated && !admin.isSuspended) ||
+        (statusFilter === "inactive" && admin.isDeactivated) ||
+        (statusFilter === "suspended" && admin.isSuspended);
 
-    return matchesSearch && matchesStatus && matchesRole && matchesDepartment;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [admins, searchQuery, statusFilter]);
 
-  const handleCreateAdmin = async (data: InsertAdmin) => {
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSubmit = async (data: InsertAdmin) => {
     try {
-      // Simulate API call delay
-      setIsAddingAdmin(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Prepare data for API
+      const apiData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        companyName: data.companyName,
+        companyAddress: data.companyAddress,
+        companyPhone: data.phoneNumber,
+        internetProviders: data.internetProviders,
+      };
+
+      await addCompanyProfile(apiData).unwrap();
       
       toast({
         title: "Success",
-        description: "Admin created successfully (Demo Mode)",
+        description: "Admin user added successfully!",
       });
       
-      setIsCreateDialogOpen(false);
+      // Reset form and close dialog
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+        countryCode: "+91",
+        role: Role.ADMIN,
+        status: "active",
+        permissions: [],
+        companyName: "",
+        companyAddress: "",
+        internetProviders: [],
+      });
       form.reset();
-      setIsAddingAdmin(false);
+      setIsCreateDialogOpen(false);
+      
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create admin. Please try again.",
+        description: "Failed to add admin user. Please try again.",
         variant: "destructive",
       });
-      setIsAddingAdmin(false);
     }
   };
 
@@ -249,22 +281,24 @@ export default function Admin() {
 
   const handleActivateAdmin = async (adminId: string) => {
     try {
-      // Simulate API call delay
       setIsActivatingAdmin(true);
+      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: "Success",
-        description: "Admin activated successfully (Demo Mode)",
+        description: "Admin activated successfully!",
       });
       
-      setIsActivatingAdmin(false);
+      // Refresh the data
+      refetch();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to activate admin. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsActivatingAdmin(false);
     }
   };
@@ -274,78 +308,6 @@ export default function Admin() {
       setAvailableProviders([...availableProviders, newProvider.trim()]);
       setNewProvider("");
     }
-  };
-
-  const getStatusBadge = (admin: Admin) => {
-    const { isActive, accountStatus } = admin;
-    
-    if (accountStatus.isSuspended) {
-      return (
-        <Badge className="bg-red-100 text-red-800 border-0">
-          <X className="w-3 h-3 mr-1" />
-          Suspended
-        </Badge>
-      );
-    }
-    
-    if (accountStatus.isDeactivated) {
-      return (
-        <Badge className="bg-gray-100 text-gray-800 border-0">
-          <X className="w-3 h-3 mr-1" />
-          Deactivated
-        </Badge>
-      );
-    }
-    
-    if (isActive) {
-      return (
-        <Badge className="bg-green-100 text-green-800 border-0">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Active
-        </Badge>
-      );
-    }
-    
-    return (
-      <Badge className="bg-red-100 text-red-800 border-0">
-        <X className="w-3 h-3 mr-1" />
-        Inactive
-      </Badge>
-    );
-  };
-
-  const getRoleBadge = (role: Role) => {
-    if (role === Role.SUPERADMIN) {
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800 border-0">
-          <Crown className="w-3 h-3 mr-1" />
-          Super Admin
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-blue-100 text-blue-800 border-0">
-        <Shield className="w-3 h-3 mr-1" />
-        Admin
-      </Badge>
-    );
-  };
-
-  const getVerificationBadge = (accountStatus: AdminAccountStatus) => {
-    if (accountStatus.isAccountVerified) {
-      return (
-        <Badge className="bg-blue-100 text-blue-800 border-0">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Verified
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-yellow-100 text-yellow-800 border-0">
-        <Clock className="w-3 h-3 mr-1" />
-        Pending
-      </Badge>
-    );
   };
 
   const formatDate = (dateString: string) => {
@@ -366,7 +328,7 @@ export default function Admin() {
     });
   };
 
-  if (isLoading) {
+  if (isLoadingDashboard) {
     return (
       <MainLayout title="Admin Management">
         <div className="flex items-center justify-center h-64">
@@ -379,7 +341,7 @@ export default function Admin() {
     );
   }
 
-  if (error) {
+  if (dashboardError) {
     return (
       <MainLayout title="Admin Management">
         <div className="flex items-center justify-center h-64">
@@ -405,78 +367,127 @@ export default function Admin() {
         </div>
 
         {/* Stats Cards - Updated to show only Admin stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Admins</p>
-                  <p className="text-2xl font-bold">{summary?.regularAdmins || 0}</p>
+                  <p className="text-sm font-medium text-blue-700">Total Admins</p>
+                  <p className="text-2xl font-bold text-blue-800">{dashboardSummary?.totalAdmins || 0}</p>
                 </div>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <Users className="h-4 w-4 text-blue-600" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active Admins</p>
-                  <p className="text-2xl font-bold text-green-600">{summary?.activeAdmins || 0}</p>
+                  <p className="text-sm font-medium text-green-700">Active Admins</p>
+                  <p className="text-2xl font-bold text-green-800">{dashboardSummary?.activeAdmins || 0}</p>
                 </div>
                 <CheckCircle className="h-4 w-4 text-green-600" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Inactive</p>
-                  <p className="text-2xl font-bold text-red-600">{summary?.inactive || 0}</p>
+                  <p className="text-sm font-medium text-red-700">Inactive</p>
+                  <p className="text-2xl font-bold text-red-600">{dashboardSummary?.inactiveAdmins || 0}</p>
                 </div>
                 <X className="h-4 w-4 text-red-600" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">ISP Companies</p>
-                  <p className="text-2xl font-bold text-blue-600">{summary?.regularAdmins || 0}</p>
+                  <p className="text-sm font-medium text-purple-700">ISP Companies</p>
+                  <p className="text-2xl font-bold text-purple-800">{ispCompanyStats?.activeCompanies || 0}</p>
                 </div>
-                <Shield className="h-4 w-4 text-blue-600" />
+                <Shield className="h-4 w-4 text-purple-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Admin Analytics & Performance */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">Admin Performance</h3>
                 <TrendingUp className="h-5 w-5 text-blue-600" />
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Avg Response Time</span>
-                  <span className="font-semibold text-green-600">2.3 hrs</span>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Response Time</span>
+                  <Badge variant="default" className="bg-blue-100 text-blue-800">
+                    {adminPerformance?.avgResponseTime || "0"}
+                  </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Tasks Completed</span>
-                  <span className="font-semibold text-blue-600">87%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">User Satisfaction</span>
-                  <span className="font-semibold text-yellow-600">4.2/5</span>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: "85%" }} />
                 </div>
               </div>
             </CardContent>
           </Card>
           
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Satisfaction</h3>
+                <Star className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">User Rating</span>
+                  <Badge variant="default" className="bg-green-100 text-green-800">
+                    {adminPerformance?.userSatisfaction || "0/5"}
+                  </Badge>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${(parseFloat(adminPerformance?.userSatisfaction || "0") / 5) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Efficiency</h3>
+                <Activity className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Task Completion</span>
+                  <Badge variant="default" className="bg-purple-100 text-purple-800">
+                    {adminPerformance?.tasksCompleted || "0%"}
+                  </Badge>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-purple-600 h-2 rounded-full" 
+                    style={{ width: `${parseFloat(adminPerformance?.tasksCompleted || "0")}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -486,15 +497,15 @@ export default function Admin() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Active Companies</span>
-                  <span className="font-semibold text-blue-600">{summary?.activeAdmins || 0}</span>
+                  <span className="font-semibold text-blue-600">{ispCompanyStats?.activeCompanies || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Total Providers</span>
-                  <span className="font-semibold text-green-600">{availableProviders.length}</span>
+                  <span className="font-semibold text-green-600">{ispCompanyStats?.totalProviders || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">New This Month</span>
-                  <span className="font-semibold text-purple-600">+3</span>
+                  <span className="font-semibold text-purple-600">{ispCompanyStats?.newThisMonth || 0}</span>
                 </div>
               </div>
             </CardContent>
@@ -509,15 +520,15 @@ export default function Admin() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">New Admins</span>
-                  <span className="font-semibold text-green-600">+2 this week</span>
+                  <span className="font-semibold text-green-600">{recentActivity?.newAdmins || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Company Updates</span>
-                  <span className="font-semibold text-blue-600">5 today</span>
+                  <span className="font-semibold text-blue-600">{recentActivity?.companyUpdates || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Active Sessions</span>
-                  <span className="font-semibold text-purple-600">12 online</span>
+                  <span className="font-semibold text-purple-600">{recentActivity?.activeSessions || 0}</span>
                 </div>
               </div>
             </CardContent>
@@ -546,17 +557,7 @@ export default function Admin() {
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {filters?.availableDepartments?.map((dept: string) => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
+                    <SelectItem value="suspended">Suspended</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -564,9 +565,9 @@ export default function Admin() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
+                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
                 >
-                  {viewMode === "card" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+                  {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
                 </Button>
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
@@ -585,7 +586,7 @@ export default function Admin() {
                       </p>
                     </DialogHeader>
                     
-                    <form onSubmit={form.handleSubmit(handleCreateAdmin)} className="space-y-6">
+                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                       {/* Basic Information */}
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">👤 Basic Information</h3>
@@ -706,9 +707,9 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Role & Department */}
+                      {/* Role & Company Information */}
                       <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">🔐 Role & Department</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">🔐 Role & Company Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="role" className="text-sm font-medium">Role *</Label>
@@ -721,17 +722,11 @@ export default function Admin() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value={Role.ADMIN} className="text-blue-600">🛡️ Admin</SelectItem>
+                                <SelectItem value={Role.SUPERADMIN} className="text-yellow-600">👑 Super Admin</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="department" className="text-sm font-medium">Department</Label>
-                            <Input 
-                              {...form.register("department")} 
-                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                              placeholder="Enter department"
-                            />
-                          </div>
+                          {/* Removed Department field */}
                         </div>
                       </div>
 
@@ -768,18 +763,17 @@ export default function Admin() {
                         >
                           Cancel
                         </Button>
-                        <Button 
-                          type="submit"
-                          disabled={isAddingAdmin}
-                          className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
+                        <Button type="submit" disabled={isAddingAdmin} className="w-full">
                           {isAddingAdmin ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Creating...
+                              Adding Admin...
                             </>
                           ) : (
-                            "✨ Create ISP Admin"
+                            <>
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Add Admin
+                            </>
                           )}
                         </Button>
                       </div>
@@ -792,7 +786,7 @@ export default function Admin() {
         </Card>
 
         {/* Admins Display - Updated to show company info */}
-        {viewMode === "card" ? (
+        {viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAdmins.map((admin: Admin) => (
               <Card key={admin._id} className="hover:shadow-md transition-shadow">
@@ -803,13 +797,15 @@ export default function Admin() {
                         <User className="w-5 h-5 text-purple-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">{admin.fullName}</h3>
+                        <h3 className="font-semibold">{admin.firstName} {admin.lastName}</h3>
                         <p className="text-sm text-muted-foreground">{admin.email}</p>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      {getStatusBadge(admin)}
-                      {getRoleBadge(admin.role)}
+                      <Badge variant={!admin.isDeactivated ? "default" : "secondary"}>
+                        {!admin.isDeactivated ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <Badge variant="outline">Admin</Badge>
                     </div>
                   </div>
                   
@@ -836,22 +832,16 @@ export default function Admin() {
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Phone className="w-4 h-4 mr-2" />
-                      {admin.countryCode} {admin.phoneNumber}
+                      {admin.companyPhone}
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Joined: {formatDate(admin.createdAt)}
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {admin.companyAddress}
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="w-4 h-4 mr-2" />
                       Last Login: {formatDateTime(admin.lastLogin)}
                     </div>
-                    {admin.department && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Department: {admin.department}
-                      </div>
-                    )}
                   </div>
                   
                   <div className="flex gap-2">
@@ -874,12 +864,11 @@ export default function Admin() {
                           firstName: admin.firstName,
                           lastName: admin.lastName,
                           email: admin.email,
-                          phoneNumber: admin.phoneNumber,
-                          countryCode: admin.countryCode,
-                          role: admin.role,
-                          status: (admin.status as "active" | "inactive" | "suspended") || (admin.isActive ? "active" : "inactive"),
-                          department: admin.department || "",
-                          permissions: admin.permissions || [],
+                          phoneNumber: admin.companyPhone,
+                          countryCode: "+91", // Default country code
+                          role: Role.ADMIN, // Default role
+                          status: admin.isActivated ? "active" : "inactive",
+                          permissions: [],
                           companyName: admin.companyName || "",
                           companyAddress: admin.companyAddress || "",
                           internetProviders: admin.internetProviders || [],
@@ -919,23 +908,26 @@ export default function Admin() {
                       </div>
                     )
                   },
-                  { key: "fullName", label: "Name" },
+                  { 
+                    key: "name", 
+                    label: "Name",
+                    render: (_, admin) => `${admin.firstName} ${admin.lastName}`
+                  },
                   { key: "email", label: "Email" },
-                  { key: "phoneNumber", label: "Phone" },
                   { 
                     key: "companyName", 
                     label: "Company",
                     render: (value) => value || "-"
                   },
                   { 
-                    key: "department", 
-                    label: "Department",
-                    render: (value) => value || "-"
-                  },
-                  { 
                     key: "status", 
                     label: "Status",
-                    render: (_, admin) => getStatusBadge(admin)
+                    render: (_, admin) => {
+                      if (admin.isSuspended) return <Badge variant="destructive">Suspended</Badge>;
+                      if (admin.isDeactivated) return <Badge variant="secondary">Inactive</Badge>;
+                      if (!admin.isDeactivated) return <Badge variant="default">Active</Badge>;
+                      return <Badge variant="outline">Unknown</Badge>;
+                    }
                   },
                   {
                     key: "createdAt",
@@ -966,12 +958,11 @@ export default function Admin() {
                               firstName: admin.firstName,
                               lastName: admin.lastName,
                               email: admin.email,
-                              phoneNumber: admin.phoneNumber,
-                              countryCode: admin.countryCode,
-                              role: admin.role,
-                              status: (admin.status as "active" | "inactive" | "suspended") || (admin.isActive ? "active" : "inactive"),
-                              department: admin.department || "",
-                              permissions: admin.permissions || [],
+                              phoneNumber: admin.companyPhone,
+                              countryCode: "+91", // Default country code
+                              role: Role.ADMIN, // Default role
+                              status: admin.isActivated ? "active" : "inactive",
+                              permissions: [],
                               companyName: admin.companyName || "",
                               companyAddress: admin.companyAddress || "",
                               internetProviders: admin.internetProviders || [],
@@ -1011,6 +1002,7 @@ export default function Admin() {
                 variant="outline"
                 size="sm"
                 disabled={!pagination.hasPrevPage}
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -1022,6 +1014,7 @@ export default function Admin() {
                 variant="outline"
                 size="sm"
                 disabled={!pagination.hasNextPage}
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -1169,9 +1162,9 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* Role & Department */}
+            {/* Role & Company Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">🔐 Role & Department</h3>
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">🔐 Role & Company Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-role" className="text-sm font-medium">Role *</Label>
@@ -1184,18 +1177,11 @@ export default function Admin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={Role.ADMIN} className="text-blue-600">🛡️ Admin</SelectItem>
+                      <SelectItem value={Role.SUPERADMIN} className="text-yellow-600">👑 Super Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-department" className="text-sm font-medium">Department</Label>
-                  <Input 
-                    id="edit-department"
-                    {...editForm.register("department")} 
-                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter department"
-                  />
-                </div>
+                {/* Removed Department field */}
               </div>
             </div>
 
@@ -1264,11 +1250,13 @@ export default function Admin() {
                   <User className="w-8 h-8 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">{selectedAdmin.fullName}</h3>
-                  <p className="text-muted-foreground">{selectedAdmin.email}</p>
+                  <h3 className="text-xl font-semibold">{selectedAdmin!.firstName} {selectedAdmin!.lastName}</h3>
+                  <p className="text-muted-foreground">{selectedAdmin!.email}</p>
                   <div className="mt-2 flex items-center gap-2">
-                    {getStatusBadge(selectedAdmin)}
-                    {getRoleBadge(selectedAdmin.role)}
+                    <Badge variant={!selectedAdmin!.isDeactivated ? "default" : "secondary"}>
+                      {!selectedAdmin!.isDeactivated ? 'Active' : 'Inactive'}
+                    </Badge>
+                    <Badge variant="outline">Admin</Badge>
                   </div>
                 </div>
               </div>
@@ -1279,11 +1267,11 @@ export default function Admin() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Phone className="w-4 h-4 text-muted-foreground" />
-                      <span>{selectedAdmin.countryCode} {selectedAdmin.phoneNumber}</span>
+                      <span>{selectedAdmin!.companyPhone}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Mail className="w-4 h-4 text-muted-foreground" />
-                      <span>{selectedAdmin.email}</span>
+                      <span>{selectedAdmin!.email}</span>
                     </div>
                   </div>
                 </div>
@@ -1293,38 +1281,32 @@ export default function Admin() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
                       <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <span>Joined: {formatDate(selectedAdmin.createdAt)}</span>
+                      <span>Joined: {formatDate(selectedAdmin!.createdAt)}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>Last Login: {formatDateTime(selectedAdmin.lastLogin)}</span>
+                      <span>Last Login: {formatDateTime(selectedAdmin!.lastLogin)}</span>
                     </div>
-                    {selectedAdmin.updatedAt && (
-                      <div className="flex items-center gap-3">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span>Last Updated: {formatDateTime(selectedAdmin.updatedAt)}</span>
-                      </div>
-                    )}
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-4 h-4 text-muted-foreground" />
-                      <span>Status: {selectedAdmin.status || (selectedAdmin.isActive ? 'Active' : 'Inactive')}</span>
+                      <span>Status: {!selectedAdmin!.isDeactivated ? 'Active' : 'Inactive'}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Additional Information */}
-              {selectedAdmin.companyName && (
+              {selectedAdmin!.companyName && (
                 <div className="space-y-4">
-                  <h4 className="font-medium text-muted-foreground">Company & Role</h4>
+                  <h4 className="font-medium text-muted-foreground">Company Information</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-3">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <span>Company: {selectedAdmin.companyName}</span>
+                      <span>Company: {selectedAdmin!.companyName}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Shield className="w-4 h-4 text-muted-foreground" />
-                      <span>Role: {selectedAdmin.role === Role.SUPERADMIN ? 'Super Admin' : 'Admin'}</span>
+                      <span>Role: Admin</span>
                     </div>
                   </div>
                 </div>
@@ -1334,13 +1316,10 @@ export default function Admin() {
                 <h4 className="font-medium text-muted-foreground">Account Status</h4>
                 <div className="flex gap-2">
                   <span className="text-sm">
-                    Deactivated: {selectedAdmin.accountStatus.isDeactivated ? 'Yes' : 'No'}
+                    Deactivated: {selectedAdmin!.isDeactivated ? 'Yes' : 'No'}
                   </span>
                   <span className="text-sm">
-                    Suspended: {selectedAdmin.accountStatus.isSuspended ? 'Yes' : 'No'}
-                  </span>
-                  <span className="text-sm">
-                    Verified: {selectedAdmin.accountStatus.isAccountVerified ? 'Yes' : 'No'}
+                    Suspended: {selectedAdmin!.isSuspended ? 'Yes' : 'No'}
                   </span>
                 </div>
               </div>
@@ -1365,7 +1344,7 @@ export default function Admin() {
               Delete Admin
             </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Are you sure you want to delete {selectedAdmin?.fullName}? This action cannot be undone.
+              Are you sure you want to delete {selectedAdmin?.firstName} {selectedAdmin?.lastName}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-3">

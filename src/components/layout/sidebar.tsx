@@ -47,7 +47,7 @@ const navigation = [
   { name: "Analytics", href: "/analytics", icon: BarChart3, permission: "view-analytics" },
   { name: "Notifications", href: "/notifications", icon: Bell, permission: "manage-notifications" },
   { name: "Support & Rating", href: "/support", icon: Headphones, permission: "manage-support" },
-  { name: "Profile", href: "/profile", icon: User, permission: "view-dashboard" },
+  { name: "Profile", href: "/profile", icon: User, permission: "view-dashboard", role: "admin" },
   { name: "Settings", href: "/settings", icon: Settings, permission: "system-settings" },
   { name: "Leads", href: "/leads", icon: Target, permission: "view-leads" },
   { name: "Company Leads", href: "/company-leads", icon: Building, permission: "manage-leads" },
@@ -93,10 +93,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const ThemeIcon = themeIcons[theme];
 
-  // Filter navigation based on permissions only
+  // Filter navigation based on permissions and role restrictions
   const filteredNavigation = navigation.filter(item => {
     // Check if user has permission
     const hasUserPermission = hasPermission(item.permission);
+    
+    // Check role restrictions
+    if (item.role && user?.role !== item.role) {
+      return false;
+    }
     
     // Debug logging for Leads section
     if (item.name === "Leads") {

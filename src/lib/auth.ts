@@ -36,14 +36,14 @@ const normalizeRole = (roleString: string): Role => {
 
 const permissions = {
   [Role.SUPERADMIN]: [
-    'view-dashboard',
+    // 'view-dashboard',
     'manage-engineers',
     'assign-complaints',
     'manage-users',
     'manage-products',
     'manage-plans',
     'manage-installations',
-    'manage-leads',
+    // 'manage-leads',
     'manage-notifications',
     'view-analytics',
     'system-settings',
@@ -70,7 +70,6 @@ const permissions = {
     'view-dashboard',
     'assign-complaints',
     'manage-installations',
-    'manage-leads',  // MANAGER can see "Company Leads" section
     'view-analytics',
     'manage-support',
     // Note: MANAGER does NOT have 'view-leads' permission

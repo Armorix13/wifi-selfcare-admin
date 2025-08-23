@@ -35,7 +35,7 @@ export function RoleProtectedRoute({
       case Role.ADMIN:
         return hasPermission('manage-users') || hasPermission('manage-engineers');
       case Role.MANAGER:
-        return hasPermission('manage-installations') || hasPermission('manage-leads');
+        return hasPermission('manage-installations') || hasPermission('view-analytics');
       case Role.AGENT:
         return hasPermission('view-complaints') || hasPermission('update-complaints');
       default:

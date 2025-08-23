@@ -71,7 +71,7 @@ export const ROUTES: RouteConfig[] = [
   },
   {
     path: '/profile',
-    roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER, Role.AGENT],
+    roles: [ Role.ADMIN, Role.MANAGER, Role.AGENT],
     title: 'Profile',
     icon: 'profile'
   },
@@ -95,7 +95,7 @@ export const ROUTES: RouteConfig[] = [
   },
   {
     path: '/company-leads',
-    roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
+    roles: [Role.ADMIN],
     title: 'Company Leads',
     icon: 'company-leads'
   },

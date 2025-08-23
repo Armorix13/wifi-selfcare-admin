@@ -114,7 +114,7 @@ export default function Complaints() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null | any>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<"card" | "table">("card");
+  const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedEngineerId, setSelectedEngineerId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -649,16 +649,16 @@ export default function Complaints() {
           </div>
         </div>
 
-        {/* Analytics and Complaints Tabs */}
-        <Tabs defaultValue="analytics" className="w-full">
+        {/* Complaints and Analytics Tabs */}
+        <Tabs defaultValue="complaints" className="w-full">
           <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics
-            </TabsTrigger>
             <TabsTrigger value="complaints" className="flex items-center gap-2">
               <List className="h-4 w-4" />
               Complaints
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 

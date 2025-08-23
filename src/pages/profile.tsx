@@ -30,6 +30,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
+import { Role } from "@/lib/types/auth";
 import { useGetCompanyProfileQuery, useUpdateCompanyProfileMutation, BASE_URL } from "@/api/index";
 import React from "react";
 
@@ -59,8 +60,8 @@ export default function Profile() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Check if user has permission to access profile (only ADMIN role)
-  if (!hasPermission('manage-leads')) {
+  // Check if user has permission to access profile (ADMIN, MANAGER, AGENT roles)
+  if (!user || ![Role.ADMIN, Role.MANAGER, Role.AGENT].includes(user.role)) {
     return (
       <MainLayout title="Access Denied">
         <div className="container mx-auto p-6">
@@ -72,11 +73,11 @@ export default function Profile() {
               <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
               <p className="text-gray-600 mb-6">
                 You don't have permission to access the Profile section. 
-                This feature is only available to Admin users.
+                This feature is only available to Admin, Manager, and Agent users.
               </p>
               <div className="text-sm text-gray-500">
                 <p><strong>Your Role:</strong> {user?.role || 'Unknown'}</p>
-                <p><strong>Required Role:</strong> ADMIN</p>
+                <p><strong>Required Roles:</strong> ADMIN, MANAGER, or AGENT</p>
               </div>
             </CardContent>
           </Card>

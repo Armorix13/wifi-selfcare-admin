@@ -136,13 +136,13 @@ function Router() {
       } />
       
       <Route path="/leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
           <Leads />
         </RoleProtectedRoute>
       } />
       
       <Route path="/company-leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
           <CompanyLeads />
         </RoleProtectedRoute>
       } />
@@ -154,7 +154,7 @@ function Router() {
       } />
       
       <Route path="/installations-leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
           <InstallationsLeads />
         </RoleProtectedRoute>
       } />
