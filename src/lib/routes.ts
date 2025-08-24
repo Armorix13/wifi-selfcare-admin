@@ -105,12 +105,12 @@ export const ROUTES: RouteConfig[] = [
     title: 'Advertisements',
     icon: 'advertisements'
   },
-  // {
-  //   path: '/installations-leads',
-  //   roles: [Role.SUPERADMIN, Role.ADMIN, Role.MANAGER],
-  //   title: 'Installation Leads',
-  //   icon: 'installation-leads'
-  // }
+  {
+    path: '/installations-leads',
+    roles: [Role.ADMIN, Role.MANAGER],
+    title: 'Installation Leads',
+    icon: 'installation-leads'
+  }
 ];
 
 

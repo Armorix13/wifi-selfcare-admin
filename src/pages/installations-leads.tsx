@@ -14,7 +14,6 @@ import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-
 import {
   HardHat,
   Phone,
-  MessageCircle,
   Mail,
   Search,
   Filter,
@@ -33,6 +32,7 @@ import {
   Target,
   Star,
   Zap,
+  FileText,
 } from "lucide-react";
 import {
   Table,
@@ -44,12 +44,10 @@ import {
 } from "@/components/ui/table";
 import {
   dummyNewInstallations,
-  dummyLeads,
   dummyApplicationForms,
   dummyWifiInstallationRequests,
   dummyEngineers,
   type NewInstallation,
-  type Lead,
   type ApplicationForm,
   type WifiInstallationRequest
 } from "@/lib/dummyData";
@@ -59,15 +57,13 @@ import { api } from "@/api/index";
 export default function InstallationsLeads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
+
   const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [installations, setInstallations] = useState(dummyNewInstallations);
-  const [leads, setLeads] = useState(dummyLeads);
   const [applicationForms] = useState(dummyApplicationForms);
   const [installationRequests] = useState(dummyWifiInstallationRequests);
   const [showNewInstallationForm, setShowNewInstallationForm] = useState(false);
-  const [showNewLeadForm, setShowNewLeadForm] = useState(false);
   const [showEngineerAssignmentModal, setShowEngineerAssignmentModal] = useState(false);
   const [showInstallationRequestModal, setShowInstallationRequestModal] = useState(false);
   const [selectedInstallationRequest, setSelectedInstallationRequest] = useState<any>(null);
@@ -181,14 +177,7 @@ export default function InstallationsLeads() {
     ));
   };
 
-  // Action handlers for leads
-  const updateLeadStatus = (id: number, status: 'new' | 'contacted' | 'qualified' | 'converted' | 'closed') => {
-    setLeads(prev => prev.map(lead =>
-      lead.id === id
-        ? { ...lead, status, updatedAt: new Date().toISOString() }
-        : lead
-    ));
-  };
+
 
   // Engineer assignment handler
   const handleEngineerAssignment = async () => {
@@ -309,29 +298,7 @@ export default function InstallationsLeads() {
     });
   }, [searchTerm, statusFilter, priorityFilter, dateFilter]);
 
-  // Filter leads
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      const matchesSearch =
-        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.phone.includes(searchTerm) ||
-        (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
-      const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
-      const matchesPriority = priorityFilter === "all" || lead.priority === priorityFilter;
-
-      let matchesDate = true;
-      if (dateFilter.from && dateFilter.to) {
-        const leadDate = parseISO(lead.createdAt);
-        const fromDate = startOfDay(dateFilter.from);
-        const toDate = endOfDay(dateFilter.to);
-        matchesDate = isAfter(leadDate, fromDate) && isBefore(leadDate, toDate);
-      }
-
-      return matchesSearch && matchesStatus && matchesSource && matchesPriority && matchesDate;
-    });
-  }, [searchTerm, statusFilter, sourceFilter, priorityFilter, dateFilter]);
 
   // Filter all installation forms
   const filteredAllInstallationForms = useMemo(() => {
@@ -494,14 +461,6 @@ export default function InstallationsLeads() {
     const confirmedInstallations = dummyNewInstallations.filter(i => i.status === "confirmed").length;
     const rejectedInstallations = dummyNewInstallations.filter(i => i.status === "rejected").length;
 
-    // Lead analytics
-    const totalLeads = dummyLeads.length;
-    const newLeads = dummyLeads.filter(l => l.status === "new").length;
-    const contactedLeads = dummyLeads.filter(l => l.isContactedByManager).length;
-    const convertedLeads = dummyLeads.filter(l => l.status === "converted").length;
-
-    const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads * 100).toFixed(1) : '0';
-    const contactRate = totalLeads > 0 ? (contactedLeads / totalLeads * 100).toFixed(1) : '0';
     const installationSuccessRate = totalInstallations > 0 ? (confirmedInstallations / totalInstallations * 100).toFixed(1) : '0';
 
     return {
@@ -509,12 +468,6 @@ export default function InstallationsLeads() {
       pendingInstallations,
       confirmedInstallations,
       rejectedInstallations,
-      totalLeads,
-      newLeads,
-      contactedLeads,
-      convertedLeads,
-      conversionRate,
-      contactRate,
       installationSuccessRate
     };
   }, []);
@@ -547,34 +500,7 @@ export default function InstallationsLeads() {
     window.URL.revokeObjectURL(url);
   };
 
-  const exportLeadsToExcel = () => {
-    const headers = ["ID", "Name", "Phone", "Email", "Address", "Location", "Source", "Status", "Priority", "Inquiry Type", "Contacted by Manager", "Created Date"];
-    const csvContent = [
-      headers.join(","),
-      ...filteredLeads.map(lead => [
-        lead.id,
-        `"${lead.name}"`,
-        lead.phone,
-        lead.email || "N/A",
-        `"${lead.address}"`,
-        lead.location || "N/A",
-        lead.source,
-        lead.status,
-        lead.priority,
-        lead.inquiryType,
-        lead.isContactedByManager ? "Yes" : "No",
-        lead.createdAt
-      ].join(","))
-    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `leads_${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   const getStatusBadge = (status: string, type: "installation" | "lead") => {
     if (type === "installation") {
@@ -615,19 +541,10 @@ export default function InstallationsLeads() {
     }
   };
 
-  const getSourceIcon = (source: string) => {
-    switch (source) {
-      case 'ivr': return <Phone className="h-4 w-4" />;
-      case 'whatsapp': return <MessageCircle className="h-4 w-4" />;
-      case 'website': return <Mail className="h-4 w-4" />;
-      case 'referral': return <Users className="h-4 w-4" />;
-      case 'social_media': return <Target className="h-4 w-4" />;
-      default: return <Phone className="h-4 w-4" />;
-    }
-  };
+
 
   return (
-    <MainLayout title="New Installation & Leads">
+    <MainLayout title="New Installation & Applications">
       <div className="space-y-6">
         {/* Top Stats Row - All Data Types */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -803,37 +720,7 @@ export default function InstallationsLeads() {
             </CardContent>
           </Card>
 
-          {/* Leads Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
-                <Phone className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
-                Customer Leads
-              </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm">
-                Active leads and inquiries
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-orange-600">{leads.length}</div>
-              <div className="text-xs lg:text-sm text-gray-600 mt-1">
-                {leads.filter(lead => lead.isContactedByManager).length} contacted
-              </div>
-              <div className="mt-3 space-y-2">
-                {leads.slice(0, 3).map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs lg:text-sm font-medium truncate">{lead.name}</div>
-                      <div className="text-xs text-gray-500">{lead.source}</div>
-                    </div>
-                    <Badge className={`${getStatusColor(lead.status)} text-xs ml-2`}>
-                      {lead.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
 
         {/* Quick Overview and Recent Activity Row */}
@@ -868,10 +755,7 @@ export default function InstallationsLeads() {
                   <div className="text-lg lg:text-xl font-bold dashboard-text">{installations.length}</div>
                   <div className="text-xs dashboard-text-muted">Installations</div>
                 </div>
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
-                  <div className="text-lg lg:text-xl font-bold dashboard-text">{leads.length}</div>
-                  <div className="text-xs dashboard-text-muted">Leads</div>
-                </div>
+
               </div>
             </CardContent>
           </Card>
@@ -886,7 +770,7 @@ export default function InstallationsLeads() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {[...transformedApplications, ...transformedInstallationRequests, ...installationRequests, ...installations, ...leads]
+                {[...transformedApplications, ...transformedInstallationRequests, ...installationRequests, ...installations]
                   .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
                   .slice(0, 5)
                   .map((item, index) => (
@@ -911,13 +795,13 @@ export default function InstallationsLeads() {
         <div className="space-y-4 lg:space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">New Installation & Leads</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm lg:text-base">Manage installation requests and customer inquiries</p>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">New Installation & Applications</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm lg:text-base">Manage installation requests and application forms</p>
             </div>
           </div>
 
           <Tabs defaultValue="all-forms" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-1 lg:grid-cols-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
               <TabsTrigger value="all-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
                 <HardHat className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden sm:inline">All Forms</span>
@@ -932,11 +816,6 @@ export default function InstallationsLeads() {
                 <Zap className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden sm:inline">Installations</span>
                 <span className="sm:hidden">Installs</span>
-              </TabsTrigger>
-              <TabsTrigger value="leads" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <Phone className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">Leads</span>
-                <span className="sm:hidden">Leads</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1345,26 +1224,26 @@ export default function InstallationsLeads() {
 
                 <Card className="shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Total Leads</CardTitle>
-                    <Users className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    <CardTitle className="text-sm lg:text-base font-medium">Total Applications</CardTitle>
+                    <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{analytics.totalLeads}</div>
+                    <div className="text-xl lg:text-2xl font-bold">{transformedApplications.length}</div>
                     <p className="text-xs lg:text-sm text-muted-foreground">
-                      {analytics.conversionRate}% conversion rate
+                      Application forms submitted
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card className="shadow-sm">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Manager Contact Rate</CardTitle>
-                    <TrendingUp className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    <CardTitle className="text-sm lg:text-base font-medium">Installation Requests</CardTitle>
+                    <Building className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{analytics.contactRate}%</div>
+                    <div className="text-xl lg:text-2xl font-bold">{transformedInstallationRequests.length}</div>
                     <p className="text-xs lg:text-sm text-muted-foreground">
-                      {analytics.contactedLeads} leads contacted
+                      Requests in review
                     </p>
                   </CardContent>
                 </Card>
@@ -1408,34 +1287,34 @@ export default function InstallationsLeads() {
 
                 <Card className="shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-base lg:text-lg">Lead Status Distribution</CardTitle>
+                    <CardTitle className="text-base lg:text-lg">Application Status Distribution</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">New Leads</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.newLeads}</span>
+                        <span className="text-sm lg:text-base">In Review</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'inreview').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.newLeads / analytics.totalLeads) * 100}%` }}></div>
+                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'inreview').length / transformedApplications.length) * 100}%` }}></div>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Contacted</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.contactedLeads}</span>
+                        <span className="text-sm lg:text-base">Accepted</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'accept').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.contactedLeads / analytics.totalLeads) * 100}%` }}></div>
+                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'accept').length / transformedApplications.length) * 100}%` }}></div>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Converted</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.convertedLeads}</span>
+                        <span className="text-sm lg:text-base">Rejected</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'reject').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.convertedLeads / analytics.totalLeads) * 100}%` }}></div>
+                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'reject').length / transformedApplications.length) * 100}%` }}></div>
                       </div>
                     </div>
                   </CardContent>
@@ -1726,291 +1605,7 @@ export default function InstallationsLeads() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="leads" className="space-y-4 lg:space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <CardTitle className="text-lg lg:text-xl">Lead Management</CardTitle>
-                      <CardDescription className="text-sm">Track customer inquiries from various sources</CardDescription>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button className="bg-purple-600 hover:bg-purple-700 text-white text-xs lg:text-sm px-3 py-2">
-                            <Users className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                            New Lead
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="text-lg lg:text-xl">Add New Lead</DialogTitle>
-                            <DialogDescription className="text-sm">
-                              Register a new customer inquiry
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-medium">Full Name</Label>
-                              <Input placeholder="Enter customer name" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Phone Number</Label>
-                              <Input placeholder="+91 98765 43210" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Email (Optional)</Label>
-                              <Input type="email" placeholder="customer@email.com" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Source</Label>
-                              <Select>
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select source" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="website">Website</SelectItem>
-                                  <SelectItem value="ivr">IVR Call</SelectItem>
-                                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                                  <SelectItem value="referral">Referral</SelectItem>
-                                  <SelectItem value="social_media">Social Media</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label className="text-sm font-medium">Address</Label>
-                              <Input placeholder="Complete address" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Inquiry Type</Label>
-                              <Select>
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="general">General</SelectItem>
-                                  <SelectItem value="pricing">Pricing</SelectItem>
-                                  <SelectItem value="technical">Technical</SelectItem>
-                                  <SelectItem value="support">Support</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Priority</Label>
-                              <Select>
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                  <SelectItem value="urgent">Urgent</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label className="text-sm font-medium">Message (Optional)</Label>
-                              <Input placeholder="Customer inquiry or message" className="text-sm" />
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2 pt-4">
-                            <Button variant="outline" className="text-sm">Cancel</Button>
-                            <Button className="bg-purple-600 hover:bg-purple-700 text-white text-sm">Add Lead</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button onClick={exportLeadsToExcel} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
-                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        Export Excel
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search leads..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm text-sm"
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="converted">Converted</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Sources</SelectItem>
-                        <SelectItem value="ivr">IVR Call</SelectItem>
-                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                        <SelectItem value="website">Website</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="social_media">Social Media</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 dark:bg-gray-800">
-                            <TableHead className="text-xs lg:text-sm font-medium">Lead</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden lg:table-cell">Source</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden sm:table-cell">Priority</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden lg:table-cell">Manager Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden xl:table-cell">Address</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredLeads.map((lead) => (
-                            <TableRow key={lead.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                              <TableCell className="py-3">
-                                <div>
-                                  <div className="font-medium text-xs lg:text-sm">{lead.name}</div>
-                                  <div className="text-xs text-gray-500 hidden lg:block">{lead.inquiryType}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div>
-                                  <div className="text-xs lg:text-sm">{lead.phone}</div>
-                                  <div className="text-xs text-gray-500 hidden lg:block">{lead.email || "No email"}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3 hidden lg:table-cell">
-                                <div className="flex items-center">
-                                  {getSourceIcon(lead.source)}
-                                  <span className="ml-2 capitalize text-xs lg:text-sm">{lead.source.replace('_', ' ')}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                {getStatusBadge(lead.status, "lead")}
-                              </TableCell>
-                              <TableCell className="py-3 hidden sm:table-cell">
-                                {getPriorityBadge(lead.priority)}
-                              </TableCell>
-                              <TableCell className="py-3 hidden lg:table-cell">
-                                <Badge variant={lead.isContactedByManager ? "default" : "secondary"} className="text-xs">
-                                  {lead.isContactedByManager ? "Yes" : "No"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3 hidden xl:table-cell">
-                                <div className="text-xs text-gray-600 max-w-xs truncate">
-                                  {lead.address}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="text-xs lg:text-sm">
-                                  {format(parseISO(lead.createdAt), "MMM dd, yyyy")}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="flex gap-1">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                        <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                                      <DialogHeader>
-                                        <DialogTitle className="text-lg lg:text-xl">Lead Details - {lead.name}</DialogTitle>
-                                        <DialogDescription className="text-sm">
-                                          View and manage lead information
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                          <Label className="text-sm font-medium">Name</Label>
-                                          <p className="text-sm">{lead.name}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Phone</Label>
-                                          <p className="text-sm">{lead.phone}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Email</Label>
-                                          <p className="text-sm">{lead.email || "Not provided"}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Source</Label>
-                                          <p className="text-sm capitalize">{lead.source.replace('_', ' ')}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Status</Label>
-                                          <p className="text-sm">{lead.status}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Priority</Label>
-                                          <p className="text-sm">{getPriorityBadge(lead.priority)}</p>
-                                        </div>
-                                        <div className="sm:col-span-2">
-                                          <Label className="text-sm font-medium">Address</Label>
-                                          <p className="text-sm">{lead.address}</p>
-                                        </div>
-                                        <div className="sm:col-span-2">
-                                          <Label className="text-sm font-medium">Message</Label>
-                                          <p className="text-sm">{lead.message || "No message provided"}</p>
-                                        </div>
-                                      </div>
-                                      <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                        <Button
-                                          onClick={() => updateLeadStatus(lead.id, 'contacted')}
-                                          variant={lead.status === 'contacted' ? 'default' : 'outline'}
-                                          className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                                        >
-                                          <Phone className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Mark Contacted
-                                        </Button>
-                                        <Button
-                                          onClick={() => updateLeadStatus(lead.id, 'qualified')}
-                                          variant={lead.status === 'qualified' ? 'default' : 'outline'}
-                                          className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
-                                        >
-                                          <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Mark Qualified
-                                        </Button>
-                                        <Button
-                                          onClick={() => updateLeadStatus(lead.id, 'converted')}
-                                          variant={lead.status === 'converted' ? 'default' : 'outline'}
-                                          className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                        >
-                                          <Star className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Convert
-                                        </Button>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </div>
       </div>

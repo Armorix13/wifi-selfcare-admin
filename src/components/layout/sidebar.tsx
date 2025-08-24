@@ -38,7 +38,8 @@ import React from "react";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view-dashboard-analytics" },
   { name: "Complaints", href: "/complaints", icon: AlertCircle, permission: "assign-complaints", role: "admin" },
-  // { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
+  { name: "New Installation", href: "/installations-leads", icon: HardHat, permission: "manage-installations",role: "admin" },
+  { name: "Company Leads", href: "/company-leads", icon: Building, permission: "manage-leads" },
   { name: "Engineers", href: "/engineers", icon: Users, permission: "manage-engineers" },
   { name: "Admin", href: "/manage-admin", icon: Users, permission: "manage-admin" },
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
@@ -50,7 +51,6 @@ const navigation = [
   { name: "Profile", href: "/profile", icon: User, permission: "view-dashboard", role: "admin" },
   { name: "Settings", href: "/settings", icon: Settings, permission: "system-settings" },
   { name: "Leads", href: "/leads", icon: Target, permission: "view-leads" },
-  { name: "Company Leads", href: "/company-leads", icon: Building, permission: "manage-leads" },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone, permission: "manage-advertisements" },
 ];
 

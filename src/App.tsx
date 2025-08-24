@@ -154,7 +154,7 @@ function Router() {
       } />
       
       <Route path="/installations-leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
           <InstallationsLeads />
         </RoleProtectedRoute>
       } />
