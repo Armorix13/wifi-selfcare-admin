@@ -7,32 +7,42 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
 import { RouteGuard, RoleProtectedRoute } from "@/components/auth/RoleProtectedRoute";
 import { Role } from "@/lib/types/auth";
+import { lazy, Suspense } from "react";
 
 // Import modern themes
 import "@/styles/modern-themes.css";
-import NotFound from "@/pages/not-found";
-import Login from "@/pages/login";
-import Dashboard from "@/pages/dashboard";
-import Complaints from "@/pages/complaints";
-import Engineers from "@/pages/engineers";
-import Users from "@/pages/users";
-import { Products } from "@/pages/products";
-import Plans from "@/pages/plans";
-import Analytics from "@/pages/analytics";
-import Notifications from "@/pages/notifications";
-import Support from "@/pages/support";
-import Settings from "@/pages/settings";
-import Profile from "@/pages/profile";
-import UserDetail from "@/pages/user-detail";
-import EngineerDetail from "@/pages/engineer-detail";
-import ComplaintDetail from "@/pages/complaint-detail";
-import PlanDetail from "@/pages/plan-detail";
-import Installations from "@/pages/installations";
-import Leads from "@/pages/leads";
-import CompanyLeads from "@/pages/company-leads";
-import Advertisements from "@/pages/advertisements";
-import InstallationsLeads from "@/pages/installations-leads";
-import Admin from "@/pages/Admin";
+
+// Lazy load all page components
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Login = lazy(() => import("@/pages/login"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const Complaints = lazy(() => import("@/pages/complaints"));
+const Engineers = lazy(() => import("@/pages/engineers"));
+const Users = lazy(() => import("@/pages/users"));
+const Products = lazy(() => import("@/pages/products").then(module => ({ default: module.Products })));
+const Plans = lazy(() => import("@/pages/plans"));
+const Analytics = lazy(() => import("@/pages/analytics"));
+const Notifications = lazy(() => import("@/pages/notifications"));
+const Support = lazy(() => import("@/pages/support"));
+const Settings = lazy(() => import("@/pages/settings"));
+const Profile = lazy(() => import("@/pages/profile"));
+const UserDetail = lazy(() => import("@/pages/user-detail"));
+const EngineerDetail = lazy(() => import("@/pages/engineer-detail"));
+const ComplaintDetail = lazy(() => import("@/pages/complaint-detail"));
+const PlanDetail = lazy(() => import("@/pages/plan-detail"));
+const Installations = lazy(() => import("@/pages/installations"));
+const Leads = lazy(() => import("@/pages/leads"));
+const CompanyLeads = lazy(() => import("@/pages/company-leads"));
+const Advertisements = lazy(() => import("@/pages/advertisements"));
+const InstallationsLeads = lazy(() => import("@/pages/installations-leads"));
+const Admin = lazy(() => import("@/pages/Admin"));
+
+// Loading component for Suspense fallback
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+  </div>
+);
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -48,145 +58,147 @@ function Router() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <Routes>
-      <Route path="/login" element={
-        isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
-      } />
-      
-      <Route path="/" element={
-        isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-      } />
-      
-      <Route path="/dashboard" element={
-        <RouteGuard>
-          <Dashboard />
-        </RouteGuard>
-      } />
-      
-      <Route path="/complaints" element={
-        <RouteGuard>
-          <Complaints />
-        </RouteGuard>
-      } />
-      
-      <Route path="/engineers" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <Engineers />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/manage-admin" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
-          <Admin />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/users" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <Users />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/products" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
-          <Products />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/plans" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <Plans />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/analytics" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
-          <Analytics />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/notifications" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <Notifications />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/support" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
-          <Support />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/profile" element={
-        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
-          <Profile />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/settings" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
-          <Settings />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/installations" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
-          <Installations />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
-          <Leads />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/company-leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
-          <CompanyLeads />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/advertisements" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
-          <Advertisements />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/installations-leads" element={
-        <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
-          <InstallationsLeads />
-        </RoleProtectedRoute>
-      } />
-      
-      {/* Detail Routes */}
-      <Route path="/users/:id" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <UserDetail />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/engineers/:id" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <EngineerDetail />
-        </RoleProtectedRoute>
-      } />
-      
-      <Route path="/complaints/:id" element={
-        <RouteGuard>
-          <ComplaintDetail />
-        </RouteGuard>
-      } />
-      
-      <Route path="/plans/:id" element={
-        <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
-          <PlanDetail />
-        </RoleProtectedRoute>
-      } />
-      
-      {/* Fallback to 404 */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Suspense fallback={<LoadingSpinner />}>
+      <Routes>
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />
+        } />
+        
+        <Route path="/" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+        } />
+        
+        <Route path="/dashboard" element={
+          <RouteGuard>
+            <Dashboard />
+          </RouteGuard>
+        } />
+        
+        <Route path="/complaints" element={
+          <RouteGuard>
+            <Complaints />
+          </RouteGuard>
+        } />
+        
+        <Route path="/engineers" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <Engineers />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/manage-admin" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+            <Admin />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/users" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <Users />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/products" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+            <Products />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/plans" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <Plans />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/analytics" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+            <Analytics />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/notifications" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <Notifications />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/support" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+            <Support />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <Profile />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/settings" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+            <Settings />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/installations" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN, Role.MANAGER]}>
+            <Installations />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/leads" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+            <Leads />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/company-leads" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <CompanyLeads />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/advertisements" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN]}>
+            <Advertisements />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/installations-leads" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <InstallationsLeads />
+          </RoleProtectedRoute>
+        } />
+        
+        {/* Detail Routes */}
+        <Route path="/users/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <UserDetail />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/engineers/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <EngineerDetail />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/complaints/:id" element={
+          <RouteGuard>
+            <ComplaintDetail />
+          </RouteGuard>
+        } />
+        
+        <Route path="/plans/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <PlanDetail />
+          </RoleProtectedRoute>
+        } />
+        
+        {/* Fallback to 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 }
 
