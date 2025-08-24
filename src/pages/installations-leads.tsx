@@ -43,27 +43,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  dummyNewInstallations,
-  dummyApplicationForms,
-  dummyWifiInstallationRequests,
-  dummyEngineers,
-  type NewInstallation,
-  type ApplicationForm,
-  type WifiInstallationRequest
+  dummyEngineers
 } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
-import { api } from "@/api/index";
+import { api, BASE_URL } from "@/api/index";
 
 export default function InstallationsLeads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const [dateFilter, setDateFilter] = useState<{ from?: Date; to?: Date }>({});
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [installations, setInstallations] = useState(dummyNewInstallations);
-  const [applicationForms] = useState(dummyApplicationForms);
-  const [installationRequests] = useState(dummyWifiInstallationRequests);
-  const [showNewInstallationForm, setShowNewInstallationForm] = useState(false);
+  const [dateFilter, setDateFilter] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+
+
+
   const [showEngineerAssignmentModal, setShowEngineerAssignmentModal] = useState(false);
   const [showInstallationRequestModal, setShowInstallationRequestModal] = useState(false);
   const [selectedInstallationRequest, setSelectedInstallationRequest] = useState<any>(null);
@@ -168,14 +160,7 @@ export default function InstallationsLeads() {
 
 
 
-  // Action handlers for installations
-  const updateInstallationStatus = (id: number, status: 'pending' | 'confirmed' | 'rejected') => {
-    setInstallations(prev => prev.map(installation =>
-      installation.id === id
-        ? { ...installation, status, updatedAt: new Date().toISOString() }
-        : installation
-    ));
-  };
+
 
 
 
@@ -274,29 +259,7 @@ export default function InstallationsLeads() {
     return engineer ? engineer.name : "Unassigned";
   };
 
-  // Filter installations
-  const filteredInstallations = useMemo(() => {
-    return installations.filter((installation) => {
-      const matchesSearch =
-        installation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        installation.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        installation.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        installation.phone.includes(searchTerm);
 
-      const matchesStatus = statusFilter === "all" || installation.status === statusFilter;
-      const matchesPriority = priorityFilter === "all" || installation.priority === priorityFilter;
-
-      let matchesDate = true;
-      if (dateFilter.from && dateFilter.to) {
-        const installationDate = parseISO(installation.createdAt);
-        const fromDate = startOfDay(dateFilter.from);
-        const toDate = endOfDay(dateFilter.to);
-        matchesDate = isAfter(installationDate, fromDate) && isBefore(installationDate, toDate);
-      }
-
-      return matchesSearch && matchesStatus && matchesPriority && matchesDate;
-    });
-  }, [searchTerm, statusFilter, priorityFilter, dateFilter]);
 
 
 
@@ -366,69 +329,6 @@ export default function InstallationsLeads() {
         displayEstimatedCost: req.displayEstimatedCost,
         displayPreferredPlan: req.displayPreferredPlan,
         displayScheduledDate: req.displayScheduledDate,
-      })),
-      // Dummy installation requests (fallback)
-      ...installationRequests.map(req => ({
-        ...req,
-        type: 'installation_request_dummy',
-        displayName: req.name,
-        displayId: `REQ-${req.id}`,
-        displayType: req.installationType,
-        displayStatus: req.status,
-        displayDate: req.createdAt,
-        displayContact: req.phoneNumber,
-        displayAddress: req.email, // Using email as address for requests
-        displayVillage: '',
-        displayPincode: '',
-        displayRemarks: req.remarks,
-        displayAcceptedAt: req.approvedDate,
-        displayRejectedAt: '',
-        displayPlanId: req.applicationId,
-        displayUserId: req.userId,
-        displayCountryCode: req.countryCode,
-        displayAlternatePhone: req.alternatePhoneNumber,
-        displayAlternateCountryCode: req.alternateCountryCode,
-        displayEngineer: req.assignedEngineer,
-        displayInstallationDate: req.installationDate,
-        displayCompletedDate: req.completedDate,
-        displayAadhaarFront: req.aadhaarFrontUrl,
-        displayAadhaarBack: req.aadhaarBackUrl,
-        displayPassportPhoto: req.passportPhotoUrl,
-        displayPriority: undefined,
-        displayEstimatedCost: undefined,
-        displayPreferredPlan: undefined,
-        displayScheduledDate: undefined,
-      })),
-      ...installations.map(inst => ({
-        ...inst,
-        type: 'new_installation',
-        displayName: inst.customerName,
-        displayId: `INST-${inst.id}`,
-        displayType: inst.requestType,
-        displayStatus: inst.status,
-        displayDate: inst.createdAt,
-        displayContact: inst.phone,
-        displayAddress: inst.address,
-        displayVillage: inst.location,
-        displayPincode: '',
-        displayRemarks: inst.notes,
-        displayAcceptedAt: inst.installationDate,
-        displayRejectedAt: inst.rejectionReason,
-        displayPlanId: null,
-        displayUserId: null,
-        displayCountryCode: '',
-        displayAlternatePhone: inst.alternatePhone,
-        displayAlternateCountryCode: '',
-        displayEngineer: inst.assignedEngineerId,
-        displayInstallationDate: inst.installationDate,
-        displayCompletedDate: inst.updatedAt,
-        displayAadhaarFront: inst.aadharFront,
-        displayAadhaarBack: inst.aadharBack,
-        displayPassportPhoto: inst.passportPhoto,
-        displayPriority: inst.priority,
-        displayEstimatedCost: inst.estimatedCost,
-        displayPreferredPlan: inst.preferredPlan,
-        displayScheduledDate: inst.scheduledDate,
       }))
     ];
 
@@ -451,54 +351,28 @@ export default function InstallationsLeads() {
 
       return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [searchTerm, statusFilter, dateFilter, transformedApplications, transformedInstallationRequests, installationRequests, installations]);
+  }, [searchTerm, statusFilter, dateFilter, transformedApplications, transformedInstallationRequests]);
 
   // Analytics calculations
   const analytics = useMemo(() => {
-    // Installation analytics
-    const totalInstallations = dummyNewInstallations.length;
-    const pendingInstallations = dummyNewInstallations.filter(i => i.status === "pending").length;
-    const confirmedInstallations = dummyNewInstallations.filter(i => i.status === "confirmed").length;
-    const rejectedInstallations = dummyNewInstallations.filter(i => i.status === "rejected").length;
+    // Application analytics
+    const totalApplications = transformedApplications.length;
+    const inReviewApplications = transformedApplications.filter((app: any) => app.status === "inreview").length;
+    const acceptedApplications = transformedApplications.filter((app: any) => app.status === "accept").length;
+    const rejectedApplications = transformedApplications.filter((app: any) => app.status === "reject").length;
 
-    const installationSuccessRate = totalInstallations > 0 ? (confirmedInstallations / totalInstallations * 100).toFixed(1) : '0';
+    const applicationSuccessRate = totalApplications > 0 ? (acceptedApplications / totalApplications * 100).toFixed(1) : '0';
 
     return {
-      totalInstallations,
-      pendingInstallations,
-      confirmedInstallations,
-      rejectedInstallations,
-      installationSuccessRate
+      totalApplications,
+      inReviewApplications,
+      acceptedApplications,
+      rejectedApplications,
+      applicationSuccessRate
     };
-  }, []);
+  }, [transformedApplications]);
 
-  const exportInstallationsToExcel = () => {
-    const headers = ["ID", "Customer Name", "Email", "Phone", "Location", "Preferred Plan", "Request Type", "Status", "Priority", "Estimated Cost", "Created Date"];
-    const csvContent = [
-      headers.join(","),
-      ...filteredInstallations.map(installation => [
-        installation.id,
-        `"${installation.customerName}"`,
-        installation.email,
-        installation.phone,
-        `"${installation.location}"`,
-        installation.preferredPlan || "N/A",
-        installation.requestType,
-        installation.status,
-        installation.priority,
-        installation.estimatedCost || "N/A",
-        installation.createdAt
-      ].join(","))
-    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `installations_${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
 
 
@@ -549,30 +423,30 @@ export default function InstallationsLeads() {
         {/* Top Stats Row - All Data Types */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           {/* Application Forms Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
+              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-blue-800 dark:text-blue-200">
                 <HardHat className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
                 Application Forms
               </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm">
+              <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-blue-600 dark:text-blue-300">
                 Applications in review
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-blue-600">
+              <div className="text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300">
                 {applicationsLoading ? "..." : transformedApplications.filter((app: any) => app.status === 'inreview').length}
               </div>
-              <div className="text-xs lg:text-sm text-gray-600 mt-1">
+              <div className="text-xs lg:text-sm text-blue-600 dark:text-blue-400 mt-1">
                 {applicationsLoading ? "Loading..." : "In review applications"}
               </div>
               <div className="mt-3 space-y-2">
                 {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 3).map((app: any) => (
-                  <div key={app.id} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div key={app.id} className="p-2 bg-white/60 dark:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-600">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs lg:text-sm font-medium truncate">{app.name}</div>
-                        <div className="text-xs text-gray-500">{app.applicationType}</div>
+                        <div className="text-xs lg:text-sm font-medium truncate text-blue-900 dark:text-blue-100">{app.name}</div>
+                        <div className="text-xs text-blue-600 dark:text-blue-300">{app.applicationType}</div>
                       </div>
                       <Badge className={`${getStatusColor(app.status)} text-xs ml-2`}>
                         {app.status}
@@ -618,33 +492,33 @@ export default function InstallationsLeads() {
           </Card>
 
           {/* Installation Requests Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
+          <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
+              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-green-800 dark:text-green-200">
                 <Building className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
                 Installation Requests
               </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm">
+              <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-green-600 dark:text-green-300">
                 Requests in review
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-green-600">
+              <div className="text-2xl lg:text-3xl font-bold text-green-700 dark:text-green-300">
                 {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}
               </div>
-              <div className="text-xs lg:text-sm text-gray-600 mt-1">
+              <div className="text-xs lg:text-sm text-green-600 dark:text-green-400 mt-1">
                 {installationRequestsLoading ? "Loading..." : "Approved requests"}
               </div>
               <div className="mt-3 space-y-2">
                 {installationRequestsLoading ? (
-                  <div className="text-xs text-gray-500">Loading installation requests...</div>
+                  <div className="text-xs text-green-600 dark:text-green-400">Loading installation requests...</div>
                 ) : (
                   transformedInstallationRequests.slice(0, 3).map((req: any) => (
-                    <div key={req.id} className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div key={req.id} className="p-2 bg-white/60 dark:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-600">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs lg:text-sm font-medium truncate">{req.name}</div>
-                          <div className="text-xs text-gray-500">{req.displayType}</div>
+                          <div className="text-xs lg:text-sm font-medium truncate text-green-900 dark:text-green-100">{req.name}</div>
+                          <div className="text-xs text-green-600 dark:text-green-300">{req.displayType}</div>
                         </div>
                         <Badge className={`${getStatusColor(req.status)} text-xs ml-2`}>
                           {req.status}
@@ -688,37 +562,7 @@ export default function InstallationsLeads() {
             </CardContent>
           </Card>
 
-          {/* New Installations Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
-                <Zap className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
-                New Installations
-              </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm">
-                Customer installation requests
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-purple-600">{installations.length}</div>
-              <div className="text-xs lg:text-sm text-gray-600 mt-1">
-                {installations.filter(inst => inst.status === 'confirmed').length} confirmed
-              </div>
-              <div className="mt-3 space-y-2">
-                {installations.slice(0, 3).map((inst) => (
-                  <div key={inst.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs lg:text-sm font-medium truncate">{inst.customerName}</div>
-                      <div className="text-xs text-gray-500">{inst.requestType}</div>
-                    </div>
-                    <Badge className={`${getStatusColor(inst.status)} text-xs ml-2`}>
-                      {inst.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+
 
 
         </div>
@@ -726,61 +570,56 @@ export default function InstallationsLeads() {
         {/* Quick Overview and Recent Activity Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Quick Overview */}
-          <Card className="dashboard-card shadow-sm">
+          <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
+              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-purple-800 dark:text-purple-200">
                 <BarChart3 className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
                 Quick Overview
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                  <div className="text-lg lg:text-xl font-bold dashboard-text">
+                <div className="p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
+                  <div className="text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
                     {applicationsLoading ? "..." : transformedApplications.length}
                   </div>
-                  <div className="text-xs dashboard-text-muted">
+                  <div className="text-xs text-purple-600 dark:text-purple-400">
                     {applicationsLoading ? "Loading..." : "Applications"}
                   </div>
                 </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
-                  <div className="text-lg lg:text-xl font-bold dashboard-text">
+                <div className="p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
+                  <div className="text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
                     {installationRequestsLoading ? "..." : transformedInstallationRequests.length}
                   </div>
-                  <div className="text-xs dashboard-text-muted">
+                  <div className="text-xs text-purple-600 dark:text-purple-400">
                     {installationRequestsLoading ? "Loading..." : "Requests"}
                   </div>
                 </div>
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
-                  <div className="text-lg lg:text-xl font-bold dashboard-text">{installations.length}</div>
-                  <div className="text-xs dashboard-text-muted">Installations</div>
-                </div>
-
               </div>
             </CardContent>
           </Card>
 
           {/* Recent Activity */}
-          <Card className="dashboard-card shadow-sm">
+          <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center">
+              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-orange-800 dark:text-orange-200">
                 <Clock className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
                 Recent Activity
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
-                {[...transformedApplications, ...transformedInstallationRequests, ...installationRequests, ...installations]
+                {[...transformedApplications, ...transformedInstallationRequests]
                   .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
                   .slice(0, 5)
-                  .map((item, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  .map((item: any, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-2 bg-white/60 dark:bg-orange-900/40 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-white/80 dark:hover:bg-orange-900/60 transition-colors">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs lg:text-sm font-medium truncate">
-                          {'name' in item ? item.name : 'customerName' in item ? item.customerName : 'applicationId' in item ? (item as ApplicationForm).applicationId : 'New Entry'}
+                        <div className="text-xs lg:text-sm font-medium truncate text-orange-900 dark:text-orange-100">
+                          {item.name || item.customerName || item.applicationId || 'New Entry'}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-orange-600 dark:text-orange-400">
                           {format(new Date(item.createdAt || item.updatedAt), "MMM dd, HH:mm")}
                         </div>
                       </div>
@@ -793,29 +632,47 @@ export default function InstallationsLeads() {
 
         {/* Main Content with Tabs */}
         <div className="space-y-4 lg:space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">New Installation & Applications</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm lg:text-base">Manage installation requests and application forms</p>
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 p-8 text-white shadow-lg">
+            <div className="relative z-10">
+              <h1 className="text-3xl lg:text-4xl font-bold mb-2">New Installation & Applications</h1>
+              <p className="text-blue-100 text-lg">Manage installation requests and application forms with ease</p>
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <HardHat className="h-5 w-5" />
+                  <span className="text-sm">{transformedApplications.length} Applications</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  <span className="text-sm">{transformedInstallationRequests.length} Installation Requests</span>
+                </div>
+              </div>
             </div>
+            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/10 to-transparent"></div>
+            <div className="absolute -right-4 top-4 h-32 w-32 rounded-full bg-white/10"></div>
+            <div className="absolute -right-8 top-16 h-16 w-16 rounded-full bg-white/5"></div>
           </div>
 
           <Tabs defaultValue="all-forms" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full grid-cols-1 lg:grid-cols-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-1 lg:grid-cols-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
               <TabsTrigger value="all-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
                 <HardHat className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden sm:inline">All Forms</span>
-                <span className="sm:hidden">Forms</span>
+                <span className="sm:hidden">All</span>
+              </TabsTrigger>
+              <TabsTrigger value="application-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
+                <FileText className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="hidden sm:inline">Application Forms</span>
+                <span className="sm:hidden">Apps</span>
+              </TabsTrigger>
+              <TabsTrigger value="installation-requests" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
+                <Building className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="hidden sm:inline">Installation Requests</span>
+                <span className="sm:hidden">Install</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
                 <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden sm:inline">Analytics</span>
                 <span className="sm:hidden">Stats</span>
-              </TabsTrigger>
-              <TabsTrigger value="installations" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <Zap className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">Installations</span>
-                <span className="sm:hidden">Installs</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1194,54 +1051,755 @@ export default function InstallationsLeads() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="application-forms" className="space-y-4 lg:space-y-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <CardTitle className="text-lg lg:text-xl">WiFi Application Forms</CardTitle>
+                      <CardDescription className="text-sm">Manage WiFi application forms and their status</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => {
+                        console.log("Exporting application forms data:", transformedApplications);
+                      }} className="bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm px-3 py-2">
+                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
+                        Export Data
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search applications..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-sm text-sm"
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="inreview">In Review</SelectItem>
+                        <SelectItem value="accept">Accepted</SelectItem>
+                        <SelectItem value="reject">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="text-sm">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateFilter.from ? (
+                              dateFilter.to ? (
+                                <>
+                                  {format(dateFilter.from, "LLL dd, y")} -{" "}
+                                  {format(dateFilter.to, "LLL dd, y")}
+                                </>
+                              ) : (
+                                format(dateFilter.from, "LLL dd, y")
+                              )
+                            ) : (
+                              <span>Pick a date range</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateFilter.from}
+                            selected={{ from: dateFilter.from, to: dateFilter.to }}
+                            onSelect={(range) => {
+                              if (range?.from) {
+                                setDateFilter({ from: range.from, to: range.to });
+                              }
+                            }}
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800">
+                            <TableHead className="text-xs lg:text-sm font-medium">Application ID</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Plan Details</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Address</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {applicationsLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center py-8">
+                                <div className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                  <span className="ml-2 text-sm text-gray-600">Loading applications...</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : applicationsError ? (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center py-8">
+                                <div className="text-red-600 text-sm">
+                                  Error loading applications. Please refresh the page.
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            transformedApplications
+                              .filter((app: any) => {
+                                const matchesSearch =
+                                  app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  app.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  app.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  app.applicationId.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+
+                                let matchesDate = true;
+                                if (dateFilter.from && dateFilter.to) {
+                                  const appDate = parseISO(app.createdAt);
+                                  const fromDate = startOfDay(dateFilter.from);
+                                  const toDate = endOfDay(dateFilter.to);
+                                  matchesDate = isAfter(appDate, fromDate) && isBefore(appDate, toDate);
+                                }
+
+                                return matchesSearch && matchesStatus && matchesDate;
+                              })
+                              .map((app: any) => (
+                                <TableRow key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                  <TableCell className="py-3">
+                                    <div className="font-medium text-xs lg:text-sm text-blue-600">{app.applicationId}</div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div>
+                                      <div className="font-medium text-xs lg:text-sm">{app.name}</div>
+                                      <div className="text-xs text-gray-500 hidden lg:block">{app.village}</div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div>
+                                      <div className="text-xs lg:text-sm">{app.phoneNumber}</div>
+                                      {app.alternatePhoneNumber && (
+                                        <div className="text-xs text-gray-500 hidden lg:block">{app.alternatePhoneNumber}</div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="max-w-xs">
+                                      {app.planDetails ? (
+                                        <div className="space-y-1">
+                                          <div className="text-xs lg:text-sm font-medium">{app.planDetails.title}</div>
+                                          <div className="text-xs text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
+                                          <div className="text-xs text-gray-500">{app.planDetails.provider}</div>
+                                        </div>
+                                      ) : (
+                                        <div className="text-xs text-gray-500">No plan selected</div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <Badge className={`${getStatusColor(app.status)} text-xs`}>
+                                      {app.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="text-xs text-gray-600 max-w-xs truncate">
+                                      {app.address}, {app.village} - {app.pincode}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="text-xs lg:text-sm">
+                                      {format(parseISO(app.createdAt), "MMM dd, yyyy")}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="flex gap-1">
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                            <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                          <DialogHeader>
+                                            <DialogTitle className="text-lg lg:text-xl">
+                                              WiFi Application Details - {app.name}
+                                            </DialogTitle>
+                                            <DialogDescription className="text-sm">
+                                              Complete application information and plan details
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div>
+                                              <Label className="text-sm font-medium">Application ID</Label>
+                                              <p className="text-sm font-mono">{app.applicationId}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Status</Label>
+                                              <Badge className={`${getStatusColor(app.status)} text-sm`}>
+                                                {app.status}
+                                              </Badge>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Customer Name</Label>
+                                              <p className="text-sm">{app.name}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Contact Number</Label>
+                                              <p className="text-sm">{app.countryCode} {app.phoneNumber}</p>
+                                            </div>
+                                            {app.alternatePhoneNumber && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Alternate Phone</Label>
+                                                <p className="text-sm">{app.alternateCountryCode} {app.alternatePhoneNumber}</p>
+                                              </div>
+                                            )}
+                                            <div>
+                                              <Label className="text-sm font-medium">Email</Label>
+                                              <p className="text-sm">{app.userDetails?.email || 'N/A'}</p>
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                              <Label className="text-sm font-medium">Address</Label>
+                                              <p className="text-sm">{app.address}, {app.village} - {app.pincode}</p>
+                                            </div>
+                                            {app.planDetails && (
+                                              <>
+                                                <div className="lg:col-span-2">
+                                                  <Label className="text-sm font-medium">Selected Plan</Label>
+                                                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                                                                             {app.planDetails.logo && (
+                                                         <img 
+                                                           src={`${BASE_URL}${app.planDetails.logo}`}
+                                                           alt={app.planDetails.provider}
+                                                           className="w-12 h-12 object-cover rounded-lg"
+                                                         />
+                                                       )}
+                                                      <div className="flex-1">
+                                                        <div className="font-medium">{app.planDetails.title}</div>
+                                                        <div className="text-sm text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
+                                                        <div className="text-xs text-gray-500">{app.planDetails.provider} • {app.planDetails.validity}</div>
+                                                      </div>
+                                                    </div>
+                                                    {app.planDetails.benefits && app.planDetails.benefits.length > 0 && (
+                                                      <div className="mt-2">
+                                                        <div className="text-xs font-medium text-gray-600">Benefits:</div>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                          {app.planDetails.benefits.map((benefit: string, index: number) => (
+                                                            <Badge key={index} variant="secondary" className="text-xs">
+                                                              {benefit}
+                                                            </Badge>
+                                                          ))}
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              </>
+                                            )}
+                                            <div>
+                                              <Label className="text-sm font-medium">Created Date</Label>
+                                              <p className="text-sm">{format(parseISO(app.createdAt), "MMM dd, yyyy HH:mm")}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Last Updated</Label>
+                                              <p className="text-sm">{format(parseISO(app.updatedAt), "MMM dd, yyyy HH:mm")}</p>
+                                            </div>
+                                          </div>
+
+                                          {/* Action Buttons for In Review Items */}
+                                          {app.status === 'inreview' && (
+                                            <div className="mt-6 pt-4 border-t">
+                                              <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                              <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button
+                                                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                                                  onClick={async () => {
+                                                    try {
+                                                      await updateApplicationStatus({ id: app.id, status: 'accept' });
+                                                      console.log("Application accepted:", app.applicationId);
+                                                      alert("Application accepted successfully!");
+                                                    } catch (error) {
+                                                      console.error("Error accepting application:", error);
+                                                      alert("Error accepting application. Please try again.");
+                                                    }
+                                                  }}
+                                                >
+                                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                                  Accept Application
+                                                </Button>
+                                                <Button
+                                                  variant="destructive"
+                                                  className="text-sm"
+                                                  onClick={async () => {
+                                                    try {
+                                                      await updateApplicationStatus({ id: app.id, status: 'reject' });
+                                                      console.log("Application rejected:", app.applicationId);
+                                                      alert("Application rejected successfully!");
+                                                    } catch (error) {
+                                                      console.error("Error rejecting application:", error);
+                                                    }
+                                                  }}
+                                                >
+                                                  <XCircle className="h-4 w-4 mr-2" />
+                                                  Reject Application
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="installation-requests" className="space-y-4 lg:space-y-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <CardTitle className="text-lg lg:text-xl">Installation Requests</CardTitle>
+                      <CardDescription className="text-sm">Manage installation requests and assign engineers</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => {
+                        console.log("Exporting installation requests data:", transformedInstallationRequests);
+                      }} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
+                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
+                        Export Data
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Search installation requests..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="max-w-sm text-sm"
+                      />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="text-sm">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateFilter.from ? (
+                              dateFilter.to ? (
+                                <>
+                                  {format(dateFilter.from, "LLL dd, y")} -{" "}
+                                  {format(dateFilter.to, "LLL dd, y")}
+                                </>
+                              ) : (
+                                format(dateFilter.from, "LLL dd, y")
+                              )
+                            ) : (
+                              <span>Pick a date range</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateFilter.from}
+                            selected={{ from: dateFilter.from, to: dateFilter.to }}
+                            onSelect={(range) => {
+                              if (range?.from) {
+                                setDateFilter({ from: range.from, to: range.to });
+                              }
+                            }}
+                            numberOfMonths={2}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50 dark:bg-gray-800">
+                            <TableHead className="text-xs lg:text-sm font-medium">Request ID</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Application</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Assigned Engineer</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Documents</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
+                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {installationRequestsLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8">
+                                <div className="flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                  <span className="ml-2 text-sm text-gray-600">Loading installation requests...</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : installationRequestsError ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8">
+                                <div className="text-red-600 text-sm">
+                                  Error loading installation requests. Please refresh the page.
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            transformedInstallationRequests
+                              .filter((req: any) => {
+                                const matchesSearch =
+                                  req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  req.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  req.displayAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  req.displayId.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                const matchesStatus = statusFilter === "all" || req.status === statusFilter;
+
+                                let matchesDate = true;
+                                if (dateFilter.from && dateFilter.to) {
+                                  const reqDate = parseISO(req.createdAt);
+                                  const fromDate = startOfDay(dateFilter.from);
+                                  const toDate = endOfDay(dateFilter.to);
+                                  matchesDate = isAfter(reqDate, fromDate) && isBefore(reqDate, toDate);
+                                }
+
+                                return matchesSearch && matchesStatus && matchesDate;
+                              })
+                              .map((req: any) => (
+                                <TableRow key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                  <TableCell className="py-3">
+                                    <div className="font-medium text-xs lg:text-sm text-green-600">{req.displayId}</div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div>
+                                      <div className="font-medium text-xs lg:text-sm">{req.name}</div>
+                                      <div className="text-xs text-gray-500 hidden lg:block">{req.displayVillage}</div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div>
+                                      <div className="text-xs lg:text-sm">{req.phoneNumber}</div>
+                                      {req.alternatePhoneNumber && (
+                                        <div className="text-xs text-gray-500 hidden lg:block">{req.alternatePhoneNumber}</div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="text-xs lg:text-sm text-blue-600">
+                                      {req.applicationId?.applicationId || 'N/A'}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <Badge className={`${getStatusColor(req.status)} text-xs`}>
+                                      {req.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="text-xs lg:text-sm">
+                                      {req.assignedEngineer ? (
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <span className="text-xs font-medium text-blue-600">
+                                              {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
+                                            </span>
+                                          </div>
+                                          <span>{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-500">Not assigned</span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="flex gap-1">
+                                      {req.aadhaarFrontUrl && (
+                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                          Aadhaar ✓
+                                        </Badge>
+                                      )}
+                                      {req.passportPhotoUrl && (
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                          Photo ✓
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="text-xs lg:text-sm">
+                                      {format(parseISO(req.createdAt), "MMM dd, yyyy")}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="flex gap-1">
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                            <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                          </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                          <DialogHeader>
+                                            <DialogTitle className="text-lg lg:text-xl">
+                                              Installation Request Details - {req.name}
+                                            </DialogTitle>
+                                            <DialogDescription className="text-sm">
+                                              Complete installation request information and documents
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div>
+                                              <Label className="text-sm font-medium">Request ID</Label>
+                                              <p className="text-sm font-mono">{req.displayId}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Status</Label>
+                                              <Badge className={`${getStatusColor(req.status)} text-sm`}>
+                                                {req.status}
+                                              </Badge>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Customer Name</Label>
+                                              <p className="text-sm">{req.name}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Email</Label>
+                                              <p className="text-sm">{req.email}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Contact Number</Label>
+                                              <p className="text-sm">{req.countryCode} {req.phoneNumber}</p>
+                                            </div>
+                                            {req.alternatePhoneNumber && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Alternate Phone</Label>
+                                                <p className="text-sm">{req.alternateCountryCode} {req.alternatePhoneNumber}</p>
+                                              </div>
+                                            )}
+                                            <div className="lg:col-span-2">
+                                              <Label className="text-sm font-medium">Address</Label>
+                                              <p className="text-sm">{req.displayAddress}, {req.displayVillage} - {req.displayPincode}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Application ID</Label>
+                                              <p className="text-sm text-blue-600">{req.applicationId?.applicationId || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Created Date</Label>
+                                              <p className="text-sm">{format(parseISO(req.createdAt), "MMM dd, yyyy HH:mm")}</p>
+                                            </div>
+                                            {req.assignedEngineer && (
+                                              <div className="lg:col-span-2">
+                                                <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                      <span className="text-sm font-medium text-blue-600">
+                                                        {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <div className="font-medium">{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</div>
+                                                      <div className="text-sm text-gray-600">{req.assignedEngineer.email}</div>
+                                                      <div className="text-sm text-gray-500">{req.assignedEngineer.phoneNumber}</div>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {req.remarks && (
+                                              <div className="lg:col-span-2">
+                                                <Label className="text-sm font-medium">Remarks</Label>
+                                                <p className="text-sm">{req.remarks}</p>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Documents Section */}
+                                          <div className="mt-6">
+                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                              {req.aadhaarFrontUrl && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Aadhaar Front</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                                                                         <img 
+                                                       src={`${BASE_URL}${req.aadhaarFrontUrl}`}
+                                                       alt="Aadhaar Front"
+                                                       className="w-full h-32 object-cover rounded-lg"
+                                                     />
+                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {req.aadhaarBackUrl && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Aadhaar Back</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                                                                         <img 
+                                                       src={`${BASE_URL}${req.aadhaarBackUrl}`}
+                                                       alt="Aadhaar Back"
+                                                       className="w-full h-32 object-cover rounded-lg"
+                                                     />
+                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {req.passportPhotoUrl && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Passport Photo</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                                                                         <img 
+                                                        src={`${BASE_URL}${req.passportPhotoUrl}`}
+                                                       alt="Passport Photo"
+                                                       className="w-full h-32 object-cover rounded-lg"
+                                                     />
+                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+
+                                          {/* Action Buttons for Installation Requests */}
+                                          <div className="mt-6 pt-4 border-t">
+                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                              <Button
+                                                className={`text-sm ${req.status === 'approved'
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-green-600 hover:bg-green-700'
+                                                  } text-white`}
+                                                onClick={() => {
+                                                  if (req.status !== 'approved') {
+                                                    setSelectedInstallationRequest(req);
+                                                    setShowInstallationRequestModal(true);
+                                                  }
+                                                }}
+                                                disabled={req.status === 'approved'}
+                                              >
+                                                <HardHat className="h-4 w-4 mr-2" />
+                                                Assign Engineer
+                                              </Button>
+                                              <Button
+                                                variant="outline"
+                                                className="text-sm"
+                                                onClick={() => {
+                                                  setSelectedInstallationRequest(req);
+                                                  setShowInstallationRequestModal(true);
+                                                }}
+                                              >
+                                                <Eye className="h-4 w-4 mr-2" />
+                                                View Details
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="analytics" className="space-y-4 lg:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                <Card className="shadow-sm">
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Total Installations</CardTitle>
-                    <HardHat className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{analytics.totalInstallations}</div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      {analytics.installationSuccessRate}% success rate
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Pending Installations</CardTitle>
+                    <CardTitle className="text-sm lg:text-base font-medium">In Review Applications</CardTitle>
                     <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{analytics.pendingInstallations}</div>
+                    <div className="text-xl lg:text-2xl font-bold text-blue-600">{analytics.inReviewApplications}</div>
                     <p className="text-xs lg:text-sm text-muted-foreground">
-                      Awaiting confirmation
+                      Applications under review
                     </p>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-sm">
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                    <CardTitle className="text-sm lg:text-base font-medium">Accepted Applications</CardTitle>
+                    <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl lg:text-2xl font-bold text-green-600">{analytics.acceptedApplications}</div>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
+                      {analytics.applicationSuccessRate}% success rate
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <CardTitle className="text-sm lg:text-base font-medium">Total Applications</CardTitle>
                     <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{transformedApplications.length}</div>
+                    <div className="text-xl lg:text-2xl font-bold text-purple-600">{transformedApplications.length}</div>
                     <p className="text-xs lg:text-sm text-muted-foreground">
                       Application forms submitted
                     </p>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-sm">
+                <Card className="shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                     <CardTitle className="text-sm lg:text-base font-medium">Installation Requests</CardTitle>
                     <Building className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold">{transformedInstallationRequests.length}</div>
+                    <div className="text-xl lg:text-2xl font-bold text-orange-600">{transformedInstallationRequests.length}</div>
                     <p className="text-xs lg:text-sm text-muted-foreground">
                       Requests in review
                     </p>
@@ -1252,34 +1810,34 @@ export default function InstallationsLeads() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
                 <Card className="shadow-sm">
                   <CardHeader>
-                    <CardTitle className="text-base lg:text-lg">Installation Status Distribution</CardTitle>
+                    <CardTitle className="text-base lg:text-lg">Installation Request Status Distribution</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Pending</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.pendingInstallations}</span>
+                        <span className="text-sm lg:text-base">In Review</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.pendingInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length / transformedInstallationRequests.length) * 100}%` }}></div>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Confirmed</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.confirmedInstallations}</span>
+                        <span className="text-sm lg:text-base">Approved</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.confirmedInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'approved').length / transformedInstallationRequests.length) * 100}%` }}></div>
                       </div>
                     </div>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-sm lg:text-base">Rejected</span>
-                        <span className="text-sm lg:text-base font-medium">{analytics.rejectedInstallations}</span>
+                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length}</span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(analytics.rejectedInstallations / analytics.totalInstallations) * 100}%` }}></div>
+                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length / transformedInstallationRequests.length) * 100}%` }}></div>
                       </div>
                     </div>
                   </CardContent>
@@ -1322,288 +1880,7 @@ export default function InstallationsLeads() {
               </div>
             </TabsContent>
 
-            <TabsContent value="installations" className="space-y-4 lg:space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <CardTitle className="text-lg lg:text-xl">New Installation Requests</CardTitle>
-                      <CardDescription className="text-sm">Manage customer installation applications</CardDescription>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button className="bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm px-3 py-2">
-                            <HardHat className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                            New Installation
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="text-lg lg:text-xl">New Installation Request</DialogTitle>
-                            <DialogDescription className="text-sm">
-                              Fill in customer details and upload required documents
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-medium">Customer Name</Label>
-                              <Input placeholder="Enter full name" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Email</Label>
-                              <Input type="email" placeholder="customer@email.com" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Phone Number (with country code)</Label>
-                              <Input placeholder="+91 98765 43210" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Alternate Phone Number</Label>
-                              <Input placeholder="+91 98765 43211" className="text-sm" />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label className="text-sm font-medium">Address</Label>
-                              <Input placeholder="Complete address with area and city" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Aadhar Card - Front Side</Label>
-                              <Input type="file" accept="image/*" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Aadhar Card - Back Side</Label>
-                              <Input type="file" accept="image/*" className="text-sm" />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label className="text-sm font-medium">Passport Size Photo</Label>
-                              <Input type="file" accept="image/*" className="text-sm" />
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Request Type</Label>
-                              <Select>
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="residential">Residential</SelectItem>
-                                  <SelectItem value="commercial">Commercial</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm font-medium">Priority</Label>
-                              <Select>
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="low">Low</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                  <SelectItem value="urgent">Urgent</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2 pt-4">
-                            <Button variant="outline" className="text-sm">Cancel</Button>
-                            <Button className="bg-blue-600 hover:bg-blue-700 text-white text-sm">Submit Request</Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button onClick={exportInstallationsToExcel} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
-                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        Export Excel
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search installations..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm text-sm"
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by priority" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Priority</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 dark:bg-gray-800">
-                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden lg:table-cell">Location</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Type</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium hidden sm:table-cell">Priority</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredInstallations.map((installation) => (
-                            <TableRow key={installation.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                              <TableCell className="py-3">
-                                <div>
-                                  <div className="font-medium text-xs lg:text-sm">{installation.customerName}</div>
-                                  <div className="text-xs text-gray-500 hidden lg:block">{installation.email}</div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="text-xs lg:text-sm">{installation.phone}</div>
-                              </TableCell>
-                              <TableCell className="py-3 hidden lg:table-cell">
-                                <div className="flex items-center">
-                                  <MapPin className="h-3 w-3 mr-1 text-gray-500" />
-                                  <span className="text-xs lg:text-sm">{installation.location}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <Badge variant={installation.requestType === 'commercial' ? 'default' : 'secondary'} className="text-xs">
-                                  {installation.requestType}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                {getStatusBadge(installation.status, "installation")}
-                              </TableCell>
-                              <TableCell className="py-3 hidden sm:table-cell">
-                                {getPriorityBadge(installation.priority)}
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="text-xs lg:text-sm">
-                                  {format(parseISO(installation.createdAt), "MMM dd, yyyy")}
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-3">
-                                <div className="flex gap-1">
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                        <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                                      <DialogHeader>
-                                        <DialogTitle className="text-lg lg:text-xl">Installation Details - {installation.customerName}</DialogTitle>
-                                        <DialogDescription className="text-sm">
-                                          View installation request details and update status
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                          <Label className="text-sm font-medium">Customer Name</Label>
-                                          <p className="text-sm">{installation.customerName}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Email</Label>
-                                          <p className="text-sm">{installation.email}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Phone</Label>
-                                          <p className="text-sm">{installation.phone}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Alternate Phone</Label>
-                                          <p className="text-sm">{installation.alternatePhone || "Not provided"}</p>
-                                        </div>
-                                        <div className="sm:col-span-2">
-                                          <Label className="text-sm font-medium">Address</Label>
-                                          <p className="text-sm">{installation.address}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Request Type</Label>
-                                          <p className="text-sm capitalize">{installation.requestType}</p>
-                                        </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Current Status</Label>
-                                          <div className="text-sm">{getStatusBadge(installation.status, "installation")}</div>
-                                        </div>
-                                        {installation.aadharFront && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Aadhar Front</Label>
-                                            <p className="text-sm text-blue-600">Document uploaded</p>
-                                          </div>
-                                        )}
-                                        {installation.aadharBack && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Aadhar Back</Label>
-                                            <p className="text-sm text-blue-600">Document uploaded</p>
-                                          </div>
-                                        )}
-                                        {installation.passportPhoto && (
-                                          <div>
-                                            <Label className="text-sm font-medium">Passport Photo</Label>
-                                            <p className="text-sm text-blue-600">Photo uploaded</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col sm:flex-row gap-2 pt-4">
-                                        <Button
-                                          onClick={() => updateInstallationStatus(installation.id, 'confirmed')}
-                                          variant={installation.status === 'confirmed' ? 'default' : 'outline'}
-                                          className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                        >
-                                          <CheckCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Confirm
-                                        </Button>
-                                        <Button
-                                          onClick={() => updateInstallationStatus(installation.id, 'rejected')}
-                                          variant={installation.status === 'rejected' ? 'destructive' : 'outline'}
-                                          className="bg-red-600 hover:bg-red-700 text-white text-sm"
-                                        >
-                                          <XCircle className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Reject
-                                        </Button>
-                                        <Button
-                                          onClick={() => updateInstallationStatus(installation.id, 'pending')}
-                                          variant={installation.status === 'pending' ? 'default' : 'outline'}
-                                          className="text-sm"
-                                        >
-                                          <Clock className="h-3 w-3 mr-1 lg:h-4 lg:w-4 lg:mr-2" />
-                                          Set Pending
-                                        </Button>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
 
           </Tabs>
