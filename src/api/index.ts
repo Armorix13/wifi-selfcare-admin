@@ -9,7 +9,8 @@ const Tags = {
   PRODUCT:"PRODUCT",
   PLANS:"PLANS",
   ENGINEER:"ENGINEER",
-  ADMIN:"ADMIN"
+  ADMIN:"ADMIN",
+  LEADS:"LEADS"
 };
 
 export const LIMIT = 20;
@@ -365,6 +366,22 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.ADMIN],
     }),
+    getAllLeads: builder.query({
+      
+      query: () => ({
+        url: `/leads`,
+        method: "GET",
+      }),
+      providesTags: [Tags.LEADS],
+    }),
+    markLeadAsTracked: builder.mutation({
+      query: ({id, body}) => ({
+        url: `/leads/${id}/status`,
+        method: "PATCH",
+        body
+      }),
+      invalidatesTags: [Tags.LEADS],
+    }),
   }),
 });
 
@@ -410,5 +427,7 @@ export const {
   useGetCompanyProfileQuery,
   useUpdateCompanyProfileMutation,
   useAddCompanyProfileMutation,
-  useGetAnalyticsAdminDataQuery
+  useGetAnalyticsAdminDataQuery,
+  useGetAllLeadsQuery,
+  useMarkLeadAsTrackedMutation
 } = api;

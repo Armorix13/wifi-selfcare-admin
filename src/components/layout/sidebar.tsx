@@ -36,8 +36,8 @@ import {
 import React from "react";
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view-dashboard" },
-  { name: "Complaints", href: "/complaints", icon: AlertCircle, permission: "assign-complaints" },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view-dashboard-analytics" },
+  { name: "Complaints", href: "/complaints", icon: AlertCircle, permission: "assign-complaints", role: "admin" },
   // { name: "New Installation & Leads", href: "/installations-leads", icon: HardHat, permission: "manage-installations" },
   { name: "Engineers", href: "/engineers", icon: Users, permission: "manage-engineers" },
   { name: "Admin", href: "/manage-admin", icon: Users, permission: "manage-admin" },
@@ -99,8 +99,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const hasUserPermission = hasPermission(item.permission);
     
     // Check role restrictions
-    if (item.role && user?.role !== item.role) {
-      return false;
+    if (item.role) {
+      if (item.role === "admin") {
+        // For admin role restriction, allow admin and below roles (admin, manager, agent) but not superadmin
+        if (user?.role === "superadmin") {
+          return false;
+        }
+      } else if (user?.role !== item.role) {
+        // For other specific role restrictions, check exact match
+        return false;
+      }
     }
     
     // Debug logging for Leads section
