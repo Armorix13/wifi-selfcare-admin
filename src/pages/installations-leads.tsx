@@ -540,8 +540,8 @@ export default function InstallationsLeads() {
                           size="sm"
                           variant="outline"
                           className={`text-xs px-2 py-1 h-6 ${req.status === 'approved'
-                              ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500'
-                              : 'hover:bg-blue-50'
+                            ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500'
+                            : 'hover:bg-blue-50'
                             }`}
                           onClick={() => {
                             if (req.status !== 'approved') {
@@ -1008,8 +1008,8 @@ export default function InstallationsLeads() {
                                             <div className="flex flex-col sm:flex-row gap-2">
                                               <Button
                                                 className={`text-sm ${form.displayStatus === 'approved'
-                                                    ? 'bg-gray-400 cursor-not-allowed'
-                                                    : 'bg-green-600 hover:bg-green-700'
+                                                  ? 'bg-gray-400 cursor-not-allowed'
+                                                  : 'bg-green-600 hover:bg-green-700'
                                                   } text-white`}
                                                 onClick={() => {
                                                   if (form.displayStatus !== 'approved') {
@@ -1284,13 +1284,13 @@ export default function InstallationsLeads() {
                                                   <Label className="text-sm font-medium">Selected Plan</Label>
                                                   <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                                     <div className="flex items-center gap-3">
-                                                                                                             {app.planDetails.logo && (
-                                                         <img 
-                                                           src={`${BASE_URL}${app.planDetails.logo}`}
-                                                           alt={app.planDetails.provider}
-                                                           className="w-12 h-12 object-cover rounded-lg"
-                                                         />
-                                                       )}
+                                                      {app.planDetails.logo && (
+                                                        <img
+                                                          src={`${BASE_URL}${app.planDetails.logo}`}
+                                                          alt={app.planDetails.provider}
+                                                          className="w-12 h-12 object-cover rounded-lg"
+                                                        />
+                                                      )}
                                                       <div className="flex-1">
                                                         <div className="font-medium">{app.planDetails.title}</div>
                                                         <div className="text-sm text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
@@ -1666,11 +1666,11 @@ export default function InstallationsLeads() {
                                                 <div className="text-center">
                                                   <Label className="text-sm font-medium">Aadhaar Front</Label>
                                                   <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                                                                         <img 
-                                                       src={`${BASE_URL}${req.aadhaarFrontUrl}`}
-                                                       alt="Aadhaar Front"
-                                                       className="w-full h-32 object-cover rounded-lg"
-                                                     />
+                                                    <img
+                                                      src={`${BASE_URL}${req.aadhaarFrontUrl}`}
+                                                      alt="Aadhaar Front"
+                                                      className="w-full h-32 object-cover rounded-lg"
+                                                    />
                                                     <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
                                                   </div>
                                                 </div>
@@ -1679,11 +1679,11 @@ export default function InstallationsLeads() {
                                                 <div className="text-center">
                                                   <Label className="text-sm font-medium">Aadhaar Back</Label>
                                                   <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                                                                         <img 
-                                                       src={`${BASE_URL}${req.aadhaarBackUrl}`}
-                                                       alt="Aadhaar Back"
-                                                       className="w-full h-32 object-cover rounded-lg"
-                                                     />
+                                                    <img
+                                                      src={`${BASE_URL}${req.aadhaarBackUrl}`}
+                                                      alt="Aadhaar Back"
+                                                      className="w-full h-32 object-cover rounded-lg"
+                                                    />
                                                     <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
                                                   </div>
                                                 </div>
@@ -1692,11 +1692,11 @@ export default function InstallationsLeads() {
                                                 <div className="text-center">
                                                   <Label className="text-sm font-medium">Passport Photo</Label>
                                                   <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                                                                         <img 
-                                                        src={`${BASE_URL}${req.passportPhotoUrl}`}
-                                                       alt="Passport Photo"
-                                                       className="w-full h-32 object-cover rounded-lg"
-                                                     />
+                                                    <img
+                                                      src={`${BASE_URL}${req.passportPhotoUrl}`}
+                                                      alt="Passport Photo"
+                                                      className="w-full h-32 object-cover rounded-lg"
+                                                    />
                                                     <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
                                                   </div>
                                                 </div>
@@ -1710,8 +1710,8 @@ export default function InstallationsLeads() {
                                             <div className="flex flex-col sm:flex-row gap-2">
                                               <Button
                                                 className={`text-sm ${req.status === 'approved'
-                                                    ? 'bg-gray-400 cursor-not-allowed'
-                                                    : 'bg-green-600 hover:bg-green-700'
+                                                  ? 'bg-gray-400 cursor-not-allowed'
+                                                  : 'bg-green-600 hover:bg-green-700'
                                                   } text-white`}
                                                 onClick={() => {
                                                   if (req.status !== 'approved') {
@@ -1899,6 +1899,39 @@ export default function InstallationsLeads() {
 
           {selectedInstallationRequest && (
             <div className="space-y-4">
+              {/* Status Banner */}
+              <div className={`p-4 rounded-lg border ${
+                selectedInstallationRequest.status === 'approved' 
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600' 
+                  : selectedInstallationRequest.status === 'rejected'
+                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600'
+                  : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-600'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {selectedInstallationRequest.status === 'approved' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : selectedInstallationRequest.status === 'rejected' ? (
+                    <XCircle className="h-5 w-5 text-red-600" />
+                  ) : (
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                  )}
+                  <span className={`font-medium ${
+                    selectedInstallationRequest.status === 'approved' 
+                      ? 'text-green-700 dark:text-green-300' 
+                      : selectedInstallationRequest.status === 'rejected'
+                      ? 'text-red-700 dark:text-red-300'
+                      : 'text-yellow-700 dark:text-yellow-300'
+                  }`}>
+                    Status: {selectedInstallationRequest.status.charAt(0).toUpperCase() + selectedInstallationRequest.status.slice(1)}
+                  </span>
+                </div>
+                {selectedInstallationRequest.status === 'approved' && (
+                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                    This installation request has been approved and an engineer has been assigned.
+                  </p>
+                )}
+              </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Customer Name</Label>
@@ -1957,30 +1990,48 @@ export default function InstallationsLeads() {
                 </div>
               </div>
 
-              {/* Engineer Assignment Section */}
-              {isEngineerSelected && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <Label className="text-sm font-medium">Selected Engineer</Label>
-                  {engineers?.data?.engineers && (
-                    <p className="text-sm mt-1">
-                      {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.firstName} {" "}
-                      {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.lastName} - {" "}
-                      {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.phoneNumber}
-                    </p>
+              {/* Engineer Assignment Section - Only show if not already approved */}
+              {!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved' ? (
+                <>
+                  {isEngineerSelected && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Label className="text-sm font-medium">Selected Engineer</Label>
+                      {engineers?.data?.engineers && (
+                        <p className="text-sm mt-1">
+                          {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.firstName} {" "}
+                          {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.lastName} - {" "}
+                          {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.phoneNumber}
+                        </p>
+                      )}
+                    </div>
                   )}
-                </div>
-              )}
 
-              {/* Remarks Section */}
-              <div>
-                <Label className="text-sm font-medium">Remarks (Optional)</Label>
-                <Input
-                  placeholder="Enter remarks for the assignment"
-                  value={assignmentRemarks}
-                  onChange={(e) => setAssignmentRemarks(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
+                  {/* Remarks Section - Only show if not already approved */}
+                  <div>
+                    <Label className="text-sm font-medium">Remarks (Optional)</Label>
+                    <Input
+                      placeholder="Enter remarks for the assignment"
+                      value={assignmentRemarks}
+                      onChange={(e) => setAssignmentRemarks(e.target.value)}
+                      className="text-sm"
+                    />
+                  </div>
+                </>
+              ) : (
+                /* Show current engineer info if already approved */
+                selectedInstallationRequest?.assignedEngineer && (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <Label className="text-sm font-medium">Currently Assigned Engineer</Label>
+                    <div className="mt-2">
+                      <p className="text-sm font-medium">
+                        {selectedInstallationRequest.assignedEngineer.firstName} {selectedInstallationRequest.assignedEngineer.lastName}
+                      </p>
+                      <p className="text-sm text-gray-600">{selectedInstallationRequest.assignedEngineer.email}</p>
+                      <p className="text-sm text-gray-500">{selectedInstallationRequest.assignedEngineer.phoneNumber}</p>
+                    </div>
+                  </div>
+                )
+              )}
             </div>
           )}
 
@@ -1998,29 +2049,47 @@ export default function InstallationsLeads() {
             >
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleRejectInstallationRequest}
-              className="text-sm"
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Reject
-            </Button>
-            <Button
-              onClick={() => setShowEngineerAssignmentModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-            >
-              <HardHat className="h-4 w-4 mr-2" />
-              Select Engineer
-            </Button>
-            {isEngineerSelected && (
+            
+            {/* Only show Reject button if not already approved */}
+            {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
               <Button
-                onClick={handleEngineerAssignment}
-                className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                variant="destructive"
+                onClick={handleRejectInstallationRequest}
+                className="text-sm"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Submit Assignment
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
               </Button>
+            )}
+            
+            {/* Only show Engineer selection buttons if not already approved */}
+            {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
+              <>
+                <Button
+                  onClick={() => setShowEngineerAssignmentModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                >
+                  <HardHat className="h-4 w-4 mr-2" />
+                  Select Engineer
+                </Button>
+                {isEngineerSelected && (
+                  <Button
+                    onClick={handleEngineerAssignment}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Submit Assignment
+                  </Button>
+                )}
+              </>
+            ) : (
+              /* Show info message for approved requests */
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-sm text-green-700 dark:text-green-300">
+                  Installation request already approved and engineer assigned
+                </span>
+              </div>
             )}
           </div>
         </DialogContent>
@@ -2054,8 +2123,8 @@ export default function InstallationsLeads() {
                     <div
                       key={engineer._id}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedEngineer === engineer._id
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                       onClick={() => handleEngineerSelection(engineer._id)}
                     >
