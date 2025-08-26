@@ -27,7 +27,8 @@ const Support = lazy(() => import("@/pages/support"));
 const Settings = lazy(() => import("@/pages/settings"));
 const Profile = lazy(() => import("@/pages/profile"));
 const UserDetail = lazy(() => import("@/pages/user-detail"));
-const EngineerDetail = lazy(() => import("@/pages/engineer-detail"));
+const AddUser = lazy(() => import("@/pages/AddUser"));
+const EngineerDetail = lazy(() => import("@/pages/EngineerDetails"));
 const ComplaintDetail = lazy(() => import("@/pages/complaint-detail"));
 const PlanDetail = lazy(() => import("@/pages/plan-detail"));
 const Installations = lazy(() => import("@/pages/installations"));
@@ -36,6 +37,7 @@ const CompanyLeads = lazy(() => import("@/pages/company-leads"));
 const Advertisements = lazy(() => import("@/pages/advertisements"));
 const InstallationsLeads = lazy(() => import("@/pages/installations-leads"));
 const Admin = lazy(() => import("@/pages/Admin"));
+const LeaveRequests = lazy(() => import("@/pages/leave-requests"));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -95,6 +97,12 @@ function Router() {
         <Route path="/users" element={
           <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
             <Users />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/users/add" element={
+          <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
+            <AddUser />
           </RoleProtectedRoute>
         } />
         
@@ -167,6 +175,12 @@ function Router() {
         <Route path="/installations-leads" element={
           <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
             <InstallationsLeads />
+          </RoleProtectedRoute>
+        } />
+        
+        <Route path="/leave-requests" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN, Role.MANAGER]}>
+            <LeaveRequests />
           </RoleProtectedRoute>
         } />
         

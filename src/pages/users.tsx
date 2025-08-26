@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/main-layout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const userSchema = z.object({
 type UserData = Customer;
 
 export default function Users() {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -354,106 +356,13 @@ export default function Users() {
                     >
                       <List className="h-4 w-4" />
                     </Button>
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Add User
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Add New User</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-4 py-4">
-                          <div>
-                            <Label htmlFor="name">Name</Label>
-                            <Input {...form.register("name")} />
-                          </div>
-                          <div>
-                            <Label htmlFor="email">Email</Label>
-                            <Input {...form.register("email")} type="email" />
-                          </div>
-                          <div>
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input {...form.register("phone")} />
-                          </div>
-                          <div>
-                            <Label htmlFor="location">Location</Label>
-                            <Input {...form.register("location")} />
-                          </div>
-                        </div>
-                        
-                        {/* Profile Image Upload */}
-                        <div className="space-y-4">
-                          <Label htmlFor="profile-image">Profile Image</Label>
-                          
-                          {!profileImagePreview ? (
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
-                                 onClick={() => document.getElementById('profile-image-upload')?.click()}>
-                              <div className="flex flex-col items-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <Upload className="h-6 w-6 text-primary" />
-                                </div>
-                                <div>
-                                  <p className="font-medium">Upload profile image</p>
-                                  <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                                </div>
-                                <label className="cursor-pointer">
-                                  <span className="inline-flex items-center px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
-                                    <ImageIcon className="h-4 w-4 mr-2" />
-                                    Choose File
-                                  </span>
-                                  <input
-                                    id="profile-image-upload"
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={handleUserImageUpload}
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative inline-block">
-                              <div className="bg-muted rounded-lg p-4">
-                                <div className="flex items-center gap-4">
-                                  <img 
-                                    src={profileImagePreview} 
-                                    alt="Profile preview" 
-                                    className="h-16 w-16 object-cover rounded-lg border"
-                                  />
-                                  <div className="flex-1">
-                                    <p className="font-medium">
-                                      {profileImageFile?.name}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {profileImageFile ? (profileImageFile.size / 1024 / 1024).toFixed(2) : '0'} MB
-                                    </p>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={removeUserImage}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={form.handleSubmit(handleCreateUser)}>
-                            Create User
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      onClick={() => navigate("/users/add")}
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add New User
+                    </Button>
                   </div>
                 </div>
               </CardContent>

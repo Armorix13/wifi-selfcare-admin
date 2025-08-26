@@ -25,6 +25,7 @@ import {
   Building,
   Megaphone,
   User,
+  CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ const navigation = [
   { name: "New Installation", href: "/installations-leads", icon: HardHat, permission: "manage-installations",role: "admin" },
   { name: "Company Leads", href: "/company-leads", icon: Building, permission: "manage-leads" },
   { name: "Engineers", href: "/engineers", icon: Users, permission: "manage-engineers" },
+  { name: "Leave Requests", href: "/leave-requests", icon: CalendarDays, permission: "manage-leave-requests", role: "admin" },
   { name: "Admin", href: "/manage-admin", icon: Users, permission: "manage-admin" },
   { name: "User Management", href: "/users", icon: UserCheck, permission: "manage-users" },
   { name: "Products", href: "/products", icon: Package, permission: "manage-products" },

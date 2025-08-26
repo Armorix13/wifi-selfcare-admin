@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -123,6 +124,7 @@ const insertEngineerSchema = z.object({
 type InsertEngineer = z.infer<typeof insertEngineerSchema>;
 
 export default function Engineers() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -831,7 +833,11 @@ export default function Engineers() {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                      <div 
+                        className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => navigate(`/engineers/${engineer._id}`)}
+                        title="Click to view engineer details"
+                      >
                         {engineer.profileImage ? (
                           <img 
                             src={`${BASE_URL}${engineer.profileImage}`} 
@@ -947,6 +953,14 @@ export default function Engineers() {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      onClick={() => navigate(`/engineers/${engineer._id}`)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                       onClick={() => {
                         setSelectedEngineer(engineer);
                         setIsViewDialogOpen(true);
@@ -1011,7 +1025,11 @@ export default function Engineers() {
                     key: "profileImage", 
                     label: "Photo",
                     render: (_, engineer) => (
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                      <div 
+                        className="w-10 h-10 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => navigate(`/engineers/${engineer._id}`)}
+                        title="Click to view engineer details"
+                      >
                         {engineer.profileImage ? (
                           <img 
                             src={`${BASE_URL}${engineer.profileImage}`} 
@@ -1090,6 +1108,14 @@ export default function Engineers() {
                     label: "Actions",
                     render: (_, engineer) => (
                       <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/engineers/${engineer._id}`)}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Details
+                        </Button>
                         <Button 
                           variant="outline" 
                           size="sm"

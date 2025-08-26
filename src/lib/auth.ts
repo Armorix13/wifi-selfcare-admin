@@ -43,7 +43,7 @@ const permissions = {
     'manage-users',
     'manage-products',
     'manage-plans',
-    'manage-installations',
+    // 'manage-installations',
     // 'manage-leads',
     'manage-notifications',
     'view-analytics',
@@ -65,6 +65,7 @@ const permissions = {
     'manage-notifications',
     'view-analytics',
     'manage-support',
+    'manage-leave-requests',
     // Note: ADMIN does NOT have 'view-leads' permission
   ],
   [Role.MANAGER]: [
@@ -73,6 +74,7 @@ const permissions = {
     'manage-installations',
     'view-analytics',
     'manage-support',
+    'manage-leave-requests',
     // Note: MANAGER does NOT have 'view-leads' permission
   ],
   [Role.AGENT]: [
