@@ -10,7 +10,8 @@ const Tags = {
   PLANS:"PLANS",
   ENGINEER:"ENGINEER",
   ADMIN:"ADMIN",
-  LEADS:"LEADS"
+  LEADS:"LEADS",
+  LEAVE_REQUESTS: "LEAVE_REQUESTS"
 };
 
 export const LIMIT = 20;
@@ -213,6 +214,30 @@ export const api = createApi({
       }),
       invalidatesTags:[Tags.ENGINEER]
     }),
+    getAllLeaveRequestAnalytics: builder.query({
+      query: ()=> ({
+        url: `/dashboard/leave-requests-analytics`,
+        method: "GET"
+      }),
+      providesTags: [Tags.LEAVE_REQUESTS],
+    }),
+
+    getAllLeaveRequest: builder.query({
+      query: ()=> ({
+        url: `/dashboard/leave-requests`,
+        method: "GET"
+      }),
+      providesTags: [Tags.LEAVE_REQUESTS],
+    }),
+    approveRejectLeaveRequest: builder.mutation({
+      query: ({id, body})=> ({
+        url: `/dashboard/leave-requests/approve-reject`,
+        method: "POST",
+        body
+      }),
+      invalidatesTags: [Tags.LEAVE_REQUESTS],
+    }),
+
     addProduct: builder.mutation<any, FormData>({
       query: (formData) => ({
         url: '/products',
@@ -429,5 +454,8 @@ export const {
   useAddCompanyProfileMutation,
   useGetAnalyticsAdminDataQuery,
   useGetAllLeadsQuery,
-  useMarkLeadAsTrackedMutation
+  useMarkLeadAsTrackedMutation,
+  useGetAllLeaveRequestAnalyticsQuery,
+  useGetAllLeaveRequestQuery,
+  useApproveRejectLeaveRequestMutation
 } = api;

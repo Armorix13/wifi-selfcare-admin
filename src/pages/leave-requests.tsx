@@ -6,214 +6,96 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, Clock, FileText, CalendarDays, TrendingUp, Users, AlertCircle, CheckCircle, XCircle, Eye, Download, Phone, Mail, MapPin, Calendar as CalendarIcon, User } from "lucide-react";
+import { Calendar, Clock, FileText, CalendarDays, TrendingUp, Users, AlertCircle, CheckCircle, XCircle, Eye, Download, Phone, Mail, MapPin, Calendar as CalendarIcon, User, BarChart3, PieChart } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { MainLayout } from "@/components/layout/main-layout";
-
-// Mock data for leave requests
-const mockLeaveRequests = [
-  {
-    _id: "68ac9bb3d681a3f5e4c19954",
-    engineer: {
-      _id: "68aad97ed681a3f5e4c17646",
-      firstName: "Sarah",
-      lastName: "Johnson",
-      email: "sarah.johnson@wificare.com",
-      phoneNumber: "+1-555-0123",
-      role: "engineer",
-      address: "123 Main Street, Tech City, TC 12345",
-      department: "Network Operations",
-      employeeId: "EMP001",
-      joiningDate: "2023-01-15T00:00:00.000Z",
-      emergencyContact: {
-        name: "John Johnson",
-        relationship: "Spouse",
-        phone: "+1-555-0126"
-      }
-    },
-    leaveType: "full_day",
-    fromDate: "2025-08-26T00:00:00.000Z",
-    toDate: "2025-08-26T00:00:00.000Z",
-    reason: "maternity",
-    description: "Maternity leave for upcoming delivery. Doctor has recommended complete rest and monitoring. This is a planned leave as per company policy for expecting mothers.",
-    totalDays: 1,
-    status: "pending",
-    documents: ["/view/image/8d4c655d-7159-495f-9f0b-b8487ed5c5fd-1756142513388.jpg"],
-    createdAt: "2025-08-25T17:21:55.828Z",
-    updatedAt: "2025-08-25T17:21:55.828Z",
-    approvedBy: null,
-    approvedAt: null,
-    rejectionReason: null,
-    statement: "I hereby request maternity leave starting from August 26, 2025, as recommended by my healthcare provider. I have attached the necessary medical documentation and will ensure a smooth handover of my current projects before the leave period.",
-    additionalNotes: "Please note that this is my first pregnancy and I have been advised to take complete rest during this period. I will be available for any urgent queries via email during my leave."
-  },
-  {
-    _id: "68ac9bb3d681a3f5e4c19955",
-    engineer: {
-      _id: "68aad97ed681a3f5e4c17647",
-      firstName: "Michael",
-      lastName: "Chen",
-      email: "michael.chen@wificare.com",
-      phoneNumber: "+1-555-0124",
-      role: "engineer",
-      address: "456 Oak Avenue, Digital District, DD 67890",
-      department: "System Administration",
-      employeeId: "EMP002",
-      joiningDate: "2022-06-20T00:00:00.000Z",
-      emergencyContact: {
-        name: "Lisa Chen",
-        relationship: "Sister",
-        phone: "+1-555-0127"
-      }
-    },
-    leaveType: "half_day",
-    fromDate: "2025-08-28T00:00:00.000Z",
-    toDate: "2025-08-28T00:00:00.000Z",
-    reason: "personal",
-    description: "Doctor appointment in the morning for routine checkup",
-    totalDays: 0.5,
-    status: "approved",
-    documents: [],
-    createdAt: "2025-08-24T10:15:30.000Z",
-    updatedAt: "2025-08-24T14:30:00.000Z",
-    approvedBy: "Admin User",
-    approvedAt: "2025-08-24T14:30:00.000Z",
-    rejectionReason: null,
-    statement: "I need to attend a scheduled doctor appointment on August 28th morning. I will return to work by 2 PM and ensure no disruption to my scheduled tasks.",
-    additionalNotes: "I have already informed my team lead about this appointment and arranged for coverage of my morning responsibilities."
-  },
-  {
-    _id: "68ac9bb3d681a3f5e4c19956",
-    engineer: {
-      _id: "68aad97ed681a3f5e4c17648",
-      firstName: "Emily",
-      lastName: "Rodriguez",
-      email: "emily.rodriguez@wificare.com",
-      phoneNumber: "+1-555-0125",
-      role: "engineer",
-      address: "789 Pine Street, Innovation Valley, IV 11111",
-      department: "Software Development",
-      employeeId: "EMP003",
-      joiningDate: "2021-09-10T00:00:00.000Z",
-      emergencyContact: {
-        name: "Carlos Rodriguez",
-        relationship: "Father",
-        phone: "+1-555-0128"
-      }
-    },
-    leaveType: "full_day",
-    fromDate: "2025-09-02T00:00:00.000Z",
-    toDate: "2025-09-05T00:00:00.000Z",
-    reason: "vacation",
-    description: "Family vacation to Hawaii - celebrating parents' anniversary",
-    totalDays: 4,
-    status: "pending",
-    documents: [],
-    createdAt: "2025-08-20T09:45:15.000Z",
-    updatedAt: "2025-08-20T09:45:15.000Z",
-    approvedBy: null,
-    approvedAt: null,
-    rejectionReason: null,
-    statement: "I am requesting vacation leave from September 2-5, 2025, to celebrate my parents' 30th wedding anniversary in Hawaii. This is a family trip that has been planned for several months.",
-    additionalNotes: "I will ensure all my current projects are completed or properly handed over before the leave period. I have also arranged for a colleague to cover any urgent issues that may arise during my absence."
-  },
-  {
-    _id: "68ac9bb3d681a3f5e4c19957",
-    engineer: {
-      _id: "68aad97ed681a3f5e4c17649",
-      firstName: "David",
-      lastName: "Thompson",
-      email: "david.thompson@wificare.com",
-      phoneNumber: "+1-555-0126",
-      role: "engineer",
-      address: "321 Elm Street, Tech Hub, TH 22222",
-      department: "Network Security",
-      employeeId: "EMP004",
-      joiningDate: "2020-03-15T00:00:00.000Z",
-      emergencyContact: {
-        name: "Mary Thompson",
-        relationship: "Mother",
-        phone: "+1-555-0129"
-      }
-    },
-    leaveType: "full_day",
-    fromDate: "2025-08-30T00:00:00.000Z",
-    toDate: "2025-08-30T00:00:00.000Z",
-    reason: "sick",
-    description: "Not feeling well, need rest",
-    totalDays: 1,
-    status: "approved",
-    documents: [],
-    createdAt: "2025-08-25T08:20:45.000Z",
-    updatedAt: "2025-08-25T16:15:30.000Z",
-    approvedBy: "Manager User",
-    approvedAt: "2025-08-25T16:15:30.000Z",
-    rejectionReason: null,
-    statement: "I am feeling unwell today and experiencing symptoms that prevent me from working effectively. I need to take a sick day to rest and recover.",
-    additionalNotes: "I will monitor my condition and return to work as soon as I am feeling better. I have informed my team about my absence."
-  }
-];
+import { 
+  useGetAllLeaveRequestAnalyticsQuery,
+  useGetAllLeaveRequestQuery,
+  useApproveRejectLeaveRequestMutation } from "@/api";
+import { useToast } from "@/hooks/use-toast";
 
 const LeaveRequests = () => {
   const { user } = useAuth();
-  const [leaveRequests, setLeaveRequests] = useState(mockLeaveRequests);
-  const [filteredRequests, setFilteredRequests] = useState(mockLeaveRequests);
+  const { toast } = useToast();
+  const [filteredRequests, setFilteredRequests] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [leaveTypeFilter, setLeaveTypeFilter] = useState("all");
+  const [reasonFilter, setReasonFilter] = useState("all");
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Approval/Rejection modal states
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionType, setActionType] = useState<"approve" | "reject" | null>(null);
+  const [selectedRequestForAction, setSelectedRequestForAction] = useState<any>(null);
+  const [remarks, setRemarks] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
 
-  // Analytics data
-  const analytics = {
-    total: leaveRequests.length,
-    pending: leaveRequests.filter(req => req.status === "pending").length,
-    approved: leaveRequests.filter(req => req.status === "approved").length,
-    rejected: leaveRequests.filter(req => req.status === "rejected").length,
-    thisMonth: leaveRequests.filter(req => {
-      const reqDate = new Date(req.fromDate);
-      const now = new Date();
-      return reqDate.getMonth() === now.getMonth() && reqDate.getFullYear() === now.getFullYear();
-    }).length,
-    avgDays: leaveRequests.reduce((acc, req) => acc + req.totalDays, 0) / leaveRequests.length || 0
-  };
+  const { data: leaveRequestsAnalyticsData, isLoading: analyticsLoading } = useGetAllLeaveRequestAnalyticsQuery({});
+  const { data: leaveRequestsData, isLoading: requestsLoading } = useGetAllLeaveRequestQuery({});
+  const [approveRejectLeaveRequest, { isLoading: isActionLoading }] = useApproveRejectLeaveRequestMutation();
 
+  // Extract data from API responses
+  const analytics = leaveRequestsAnalyticsData?.data?.overview || {};
+  const distribution = leaveRequestsAnalyticsData?.data?.distribution || {};
+  const trends = leaveRequestsAnalyticsData?.data?.trends || {};
+  const leaveRequests = leaveRequestsData?.data?.leaveRequests || [];
+  const pagination = leaveRequestsData?.data?.pagination || {};
+
+  // Update filtered requests when data changes
+  useEffect(() => {
+    if (leaveRequests.length > 0) {
+      setFilteredRequests(leaveRequests);
+    }
+  }, [leaveRequests]);
+
+  // Apply filters
   useEffect(() => {
     let filtered = leaveRequests;
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(req =>
+      filtered = filtered.filter((req:any) =>
         req.engineer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.engineer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         req.engineer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.reason.toLowerCase().includes(searchTerm.toLowerCase())
+        req.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter(req => req.status === statusFilter);
+      filtered = filtered.filter((req:any) => req.status === statusFilter);
     }
 
     // Apply leave type filter
     if (leaveTypeFilter !== "all") {
-      filtered = filtered.filter(req => req.leaveType === leaveTypeFilter);
+      filtered = filtered.filter((req:any) => req.leaveType === leaveTypeFilter);
+    }
+
+    // Apply reason filter
+    if (reasonFilter !== "all") {
+      filtered = filtered.filter((req:any) => req.reason === reasonFilter);
     }
 
     setFilteredRequests(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [searchTerm, statusFilter, leaveTypeFilter, leaveRequests]);
+  }, [searchTerm, statusFilter, leaveTypeFilter, reasonFilter, leaveRequests]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { variant: "secondary", icon: Clock, text: "Pending" },
       approved: { variant: "default", icon: CheckCircle, text: "Approved" },
-      rejected: { variant: "destructive", icon: XCircle, text: "Rejected" }
+      rejected: { variant: "destructive", icon: XCircle, text: "Rejected" },
+      cancelled: { variant: "outline", icon: XCircle, text: "Cancelled" }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -256,14 +138,55 @@ const LeaveRequests = () => {
     });
   };
 
-  const handleStatusChange = (requestId: string, newStatus: string) => {
-    setLeaveRequests(prev => 
-      prev.map(req => 
-        req._id === requestId 
-          ? { ...req, status: newStatus, updatedAt: new Date().toISOString() }
-          : req
-      )
-    );
+  const openActionModal = (request: any, type: "approve" | "reject") => {
+    setSelectedRequestForAction(request);
+    setActionType(type);
+    setRemarks("");
+    setRejectionReason("");
+    setIsActionModalOpen(true);
+  };
+
+  const closeActionModal = () => {
+    setIsActionModalOpen(false);
+    setSelectedRequestForAction(null);
+    setActionType(null);
+    setRemarks("");
+    setRejectionReason("");
+  };
+
+  const handleApproveReject = async () => {
+    if (!selectedRequestForAction || !actionType) return;
+
+    try {
+      const payload = {
+        body: {
+          leaveRequestId: selectedRequestForAction._id,
+          type: actionType === "approve" ? 1 : 2,
+          remarks: remarks.trim() || (actionType === "approve" ? "Approved as requested" : ""),
+          ...(actionType === "reject" && { rejectionReason: rejectionReason.trim() || "No specific reason provided" })
+        }
+      };
+
+      await approveRejectLeaveRequest(payload).unwrap();
+      
+      toast({
+        title: `Leave Request ${actionType === "approve" ? "Approved" : "Rejected"}`,
+        description: `Successfully ${actionType === "approve" ? "approved" : "rejected"} the leave request.`,
+        variant: actionType === "approve" ? "default" : "destructive",
+      });
+
+      closeActionModal();
+      
+      // Refresh the data
+      // The mutation should invalidate the cache, but you can also manually refetch if needed
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.data?.message || `Failed to ${actionType} leave request. Please try again.`,
+        variant: "destructive",
+      });
+    }
   };
 
   const openDetailModal = (request: any) => {
@@ -298,6 +221,21 @@ const LeaveRequests = () => {
     setCurrentPage(1);
   };
 
+  if (analyticsLoading || requestsLoading) {
+    return (
+      <MainLayout title="Leave Requests">
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading leave requests data...</p>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout title="Leave Requests">
       <div className="container mx-auto p-6 space-y-6">
@@ -306,7 +244,7 @@ const LeaveRequests = () => {
           <h1 className="text-3xl font-bold tracking-tight text-[var(--dashboard-text)]">
             Leave Requests
           </h1>
-          <p className="text-[var(--dashboard-text-muted)]">
+          <p className="text-[var(--dashboard-text)]">
             Manage and review leave requests from engineers
           </p>
         </div>
@@ -321,7 +259,7 @@ const LeaveRequests = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Requests</p>
-                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{analytics.total}</p>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{analytics.totalRequests || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -335,7 +273,7 @@ const LeaveRequests = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{analytics.pending}</p>
+                  <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{analytics.pendingRequests || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -349,7 +287,7 @@ const LeaveRequests = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-green-600 dark:text-green-400">Approved</p>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{analytics.approved}</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">{analytics.approvedRequests || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -362,9 +300,108 @@ const LeaveRequests = () => {
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Avg Days</p>
-                  <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{analytics.avgDays.toFixed(1)}</p>
+                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Approval Rate</p>
+                  <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{analytics.approvalRate || 0}%</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 border-orange-200 dark:border-orange-800">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-orange-500 rounded-lg">
+                  <CalendarDays className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Total Days</p>
+                  <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">{analytics.totalDays || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 border-red-200 dark:border-red-800">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-red-500 rounded-lg">
+                  <XCircle className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">Rejected</p>
+                  <p className="text-2xl font-bold text-red-700 dark:text-red-300">{analytics.rejectedRequests || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/20 dark:to-indigo-900/20 border-indigo-200 dark:border-indigo-800">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-indigo-500 rounded-lg">
+                  <BarChart3 className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">Avg Processing</p>
+                  <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{analytics.avgProcessingDays || 0} days</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Distribution Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5" />
+                Status Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {distribution.status && Object.entries(distribution.status).map(([status, count]) => (
+                  <div key={status} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        status === 'pending' ? 'bg-yellow-500' :
+                        status === 'approved' ? 'bg-green-500' :
+                        status === 'rejected' ? 'bg-red-500' :
+                        'bg-gray-500'
+                      }`} />
+                      <span className="capitalize">{status}</span>
+                    </div>
+                    <Badge variant="outline">{count as number}</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Leave Type Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Leave Type Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {distribution.leaveType && Object.entries(distribution.leaveType).map(([type, count]) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                      <span className="capitalize">{type.replace('_', ' ')}</span>
+                    </div>
+                    <Badge variant="outline">{count as number}</Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -377,12 +414,12 @@ const LeaveRequests = () => {
             <CardDescription>Filter leave requests by various criteria</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="search">Search Engineer</Label>
+                <Label htmlFor="search">Search</Label>
                 <Input
                   id="search"
-                  placeholder="Search by name or email..."
+                  placeholder="Search by name, email, or reason..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -398,6 +435,7 @@ const LeaveRequests = () => {
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -411,7 +449,22 @@ const LeaveRequests = () => {
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="full_day">Full Day</SelectItem>
                     <SelectItem value="half_day">Half Day</SelectItem>
-                    <SelectItem value="multiple_days">Multiple Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason</Label>
+                <Select value={reasonFilter} onValueChange={setReasonFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Reasons</SelectItem>
+                    <SelectItem value="maternity">Maternity</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="sick">Sick</SelectItem>
+                    <SelectItem value="vacation">Vacation</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -489,9 +542,9 @@ const LeaveRequests = () => {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          <strong>Reason:</strong> {request.description}
+                          <strong>Description:</strong> {request.description}
                         </p>
-                        {request.documents.length > 0 && (
+                        {request.documents && request.documents.length > 0 && (
                           <div className="flex items-center space-x-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm text-muted-foreground">
@@ -519,7 +572,7 @@ const LeaveRequests = () => {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => handleStatusChange(request._id, "approved")}
+                              onClick={() => openActionModal(request, "approve")}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
@@ -528,7 +581,7 @@ const LeaveRequests = () => {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleStatusChange(request._id, "rejected")}
+                              onClick={() => openActionModal(request, "reject")}
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               Reject
@@ -686,18 +739,6 @@ const LeaveRequests = () => {
                         <p className="font-medium">{selectedRequest.engineer.firstName} {selectedRequest.engineer.lastName}</p>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
-                        <p className="font-medium">{selectedRequest.engineer.employeeId}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Department</Label>
-                        <p className="font-medium">{selectedRequest.engineer.department}</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
-                        <p className="font-medium">{formatDate(selectedRequest.engineer.joiningDate)}</p>
-                      </div>
-                      <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">Email</Label>
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-muted-foreground" />
@@ -710,23 +751,6 @@ const LeaveRequests = () => {
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           <p className="font-medium">{selectedRequest.engineer.phoneNumber}</p>
                         </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Address</Label>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <p className="font-medium">{selectedRequest.engineer.address}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Emergency Contact</Label>
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm">
-                          <strong>{selectedRequest.engineer.emergencyContact.name}</strong> 
-                          ({selectedRequest.engineer.emergencyContact.relationship})
-                        </span>
-                        <span className="text-sm">{selectedRequest.engineer.emergencyContact.phone}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -778,34 +802,8 @@ const LeaveRequests = () => {
                   </CardContent>
                 </Card>
 
-                {/* Statement and Additional Notes */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Statement & Additional Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Official Statement</Label>
-                      <div className="bg-muted p-4 rounded-md">
-                        <p className="text-sm italic">"{selectedRequest.statement}"</p>
-                      </div>
-                    </div>
-                    {selectedRequest.additionalNotes && (
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">Additional Notes</Label>
-                        <div className="bg-muted p-4 rounded-md">
-                          <p className="text-sm">{selectedRequest.additionalNotes}</p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
                 {/* Documents */}
-                {selectedRequest.documents.length > 0 && (
+                {selectedRequest.documents && selectedRequest.documents.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -841,7 +839,7 @@ const LeaveRequests = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CheckCircle className="h-5 w-5" />
-                      Approval Information
+                      Request Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -857,7 +855,12 @@ const LeaveRequests = () => {
                       {selectedRequest.approvedBy && (
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-muted-foreground">Approved By</Label>
-                          <p className="font-medium">{selectedRequest.approvedBy}</p>
+                          <p className="font-medium">
+                            {typeof selectedRequest.approvedBy === 'object' 
+                              ? `${selectedRequest.approvedBy.firstName} ${selectedRequest.approvedBy.lastName}`
+                              : selectedRequest.approvedBy
+                            }
+                          </p>
                         </div>
                       )}
                       {selectedRequest.approvedAt && (
@@ -866,10 +869,10 @@ const LeaveRequests = () => {
                           <p className="font-medium">{formatDateTime(selectedRequest.approvedAt)}</p>
                         </div>
                       )}
-                      {selectedRequest.rejectionReason && (
+                      {selectedRequest.remarks && (
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-muted-foreground">Rejection Reason</Label>
-                          <p className="font-medium text-destructive">{selectedRequest.rejectionReason}</p>
+                          <Label className="text-sm font-medium text-muted-foreground">Remarks</Label>
+                          <p className="font-medium">{selectedRequest.remarks}</p>
                         </div>
                       )}
                     </div>
@@ -878,6 +881,108 @@ const LeaveRequests = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Approval/Rejection Modal */}
+      <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {actionType === "approve" ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              {actionType === "approve" ? "Approve Leave Request" : "Reject Leave Request"}
+            </DialogTitle>
+            <DialogDescription>
+              {actionType === "approve" 
+                ? "Add remarks for the approval (optional)"
+                : "Provide a reason for rejection and any additional remarks"
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {selectedRequestForAction && (
+              <div className="p-3 bg-muted rounded-md">
+                <p className="text-sm font-medium">
+                  {selectedRequestForAction.engineer.firstName} {selectedRequestForAction.engineer.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDate(selectedRequestForAction.fromDate)}
+                  {selectedRequestForAction.fromDate !== selectedRequestForAction.toDate && 
+                    ` - ${formatDate(selectedRequestForAction.toDate)}`
+                  } ({selectedRequestForAction.totalDays} day(s))
+                </p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  Reason: {selectedRequestForAction.reason}
+                </p>
+              </div>
+            )}
+
+            {actionType === "reject" && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+                <Textarea
+                  id="rejectionReason"
+                  placeholder="Enter the reason for rejection..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="remarks">
+                {actionType === "approve" ? "Remarks (Optional)" : "Additional Remarks (Optional)"}
+              </Label>
+              <Textarea
+                id="remarks"
+                placeholder={
+                  actionType === "approve" 
+                    ? "Add any additional remarks for approval..."
+                    : "Add any additional remarks or notes..."
+                }
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={closeActionModal}
+                disabled={isActionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApproveReject}
+                disabled={
+                  isActionLoading || 
+                  (actionType === "reject" && !rejectionReason.trim())
+                }
+                className={
+                  actionType === "approve" 
+                    ? "bg-green-600 hover:bg-green-700" 
+                    : "bg-red-600 hover:bg-red-700"
+                }
+              >
+                {isActionLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </div>
+                ) : (
+                  actionType === "approve" ? "Approve" : "Reject"
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </MainLayout>

@@ -38,9 +38,9 @@ const permissions = {
   [Role.SUPERADMIN]: [
     // 'view-dashboard',
     'view-dashboard-analytics',
-    'manage-engineers',
+    // 'manage-engineers',
     'assign-complaints',
-    'manage-users',
+    // 'manage-users',
     'manage-products',
     'manage-plans',
     // 'manage-installations',
