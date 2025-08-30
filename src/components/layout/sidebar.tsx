@@ -26,6 +26,7 @@ import {
   Megaphone,
   User,
   CalendarDays,
+  Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +55,7 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings, permission: "system-settings" },
   { name: "Leads", href: "/leads", icon: Target, permission: "view-leads" },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone, permission: "manage-advertisements" },
+  { name: "OLT Management", href: "/olt-management", icon: Server, permission: "manage-olt" },
 ];
 
 interface SidebarProps {
@@ -70,10 +72,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   React.useEffect(() => {
     if (user) {
       console.log("Current user:", {
-        role: user.role
+        role: user.role,
+        normalizedRole: user.role?.toLowerCase()
+      });
+      
+      // Test the manage-olt permission specifically
+      console.log("Testing manage-olt permission:", {
+        hasPermission: hasPermission("manage-olt"),
+        userRole: user.role
       });
     }
-  }, [user]);
+  }, [user, hasPermission]);
 
   const handleLogout = () => {
     logout();
@@ -122,6 +131,25 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         userRole: user?.role
       });
     }
+    
+    // Debug logging for OLT Management section
+    if (item.name === "OLT Management") {
+      console.log('OLT Management navigation item check:', {
+        name: item.name,
+        permission: item.permission,
+        hasUserPermission,
+        userRole: user?.role
+      });
+    }
+    
+    // Debug logging for all items to see what's happening
+    console.log('Navigation item check:', {
+      name: item.name,
+      permission: item.permission,
+      hasUserPermission,
+      userRole: user?.role,
+      willShow: hasUserPermission
+    });
     
     return hasUserPermission;
   });

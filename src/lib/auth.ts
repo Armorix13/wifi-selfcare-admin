@@ -52,6 +52,7 @@ const permissions = {
     'manage-admin',
     'manage-advertisements',
     'manage-all',
+    'manage-olt',  // SUPERADMIN can manage OLT devices
     'view-leads'  // Only SUPERADMIN can see the "Leads" section
   ],
   [Role.ADMIN]: [
@@ -66,6 +67,7 @@ const permissions = {
     'view-analytics',
     'manage-support',
     'manage-leave-requests',
+    'manage-olt',  // ADMIN can manage OLT devices
     // Note: ADMIN does NOT have 'view-leads' permission
   ],
   [Role.MANAGER]: [

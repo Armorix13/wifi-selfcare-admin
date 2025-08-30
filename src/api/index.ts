@@ -361,6 +361,12 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.ADMIN],
     }),
+    getOltData: builder.query({
+      query: () => ({
+        url: `/dashboard/olts`,
+        method: "GET",
+      }),
+    }),
     updateAdminData: builder.mutation({
       query: (body) => ({
         url: `/dashboard/update-admin`,
@@ -457,5 +463,6 @@ export const {
   useMarkLeadAsTrackedMutation,
   useGetAllLeaveRequestAnalyticsQuery,
   useGetAllLeaveRequestQuery,
-  useApproveRejectLeaveRequestMutation
+  useApproveRejectLeaveRequestMutation,
+  useGetOltDataQuery
 } = api;

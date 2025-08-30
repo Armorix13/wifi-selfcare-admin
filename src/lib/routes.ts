@@ -110,6 +110,12 @@ export const ROUTES: RouteConfig[] = [
     roles: [Role.ADMIN, Role.MANAGER],
     title: 'Installation Leads',
     icon: 'installation-leads'
+  },
+  {
+    path: '/olt-management',
+    roles: [Role.ADMIN],
+    title: 'OLT Management',
+    icon: 'olt'
   }
 ];
 
@@ -134,6 +140,11 @@ export const DETAIL_ROUTES: RouteConfig[] = [
     path: '/plans/:id',
     roles: [Role.SUPERADMIN, Role.ADMIN],
     title: 'Plan Detail'
+  },
+  {
+    path: '/olt-management/:id',
+    roles: [Role.ADMIN],
+    title: 'OLT Detail'
   }
 ];
 
