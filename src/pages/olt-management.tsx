@@ -724,7 +724,7 @@ export default function OLTManagement() {
                          <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">Power</span>
                        </div>
                        <span className="text-sm text-gray-900 font-semibold">
-                         {olt.oltPower}W 
+                         {olt.oltPower}
                          <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
                            olt.powerStatus === 'on' 
                              ? 'bg-green-100 text-green-800 border border-green-200' 
