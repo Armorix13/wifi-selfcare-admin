@@ -62,6 +62,285 @@ export default function InstallationsLeads() {
   const [selectedEngineer, setSelectedEngineer] = useState("");
   const [assignmentRemarks, setAssignmentRemarks] = useState("");
   const [isEngineerSelected, setIsEngineerSelected] = useState(false);
+  const [isNodeSelectionOpen, setIsNodeSelectionOpen] = useState(false);
+  const [selectedNode, setSelectedNode] = useState("");
+  const [selectedOlt, setSelectedOlt] = useState<any>(null);
+  const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
+  
+  // Sample OLT data - replace with API call later
+  const oltData = [
+    {
+      "_id": "68b412a7b3f38d64aca02dda",
+      "name": "OLT-09",
+      "oltIp": "192.09.78.9",
+      "macAddress": "10:32:98:65:90:87",
+      "serialNumber": "ZZZZZZ",
+      "latitude": 37.4219983,
+      "longitude": -122.084,
+      "oltType": "epon",
+      "powerStatus": "on",
+      "oltPower": 4,
+      "status": "active",
+      "dnsServers": [],
+      "ownedBy": {
+        "_id": "68a976f837283960f117a7c4",
+        "email": "sisko.wifiselfcare@yopmail.com"
+      },
+      "attachments": [
+        "/view/image/6cf5d3df-cd18-4f20-98b5-c956a9cd415d-1756631718418.jpg",
+        "/view/image/d4c2a6fc-58d1-495a-9421-1e2925be3e41-1756631718614.jpg",
+        "/view/image/08f86f26-eaa2-4afa-ab3b-932e1a88258e-1756631718806.jpg",
+        "/view/image/23714bfd-c926-4ff6-825d-7c7f62a7c98f-1756631718810.jpg"
+      ],
+      "outputs": [
+        {
+          "type": "ms",
+          "id": "MS7933"
+        },
+        {
+          "type": "ms",
+          "id": "MS5601"
+        },
+        {
+          "type": "ms",
+          "id": "MS5377"
+        },
+        {
+          "type": "ms",
+          "id": "MS1916"
+        }
+      ],
+      "createdAt": "2025-08-31T09:15:19.002Z",
+      "updatedAt": "2025-08-31T09:15:19.002Z",
+      "oltId": "OLT7198",
+      "location": {
+        "type": "Point",
+        "coordinates": [
+          -122.084,
+          37.4219983
+        ]
+      },
+      "__v": 0,
+      "ms_devices": [
+        {
+          "ms_id": "MS7933",
+          "ms_name": "MS-1",
+          "ms_power": "1x8",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "olt",
+            "id": "OLT7198"
+          },
+          "attachments": [
+            "/view/image/c2cb1d9a-9ae5-49ff-a7df-0f6a792bfc5b-1756631826147.jpg",
+            "/view/image/c9a68945-8fb9-45cb-acc0-655a14332637-1756631826333.jpg"
+          ],
+          "outputs": [
+            {
+              "type": "subms",
+              "id": "SUBMS2210"
+            },
+            {
+              "type": "subms",
+              "id": "SUBMS1423"
+            },
+            {
+              "type": "subms",
+              "id": "SUBMS4689"
+            }
+          ]
+        },
+        {
+          "ms_id": "MS5601",
+          "ms_name": "MS-2",
+          "ms_power": "1x8",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "olt",
+            "id": "OLT7198"
+          },
+          "attachments": [
+            "/view/image/a81fe739-9ba7-49e2-a0a5-44e4942b2356-1756631866709.jpg",
+            "/view/image/9e20435d-a0c7-449a-8a7a-d575d69c3f65-1756631866900.jpg"
+          ],
+          "outputs": []
+        },
+        {
+          "ms_id": "MS5377",
+          "ms_name": "MS-3",
+          "ms_power": "1x8",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "olt",
+            "id": "OLT7198"
+          },
+          "attachments": [
+            "/view/image/ad046add-a934-42ed-9a42-b2a7057a27bd-1756631898636.jpg",
+            "/view/image/91d3c4fe-029e-4906-bf0c-749433d03658-1756631898839.jpg"
+          ],
+          "outputs": []
+        },
+        {
+          "ms_id": "MS1916",
+          "ms_name": "MS-4",
+          "ms_power": "1x8",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "olt",
+            "id": "OLT7198"
+          },
+          "attachments": [
+            "/view/image/5c9f0c9b-dfac-493d-aecb-4d5f6d34bde0-1756631939527.jpg",
+            "/view/image/905cc470-70cb-4e0f-8d92-30566dffbdce-1756631939721.jpg"
+          ],
+          "outputs": [
+            {
+              "type": "fdb",
+              "id": "FDB5088"
+            }
+          ]
+        }
+      ],
+      "fdb_devices": [
+        {
+          "fdb_id": "FDB5088",
+          "fdb_name": "FDB-1",
+          "fdb_power": 8,
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "ms",
+            "id": "MS1916",
+            "port": 1
+          },
+          "attachments": [
+            "/view/image/4cd7288a-3abe-4270-b500-e1525c39edc5-1756661555083.jpg",
+            "/view/image/78d150ba-ad20-4c59-adbd-03a058d3d59e-1756661555279.jpg"
+          ],
+          "outputs": []
+        },
+        {
+          "fdb_id": "FDB2984",
+          "fdb_name": "FDB-09090",
+          "fdb_power": 4,
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "subms",
+            "id": "SUBMS2210",
+            "port": 1
+          },
+          "attachments": [
+            "/view/image/7f4f1b2b-bfc0-4cf9-aca5-7452b16180fd-1756640670773.jpg",
+            "/view/image/7f22a78d-7104-4dae-8546-310523791c82-1756640670973.jpg"
+          ],
+          "outputs": []
+        },
+        {
+          "fdb_id": "FDB7825",
+          "fdb_name": "FDB-2",
+          "fdb_power": 2,
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "subms",
+            "id": "SUBMS2210",
+            "port": 1
+          },
+          "attachments": [
+            "/view/image/730abfe6-663a-43d3-8db6-8f52b08f26fa-1756661808707.jpg",
+            "/view/image/ee78f1c8-b0a0-42f8-85dc-562c6df88254-1756661808888.jpg"
+          ],
+          "outputs": []
+        }
+      ],
+      "subms_devices": [
+        {
+          "subms_id": "SUBMS2210",
+          "subms_name": "POPOP",
+          "subms_power": "1x4",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "ms",
+            "id": "MS7933"
+          },
+          "attachments": [
+            "/view/image/68861c97-30b4-40fd-a3d8-2f50d37dfeb9-1756635035715.jpg",
+            "/view/image/6909960a-cb9d-4414-a2f8-1eb7abd90412-1756635035898.jpg"
+          ],
+          "outputs": [
+            {
+              "type": "fdb",
+              "id": "FDB2984"
+            },
+            {
+              "type": "fdb",
+              "id": "FDB7825"
+            }
+          ]
+        },
+        {
+          "subms_id": "SUBMS1423",
+          "subms_name": "QWET",
+          "subms_power": "1x4",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "ms",
+            "id": "MS7933"
+          },
+          "attachments": [
+            "/view/image/836965c1-663e-4b12-80f0-4f84357279a9-1756635187355.jpg",
+            "/view/image/929dc195-a006-4a88-9d56-c7d3d6f95ad9-1756635187539.jpg"
+          ],
+          "outputs": []
+        },
+        {
+          "subms_id": "SUBMS4689",
+          "subms_name": "DGGD",
+          "subms_power": "1x4",
+          "location": [
+            37.4219983,
+            -122.084
+          ],
+          "input": {
+            "type": "ms",
+            "id": "MS7933"
+          },
+          "attachments": [
+            "/view/image/60f0b797-6d91-4437-b353-5d3c10937ee9-1756640617381.jpg",
+            "/view/image/3c961c9e-8547-4586-8b6e-180e0efa5a88-1756640617577.jpg"
+          ],
+          "outputs": []
+        }
+      ],
+      "x2_devices": []
+    }
+  ];
+
   const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
   const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
   const { data: engineers, isLoading: engineersLoading, error: engineersError } = api.useGetEngineersQuery({});
@@ -1360,6 +1639,29 @@ export default function InstallationsLeads() {
                                                   <XCircle className="h-4 w-4 mr-2" />
                                                   Reject Application
                                                 </Button>
+                                                <Button
+                                                  variant="outline"
+                                                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                                                  onClick={() => setIsNodeSelectionOpen(true)}
+                                                >
+                                                  🌐 Select Node
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Action Buttons for Accepted Items */}
+                                          {app.status === 'accept' && (
+                                            <div className="mt-6 pt-4 border-t">
+                                              <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                              <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button
+                                                  variant="outline"
+                                                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                                                  onClick={() => setIsNodeSelectionOpen(true)}
+                                                >
+                                                  🌐 Select Node
+                                                </Button>
                                               </div>
                                             </div>
                                           )}
@@ -1735,6 +2037,13 @@ export default function InstallationsLeads() {
                                                 <Eye className="h-4 w-4 mr-2" />
                                                 View Details
                                               </Button>
+                                              <Button
+                                                variant="outline"
+                                                className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                                                onClick={() => setIsNodeSelectionOpen(true)}
+                                              >
+                                                🌐 Select Node
+                                              </Button>
                                             </div>
                                           </div>
                                         </DialogContent>
@@ -2081,6 +2390,13 @@ export default function InstallationsLeads() {
                     Submit Assignment
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                  onClick={() => setIsNodeSelectionOpen(true)}
+                >
+                  🌐 Select Node
+                </Button>
               </>
             ) : (
               /* Show info message for approved requests */
@@ -2090,6 +2406,17 @@ export default function InstallationsLeads() {
                   Installation request already approved and engineer assigned
                 </span>
               </div>
+            )}
+
+            {/* Always show Select Node button for approved requests */}
+            {selectedInstallationRequest?.status === 'approved' && (
+              <Button
+                variant="outline"
+                className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                onClick={() => setIsNodeSelectionOpen(true)}
+              >
+                🌐 Select Node
+              </Button>
             )}
           </div>
         </DialogContent>
@@ -2163,6 +2490,301 @@ export default function InstallationsLeads() {
               onClick={() => setShowEngineerAssignmentModal(false)}
               disabled={!selectedEngineer}
               className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Confirm Selection
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Node Selection Modal */}
+      <Dialog open={isNodeSelectionOpen} onOpenChange={setIsNodeSelectionOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg lg:text-xl">Select OLT & Node</DialogTitle>
+            <DialogDescription className="text-sm">
+              Choose an OLT and navigate through its network hierarchy to select a node
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Search and Filter Section */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search OLTs..."
+                  className="text-sm"
+                />
+              </div>
+              <Select>
+                <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* OLT Selection Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {oltData.map((olt) => (
+                <div
+                  key={olt._id}
+                  className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                    selectedOlt?._id === olt._id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'
+                  }`}
+                  onClick={() => {
+                    setSelectedOlt(olt);
+                    setExpandedOlt(expandedOlt === olt._id ? null : olt._id);
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <h3 className="font-semibold text-sm text-blue-700 dark:text-blue-300">{olt.name}</h3>
+                    </div>
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-xs ${
+                        olt.status === 'active' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : olt.status === 'maintenance'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}
+                    >
+                      {olt.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between">
+                      <span>IP Address:</span>
+                      <span className="font-mono">{olt.oltIp}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Type:</span>
+                      <span className="uppercase">{olt.oltType}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Power:</span>
+                      <span>{olt.oltPower}W</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>MS Devices:</span>
+                      <span>{olt.ms_devices?.length || 0}</span>
+                    </div>
+                  </div>
+
+                  {/* Expand/Collapse Indicator */}
+                  <div className="flex justify-center mt-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${
+                      expandedOlt === olt._id 
+                        ? 'bg-blue-100 dark:bg-blue-800 rotate-180' 
+                        : 'bg-gray-100 dark:bg-gray-700'
+                    }`}>
+                      <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tree Structure for Selected OLT */}
+            {selectedOlt && expandedOlt === selectedOlt._id && (
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+                    Network Hierarchy - {selectedOlt.name}
+                  </h3>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedOlt.ms_devices?.length || 0} MS Devices
+                  </Badge>
+                </div>
+
+                {/* Tree Structure */}
+                <div className="space-y-4">
+                  {/* OLT Level */}
+                  <div className="relative">
+                    <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-600">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-blue-800 dark:text-blue-200">{selectedOlt.name}</h4>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">{selectedOlt.oltIp} • {selectedOlt.oltType.toUpperCase()}</p>
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        OLT
+                      </Badge>
+                    </div>
+
+                    {/* Connection Line */}
+                    {selectedOlt.ms_devices && selectedOlt.ms_devices.length > 0 && (
+                      <div className="absolute left-7 top-12 w-0.5 h-8 bg-blue-300 dark:bg-blue-600"></div>
+                    )}
+                  </div>
+
+                  {/* MS Devices Level */}
+                  {selectedOlt.ms_devices && selectedOlt.ms_devices.map((ms: any, msIndex: number) => (
+                    <div key={ms.ms_id} className="relative ml-8">
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-lg border border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 transition-colors cursor-pointer"
+                           onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} (${ms.ms_id})`)}>
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-green-800 dark:text-green-200">{ms.ms_name}</h5>
+                          <p className="text-xs text-green-600 dark:text-green-400">ID: {ms.ms_id} • Power: {ms.ms_power}</p>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                          MS
+                        </Badge>
+                      </div>
+
+                      {/* Connection Line */}
+                      {ms.outputs && ms.outputs.length > 0 && (
+                        <div className="absolute left-3 top-9 w-0.5 h-6 bg-green-300 dark:bg-green-600"></div>
+                      )}
+
+                      {/* SUBMS Devices */}
+                      {ms.outputs && ms.outputs.filter((output: any) => output.type === 'subms').map((submsOutput: any) => {
+                        const subms = selectedOlt.subms_devices?.find((s: any) => s.subms_id === submsOutput.id);
+                        if (!subms) return null;
+                        
+                        return (
+                          <div key={subms.subms_id} className="relative ml-6 mt-2">
+                            <div className="flex items-center gap-3 p-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-colors cursor-pointer"
+                                 onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`)}>
+                              <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h6 className="font-medium text-purple-800 dark:text-purple-200 text-sm">{subms.subms_name}</h6>
+                                <p className="text-xs text-purple-600 dark:text-purple-400">ID: {subms.subms_id} • Power: {subms.subms_power}</p>
+                              </div>
+                              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
+                                SUBMS
+                              </Badge>
+                            </div>
+
+                            {/* Connection Line */}
+                            {subms.outputs && subms.outputs.length > 0 && (
+                              <div className="absolute left-2.5 top-7 w-0.5 h-4 bg-purple-300 dark:bg-purple-600"></div>
+                            )}
+
+                            {/* FDB Devices */}
+                            {subms.outputs && subms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
+                              const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
+                              if (!fdb) return null;
+                              
+                              return (
+                                <div key={fdb.fdb_id} className="relative ml-4 mt-1">
+                                  <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
+                                       onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
+                                    <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h6 className="font-medium text-orange-800 dark:text-orange-200 text-xs">{fdb.fdb_name}</h6>
+                                      <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
+                                    </div>
+                                    <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                                      FDB
+                                    </Badge>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+
+                      {/* Direct FDB connections from MS */}
+                      {ms.outputs && ms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
+                        const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
+                        if (!fdb) return null;
+                        
+                        return (
+                          <div key={fdb.fdb_id} className="relative ml-6 mt-2">
+                            <div className="flex items-center gap-3 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
+                                 onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
+                              <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h6 className="font-medium text-orange-800 dark:text-orange-200 text-sm">{fdb.fdb_name}</h6>
+                                <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
+                              </div>
+                              <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                                FDB
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Selected Node Display */}
+            {selectedNode && (
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <h4 className="font-semibold text-sm text-green-800 dark:text-green-200">Selected Node Path</h4>
+                </div>
+                <p className="text-sm font-mono text-green-700 dark:text-green-300">{selectedNode}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsNodeSelectionOpen(false);
+                setSelectedNode("");
+                setSelectedOlt(null);
+                setExpandedOlt(null);
+              }}
+              className="text-sm"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                // Handle node selection logic here
+                console.log("Node selected:", selectedNode);
+                alert(`Node selected: ${selectedNode}`);
+                setIsNodeSelectionOpen(false);
+                setSelectedNode("");
+                setSelectedOlt(null);
+                setExpandedOlt(null);
+              }}
+              disabled={!selectedNode}
+              className="bg-green-600 hover:bg-green-700 text-white text-sm"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               Confirm Selection
