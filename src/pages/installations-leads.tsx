@@ -2214,33 +2214,33 @@ export default function InstallationsLeads() {
 
       {/* Installation Request Details Modal */}
       <Dialog open={showInstallationRequestModal} onOpenChange={setShowInstallationRequestModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg lg:text-xl">Installation Request Details</DialogTitle>
-            <DialogDescription className="text-sm">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b">
+            <DialogTitle className="text-base sm:text-lg lg:text-xl">Installation Request Details</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Review and manage installation request
             </DialogDescription>
           </DialogHeader>
 
           {selectedInstallationRequest && (
-            <div className="space-y-4">
+            <div className="space-y-4 pt-4">
               {/* Status Banner */}
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-3 sm:p-4 rounded-lg border ${
                 selectedInstallationRequest.status === 'approved' 
                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600' 
                   : selectedInstallationRequest.status === 'rejected'
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600'
                   : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-600'
               }`}>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {selectedInstallationRequest.status === 'approved' ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
                   ) : selectedInstallationRequest.status === 'rejected' ? (
-                    <XCircle className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 flex-shrink-0" />
                   ) : (
-                    <Clock className="h-5 w-5 text-yellow-600" />
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 flex-shrink-0" />
                   )}
-                  <span className={`font-medium ${
+                  <span className={`font-medium text-xs sm:text-sm ${
                     selectedInstallationRequest.status === 'approved' 
                       ? 'text-green-700 dark:text-green-300' 
                       : selectedInstallationRequest.status === 'rejected'
@@ -2251,64 +2251,65 @@ export default function InstallationsLeads() {
                   </span>
                 </div>
                 {selectedInstallationRequest.status === 'approved' && (
-                  <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                  <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 mt-2">
                     This installation request has been approved and an engineer has been assigned.
                   </p>
                 )}
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Customer Name</Label>
-                  <p className="text-sm">{selectedInstallationRequest.name}</p>
+              {/* Customer Information Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Customer Name</Label>
+                  <p className="text-xs sm:text-sm font-medium">{selectedInstallationRequest.name}</p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Request ID</Label>
-                  <p className="text-sm">{selectedInstallationRequest.displayId}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Request ID</Label>
+                  <p className="text-xs sm:text-sm font-mono">{selectedInstallationRequest.displayId}</p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Phone Number</Label>
-                  <p className="text-sm">{selectedInstallationRequest.phoneNumber}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Phone Number</Label>
+                  <p className="text-xs sm:text-sm">{selectedInstallationRequest.phoneNumber}</p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Email</Label>
-                  <p className="text-sm">{selectedInstallationRequest.email}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Email</Label>
+                  <p className="text-xs sm:text-sm break-all">{selectedInstallationRequest.email}</p>
                 </div>
-                <div className="sm:col-span-2">
-                  <Label className="text-sm font-medium">Address</Label>
-                  <p className="text-sm">{selectedInstallationRequest.displayAddress}</p>
+                <div className="space-y-1 sm:col-span-2 lg:col-span-3">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Address</Label>
+                  <p className="text-xs sm:text-sm">{selectedInstallationRequest.displayAddress}</p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Status</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</Label>
                   <Badge className={`${getStatusColor(selectedInstallationRequest.status)} text-xs`}>
                     {selectedInstallationRequest.status}
                   </Badge>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Created Date</Label>
-                  <p className="text-sm">{format(parseISO(selectedInstallationRequest.createdAt), "MMM dd, yyyy")}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Created Date</Label>
+                  <p className="text-xs sm:text-sm">{format(parseISO(selectedInstallationRequest.createdAt), "MMM dd, yyyy")}</p>
                 </div>
               </div>
 
               {/* Documents Section */}
-              <div>
-                <Label className="text-sm font-medium">Documents</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+              <div className="space-y-2">
+                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Documents</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                   {selectedInstallationRequest.displayAadhaarFront && (
-                    <div className="text-center p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
                       <p className="text-xs mt-1">Aadhaar Front</p>
                     </div>
                   )}
                   {selectedInstallationRequest.displayAadhaarBack && (
-                    <div className="text-center p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
                       <p className="text-xs mt-1">Aadhaar Back</p>
                     </div>
                   )}
                   {selectedInstallationRequest.displayPassportPhoto && (
-                    <div className="text-center p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
                       <p className="text-xs mt-1">Passport Photo</p>
                     </div>
                   )}
@@ -2317,12 +2318,12 @@ export default function InstallationsLeads() {
 
               {/* Engineer Assignment Section - Only show if not already approved */}
               {!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved' ? (
-                <>
+                <div className="space-y-3">
                   {isEngineerSelected && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <Label className="text-sm font-medium">Selected Engineer</Label>
+                    <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Selected Engineer</Label>
                       {engineers?.data?.engineers && (
-                        <p className="text-sm mt-1">
+                        <p className="text-xs sm:text-sm mt-1">
                           {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.firstName} {" "}
                           {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.lastName} - {" "}
                           {engineers.data.engineers.find((e: any) => e._id === selectedEngineer)?.phoneNumber}
@@ -2332,143 +2333,146 @@ export default function InstallationsLeads() {
                   )}
 
                   {selectedNode && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <Label className="text-sm font-medium">Selected Node</Label>
-                      <p className="text-sm mt-1 font-mono text-green-700 dark:text-green-300 break-all">
+                    <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Selected Node</Label>
+                      <p className="text-xs sm:text-sm mt-1 font-mono text-green-700 dark:text-green-300 break-all">
                         {selectedNode}
                       </p>
                     </div>
                   )}
 
                   {/* Remarks Section - Only show if not already approved */}
-                  <div>
-                    <Label className="text-sm font-medium">Remarks (Optional)</Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Remarks (Optional)</Label>
                     <Input
                       placeholder="Enter remarks for the assignment"
                       value={assignmentRemarks}
                       onChange={(e) => setAssignmentRemarks(e.target.value)}
-                      className="text-sm"
+                      className="text-xs sm:text-sm"
                     />
                   </div>
-                </>
+                </div>
               ) : (
                 /* Show current engineer info if already approved */
-                <>
+                <div className="space-y-3">
                   {selectedInstallationRequest?.assignedEngineer && (
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <Label className="text-sm font-medium">Currently Assigned Engineer</Label>
-                      <div className="mt-2">
-                        <p className="text-sm font-medium">
+                    <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Currently Assigned Engineer</Label>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs sm:text-sm font-medium">
                           {selectedInstallationRequest.assignedEngineer.firstName} {selectedInstallationRequest.assignedEngineer.lastName}
                         </p>
-                        <p className="text-sm text-gray-600">{selectedInstallationRequest.assignedEngineer.email}</p>
-                        <p className="text-sm text-gray-500">{selectedInstallationRequest.assignedEngineer.phoneNumber}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 break-all">{selectedInstallationRequest.assignedEngineer.email}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">{selectedInstallationRequest.assignedEngineer.phoneNumber}</p>
                       </div>
                     </div>
                   )}
 
                   {selectedNode && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <Label className="text-sm font-medium">Selected Node</Label>
-                      <p className="text-sm mt-1 font-mono text-blue-700 dark:text-blue-300 break-all">
+                    <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Selected Node</Label>
+                      <p className="text-xs sm:text-sm mt-1 font-mono text-blue-700 dark:text-blue-300 break-all">
                         {selectedNode}
                       </p>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowInstallationRequestModal(false);
-                setSelectedInstallationRequest(null);
-                setSelectedEngineer("");
-                setAssignmentRemarks("");
-                setIsEngineerSelected(false);
-                // Don't clear selectedNode here - keep it for next use
-              }}
-              className="text-sm"
-            >
-              Cancel
-            </Button>
-            
-            {/* Only show Reject button if not already approved */}
-            {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
+          {/* Action Buttons */}
+          <div className="sticky bottom-0 bg-background pt-4 border-t mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
               <Button
-                variant="destructive"
-                onClick={handleRejectInstallationRequest}
-                className="text-sm"
+                variant="outline"
+                onClick={() => {
+                  setShowInstallationRequestModal(false);
+                  setSelectedInstallationRequest(null);
+                  setSelectedEngineer("");
+                  setAssignmentRemarks("");
+                  setIsEngineerSelected(false);
+                  // Don't clear selectedNode here - keep it for next use
+                }}
+                className="text-xs sm:text-sm order-last sm:order-none"
               >
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
+                Cancel
               </Button>
-            )}
-            
-            {/* Only show Engineer selection buttons if not already approved */}
-            {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
-              <>
+              
+              {/* Only show Reject button if not already approved */}
+              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
                 <Button
-                  onClick={() => setShowEngineerAssignmentModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                  variant="destructive"
+                  onClick={handleRejectInstallationRequest}
+                  className="text-xs sm:text-sm"
                 >
-                  <HardHat className="h-4 w-4 mr-2" />
-                  Select Engineer
+                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Reject
                 </Button>
-                {isEngineerSelected && (
+              )}
+              
+              {/* Only show Engineer selection buttons if not already approved */}
+              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
+                <>
                   <Button
-                    onClick={handleEngineerAssignment}
-                    className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                    onClick={() => setShowEngineerAssignmentModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Submit Assignment
+                    <HardHat className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    Select Engineer
                   </Button>
-                )}
+                  {isEngineerSelected && (
+                    <Button
+                      onClick={handleEngineerAssignment}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                    >
+                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Submit Assignment
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="border-green-500 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
+                    onClick={() => setIsNodeSelectionOpen(true)}
+                  >
+                    🌐 Select Node
+                  </Button>
+                </>
+              ) : (
+                /* Show info message for approved requests */
+                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-green-700 dark:text-green-300">
+                    Installation request already approved and engineer assigned
+                  </span>
+                </div>
+              )}
+
+              {/* Always show Select Node button for approved requests */}
+              {selectedInstallationRequest?.status === 'approved' && (
                 <Button
                   variant="outline"
-                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
+                  className="border-green-500 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
                   onClick={() => setIsNodeSelectionOpen(true)}
                 >
                   🌐 Select Node
                 </Button>
-              </>
-            ) : (
-              /* Show info message for approved requests */
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm text-green-700 dark:text-green-300">
-                  Installation request already approved and engineer assigned
-                </span>
-              </div>
-            )}
+              )}
 
-            {/* Always show Select Node button for approved requests */}
-            {selectedInstallationRequest?.status === 'approved' && (
-              <Button
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
-                onClick={() => setIsNodeSelectionOpen(true)}
-              >
-                🌐 Select Node
-              </Button>
-            )}
-
-            {/* Add a button to clear selected node if needed */}
-            {selectedNode && (
-              <Button
-                variant="outline"
-                className="border-red-500 text-red-600 hover:bg-red-50 text-sm"
-                onClick={() => {
-                  setSelectedNode("");
-                  localStorage.removeItem('selectedNode');
-                }}
-              >
-                🗑️ Clear Node
-              </Button>
-            )}
+              {/* Add a button to clear selected node if needed */}
+              {selectedNode && (
+                <Button
+                  variant="outline"
+                  className="border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                  onClick={() => {
+                    setSelectedNode("");
+                    localStorage.removeItem('selectedNode');
+                  }}
+                >
+                  🗑️ Clear Node
+                </Button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
