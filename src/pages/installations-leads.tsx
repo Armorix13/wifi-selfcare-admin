@@ -66,6 +66,26 @@ export default function InstallationsLeads() {
   const [selectedNode, setSelectedNode] = useState("");
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
+
+  console.log("selectedNode",selectedNode);
+  
+  // Persist selectedNode in localStorage
+  useEffect(() => {
+    const savedNode = localStorage.getItem('selectedNode');
+    if (savedNode) {
+      setSelectedNode(savedNode);
+    }
+  }, []);
+
+  // Save selectedNode to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedNode) {
+      localStorage.setItem('selectedNode', selectedNode);
+    } else {
+      localStorage.removeItem('selectedNode');
+    }
+  }, [selectedNode]);
+  
   
   // Sample OLT data - replace with API call later
   const oltData = [
@@ -698,14 +718,14 @@ export default function InstallationsLeads() {
 
   return (
     <MainLayout title="New Installation & Applications">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8">
         {/* Top Stats Row - All Data Types */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           {/* Application Forms Stats */}
           <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-blue-800 dark:text-blue-200">
-                <HardHat className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-blue-800 dark:text-blue-200">
+                <HardHat className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                 Application Forms
               </CardTitle>
               <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-blue-600 dark:text-blue-300">
@@ -713,15 +733,15 @@ export default function InstallationsLeads() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300">
                 {applicationsLoading ? "..." : transformedApplications.filter((app: any) => app.status === 'inreview').length}
               </div>
               <div className="text-xs lg:text-sm text-blue-600 dark:text-blue-400 mt-1">
                 {applicationsLoading ? "Loading..." : "In review applications"}
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 sm:mt-3 space-y-2">
                 {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 3).map((app: any) => (
-                  <div key={app.id} className="p-2 bg-white/60 dark:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-600">
+                  <div key={app.id} className="p-2 sm:p-3 bg-white/60 dark:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-600">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex-1 min-w-0">
                         <div className="text-xs lg:text-sm font-medium truncate text-blue-900 dark:text-blue-100">{app.name}</div>
@@ -734,7 +754,7 @@ export default function InstallationsLeads() {
                     <div className="flex gap-1 mt-2">
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6"
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6 sm:h-8"
                         onClick={async () => {
                           try {
                             await updateApplicationStatus({ id: app.id, status: 'accept' });
@@ -750,7 +770,7 @@ export default function InstallationsLeads() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="text-xs px-2 py-1 h-6"
+                        className="text-xs px-2 py-1 h-6 sm:h-8"
                         onClick={async () => {
                           try {
                             await updateApplicationStatus({ id: app.id, status: 'reject' });
@@ -772,9 +792,9 @@ export default function InstallationsLeads() {
 
           {/* Installation Requests Stats */}
           <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-green-800 dark:text-green-200">
-                <Building className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-green-800 dark:text-green-200">
+                <Building className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                 Installation Requests
               </CardTitle>
               <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-green-600 dark:text-green-300">
@@ -782,18 +802,18 @@ export default function InstallationsLeads() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="text-2xl lg:text-3xl font-bold text-green-700 dark:text-green-300">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-700 dark:text-green-300">
                 {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}
               </div>
               <div className="text-xs lg:text-sm text-green-600 dark:text-green-400 mt-1">
                 {installationRequestsLoading ? "Loading..." : "Approved requests"}
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 sm:mt-3 space-y-2">
                 {installationRequestsLoading ? (
                   <div className="text-xs text-green-600 dark:text-green-400">Loading installation requests...</div>
                 ) : (
                   transformedInstallationRequests.slice(0, 3).map((req: any) => (
-                    <div key={req.id} className="p-2 bg-white/60 dark:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-600">
+                    <div key={req.id} className="p-2 sm:p-3 bg-white/60 dark:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-600">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex-1 min-w-0">
                           <div className="text-xs lg:text-sm font-medium truncate text-green-900 dark:text-green-100">{req.name}</div>
@@ -806,7 +826,7 @@ export default function InstallationsLeads() {
                       <div className="flex gap-1 mt-2">
                         <Button
                           size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6"
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6 sm:h-8"
                           onClick={() => {
                             setSelectedInstallationRequest(req);
                             setShowInstallationRequestModal(true);
@@ -818,7 +838,7 @@ export default function InstallationsLeads() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className={`text-xs px-2 py-1 h-6 ${req.status === 'approved'
+                          className={`text-xs px-2 py-1 h-6 sm:h-8 ${req.status === 'approved'
                             ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500'
                             : 'hover:bg-blue-50'
                             }`}
@@ -840,34 +860,30 @@ export default function InstallationsLeads() {
               </div>
             </CardContent>
           </Card>
-
-
-
-
         </div>
 
         {/* Quick Overview and Recent Activity Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Quick Overview */}
           <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-purple-800 dark:text-purple-200">
-                <BarChart3 className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-purple-800 dark:text-purple-200">
+                <BarChart3 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                 Quick Overview
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
-                  <div className="text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
+                  <div className="text-base sm:text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
                     {applicationsLoading ? "..." : transformedApplications.length}
                   </div>
                   <div className="text-xs text-purple-600 dark:text-purple-400">
                     {applicationsLoading ? "Loading..." : "Applications"}
                   </div>
                 </div>
-                <div className="p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
-                  <div className="text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
+                <div className="p-2 sm:p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
+                  <div className="text-base sm:text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
                     {installationRequestsLoading ? "..." : transformedInstallationRequests.length}
                   </div>
                   <div className="text-xs text-purple-600 dark:text-purple-400">
@@ -880,19 +896,19 @@ export default function InstallationsLeads() {
 
           {/* Recent Activity */}
           <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base lg:text-lg dashboard-card-title flex items-center text-orange-800 dark:text-orange-200">
-                <Clock className="mr-2 h-4 w-4 lg:h-5 lg:w-5" />
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-orange-800 dark:text-orange-200">
+                <Clock className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
                 Recent Activity
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {[...transformedApplications, ...transformedInstallationRequests]
                   .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
                   .slice(0, 5)
                   .map((item: any, index) => (
-                    <div key={index} className="flex items-center space-x-3 p-2 bg-white/60 dark:bg-orange-900/40 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-white/80 dark:hover:bg-orange-900/60 transition-colors">
+                    <div key={index} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-white/60 dark:bg-orange-900/40 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-white/80 dark:hover:bg-orange-900/60 transition-colors">
                       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs lg:text-sm font-medium truncate text-orange-900 dark:text-orange-100">
@@ -910,29 +926,29 @@ export default function InstallationsLeads() {
         </div>
 
         {/* Main Content with Tabs */}
-        <div className="space-y-4 lg:space-y-6">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 p-8 text-white shadow-lg">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 p-4 sm:p-6 lg:p-8 text-white shadow-lg">
             <div className="relative z-10">
-              <h1 className="text-3xl lg:text-4xl font-bold mb-2">New Installation & Applications</h1>
-              <p className="text-blue-100 text-lg">Manage installation requests and application forms with ease</p>
-              <div className="flex items-center gap-4 mt-4">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">New Installation & Applications</h1>
+              <p className="text-blue-100 text-sm sm:text-base lg:text-lg">Manage installation requests and application forms with ease</p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-3 sm:mt-4">
                 <div className="flex items-center gap-2">
-                  <HardHat className="h-5 w-5" />
-                  <span className="text-sm">{transformedApplications.length} Applications</span>
+                  <HardHat className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs sm:text-sm">{transformedApplications.length} Applications</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  <span className="text-sm">{transformedInstallationRequests.length} Installation Requests</span>
+                  <Building className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs sm:text-sm">{transformedInstallationRequests.length} Installation Requests</span>
                 </div>
               </div>
             </div>
             <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/10 to-transparent"></div>
-            <div className="absolute -right-4 top-4 h-32 w-32 rounded-full bg-white/10"></div>
-            <div className="absolute -right-8 top-16 h-16 w-16 rounded-full bg-white/5"></div>
+            <div className="absolute -right-4 top-4 h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-white/10"></div>
+            <div className="absolute -right-8 top-16 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white/5"></div>
           </div>
 
-          <Tabs defaultValue="all-forms" className="space-y-4 lg:space-y-6">
-            <TabsList className="grid w-full grid-cols-1 lg:grid-cols-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
+          <Tabs defaultValue="all-forms" className="space-y-4 sm:space-y-6">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
               <TabsTrigger value="all-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
                 <HardHat className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="hidden sm:inline">All Forms</span>
@@ -2315,6 +2331,15 @@ export default function InstallationsLeads() {
                     </div>
                   )}
 
+                  {selectedNode && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <Label className="text-sm font-medium">Selected Node</Label>
+                      <p className="text-sm mt-1 font-mono text-green-700 dark:text-green-300 break-all">
+                        {selectedNode}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Remarks Section - Only show if not already approved */}
                   <div>
                     <Label className="text-sm font-medium">Remarks (Optional)</Label>
@@ -2328,18 +2353,29 @@ export default function InstallationsLeads() {
                 </>
               ) : (
                 /* Show current engineer info if already approved */
-                selectedInstallationRequest?.assignedEngineer && (
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <Label className="text-sm font-medium">Currently Assigned Engineer</Label>
-                    <div className="mt-2">
-                      <p className="text-sm font-medium">
-                        {selectedInstallationRequest.assignedEngineer.firstName} {selectedInstallationRequest.assignedEngineer.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">{selectedInstallationRequest.assignedEngineer.email}</p>
-                      <p className="text-sm text-gray-500">{selectedInstallationRequest.assignedEngineer.phoneNumber}</p>
+                <>
+                  {selectedInstallationRequest?.assignedEngineer && (
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <Label className="text-sm font-medium">Currently Assigned Engineer</Label>
+                      <div className="mt-2">
+                        <p className="text-sm font-medium">
+                          {selectedInstallationRequest.assignedEngineer.firstName} {selectedInstallationRequest.assignedEngineer.lastName}
+                        </p>
+                        <p className="text-sm text-gray-600">{selectedInstallationRequest.assignedEngineer.email}</p>
+                        <p className="text-sm text-gray-500">{selectedInstallationRequest.assignedEngineer.phoneNumber}</p>
+                      </div>
                     </div>
-                  </div>
-                )
+                  )}
+
+                  {selectedNode && (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <Label className="text-sm font-medium">Selected Node</Label>
+                      <p className="text-sm mt-1 font-mono text-blue-700 dark:text-blue-300 break-all">
+                        {selectedNode}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -2353,6 +2389,7 @@ export default function InstallationsLeads() {
                 setSelectedEngineer("");
                 setAssignmentRemarks("");
                 setIsEngineerSelected(false);
+                // Don't clear selectedNode here - keep it for next use
               }}
               className="text-sm"
             >
@@ -2416,6 +2453,20 @@ export default function InstallationsLeads() {
                 onClick={() => setIsNodeSelectionOpen(true)}
               >
                 🌐 Select Node
+              </Button>
+            )}
+
+            {/* Add a button to clear selected node if needed */}
+            {selectedNode && (
+              <Button
+                variant="outline"
+                className="border-red-500 text-red-600 hover:bg-red-50 text-sm"
+                onClick={() => {
+                  setSelectedNode("");
+                  localStorage.removeItem('selectedNode');
+                }}
+              >
+                🗑️ Clear Node
               </Button>
             )}
           </div>
@@ -2500,25 +2551,25 @@ export default function InstallationsLeads() {
 
       {/* Node Selection Modal */}
       <Dialog open={isNodeSelectionOpen} onOpenChange={setIsNodeSelectionOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg lg:text-xl">Select OLT & Node</DialogTitle>
-            <DialogDescription className="text-sm">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg sm:text-xl lg:text-2xl">Select OLT & Node</DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Choose an OLT and navigate through its network hierarchy to select a node
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Search and Filter Section */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
                 <Input
                   placeholder="Search OLTs..."
-                  className="text-sm"
+                  className="text-sm sm:text-base h-10 sm:h-12"
                 />
               </div>
               <Select>
-                <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base h-10 sm:h-12">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -2531,13 +2582,13 @@ export default function InstallationsLeads() {
             </div>
 
             {/* OLT Selection Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {oltData.map((olt) => (
                 <div
                   key={olt._id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
                     selectedOlt?._id === olt._id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-md'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg'
                       : 'hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'
                   }`}
                   onClick={() => {
@@ -2545,10 +2596,10 @@ export default function InstallationsLeads() {
                     setExpandedOlt(expandedOlt === olt._id ? null : olt._id);
                   }}
                 >
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <h3 className="font-semibold text-sm text-blue-700 dark:text-blue-300">{olt.name}</h3>
+                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full"></div>
+                      <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-blue-700 dark:text-blue-300">{olt.name}</h3>
                     </div>
                     <Badge 
                       variant="secondary" 
@@ -2564,33 +2615,33 @@ export default function InstallationsLeads() {
                     </Badge>
                   </div>
                   
-                  <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex justify-between">
-                      <span>IP Address:</span>
-                      <span className="font-mono">{olt.oltIp}</span>
+                      <span>IP:</span>
+                      <span className="font-mono text-xs">{olt.oltIp}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Type:</span>
-                      <span className="uppercase">{olt.oltType}</span>
+                      <span className="uppercase text-xs">{olt.oltType}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Power:</span>
-                      <span>{olt.oltPower}W</span>
+                      <span className="text-xs">{olt.oltPower}W</span>
                     </div>
                     <div className="flex justify-between">
                       <span>MS Devices:</span>
-                      <span>{olt.ms_devices?.length || 0}</span>
+                      <span className="text-xs">{olt.ms_devices?.length || 0}</span>
                     </div>
                   </div>
 
                   {/* Expand/Collapse Indicator */}
-                  <div className="flex justify-center mt-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${
+                  <div className="flex justify-center mt-2 sm:mt-3">
+                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${
                       expandedOlt === olt._id 
                         ? 'bg-blue-100 dark:bg-blue-800 rotate-180' 
                         : 'bg-gray-100 dark:bg-gray-700'
                     }`}>
-                      <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -2601,9 +2652,9 @@ export default function InstallationsLeads() {
 
             {/* Tree Structure for Selected OLT */}
             {selectedOlt && expandedOlt === selectedOlt._id && (
-              <div className="border-t pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+              <div className="border-t pt-4 sm:pt-6">
+                <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-blue-700 dark:text-blue-300">
                     Network Hierarchy - {selectedOlt.name}
                   </h3>
                   <Badge variant="outline" className="text-xs">
@@ -2612,42 +2663,42 @@ export default function InstallationsLeads() {
                 </div>
 
                 {/* Tree Structure */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* OLT Level */}
                   <div className="relative">
-                    <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-600">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-600">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-blue-800 dark:text-blue-200">{selectedOlt.name}</h4>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">{selectedOlt.oltIp} • {selectedOlt.oltType.toUpperCase()}</p>
+                        <h4 className="font-semibold text-sm sm:text-base text-blue-800 dark:text-blue-200">{selectedOlt.name}</h4>
+                        <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">{selectedOlt.oltIp} • {selectedOlt.oltType.toUpperCase()}</p>
                       </div>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
                         OLT
                       </Badge>
                     </div>
 
                     {/* Connection Line */}
                     {selectedOlt.ms_devices && selectedOlt.ms_devices.length > 0 && (
-                      <div className="absolute left-7 top-12 w-0.5 h-8 bg-blue-300 dark:bg-blue-600"></div>
+                      <div className="absolute left-3 sm:left-7 top-10 sm:top-12 w-0.5 h-6 sm:h-8 bg-blue-300 dark:bg-blue-600"></div>
                     )}
                   </div>
 
                   {/* MS Devices Level */}
                   {selectedOlt.ms_devices && selectedOlt.ms_devices.map((ms: any, msIndex: number) => (
-                    <div key={ms.ms_id} className="relative ml-8">
-                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-lg border border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 transition-colors cursor-pointer"
+                    <div key={ms.ms_id} className="relative ml-4 sm:ml-8">
+                      <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-lg border border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 transition-colors cursor-pointer"
                            onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} (${ms.ms_id})`)}>
-                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <h5 className="font-medium text-green-800 dark:text-green-200">{ms.ms_name}</h5>
+                          <h5 className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">{ms.ms_name}</h5>
                           <p className="text-xs text-green-600 dark:text-green-400">ID: {ms.ms_id} • Power: {ms.ms_power}</p>
                         </div>
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
@@ -2657,7 +2708,7 @@ export default function InstallationsLeads() {
 
                       {/* Connection Line */}
                       {ms.outputs && ms.outputs.length > 0 && (
-                        <div className="absolute left-3 top-9 w-0.5 h-6 bg-green-300 dark:bg-green-600"></div>
+                        <div className="absolute left-2 sm:left-3 top-7 sm:top-9 w-0.5 h-4 sm:h-6 bg-green-300 dark:bg-green-600"></div>
                       )}
 
                       {/* SUBMS Devices */}
@@ -2666,16 +2717,16 @@ export default function InstallationsLeads() {
                         if (!subms) return null;
                         
                         return (
-                          <div key={subms.subms_id} className="relative ml-6 mt-2">
-                            <div className="flex items-center gap-3 p-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-colors cursor-pointer"
+                          <div key={subms.subms_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
+                            <div className="flex items-center gap-2 sm:gap-3 p-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-colors cursor-pointer"
                                  onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`)}>
-                              <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                               </div>
                               <div className="flex-1">
-                                <h6 className="font-medium text-purple-800 dark:text-purple-200 text-sm">{subms.subms_name}</h6>
+                                <h6 className="font-medium text-xs sm:text-sm text-purple-800 dark:text-purple-200">{subms.subms_name}</h6>
                                 <p className="text-xs text-purple-600 dark:text-purple-400">ID: {subms.subms_id} • Power: {subms.subms_power}</p>
                               </div>
                               <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
@@ -2685,7 +2736,7 @@ export default function InstallationsLeads() {
 
                             {/* Connection Line */}
                             {subms.outputs && subms.outputs.length > 0 && (
-                              <div className="absolute left-2.5 top-7 w-0.5 h-4 bg-purple-300 dark:bg-purple-600"></div>
+                              <div className="absolute left-2 sm:left-2.5 top-6 sm:top-7 w-0.5 h-3 sm:h-4 bg-purple-300 dark:bg-purple-600"></div>
                             )}
 
                             {/* FDB Devices */}
@@ -2694,16 +2745,16 @@ export default function InstallationsLeads() {
                               if (!fdb) return null;
                               
                               return (
-                                <div key={fdb.fdb_id} className="relative ml-4 mt-1">
+                                <div key={fdb.fdb_id} className="relative ml-2 sm:ml-4 mt-1">
                                   <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
                                        onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
-                                    <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
-                                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                                      <svg className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                       </svg>
                                     </div>
                                     <div className="flex-1">
-                                      <h6 className="font-medium text-orange-800 dark:text-orange-200 text-xs">{fdb.fdb_name}</h6>
+                                      <h6 className="font-medium text-xs text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
                                       <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
                                     </div>
                                     <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
@@ -2723,16 +2774,16 @@ export default function InstallationsLeads() {
                         if (!fdb) return null;
                         
                         return (
-                          <div key={fdb.fdb_id} className="relative ml-6 mt-2">
-                            <div className="flex items-center gap-3 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
+                          <div key={fdb.fdb_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
+                            <div className="flex items-center gap-2 sm:gap-3 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
                                  onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
-                              <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                 </svg>
                               </div>
                               <div className="flex-1">
-                                <h6 className="font-medium text-orange-800 dark:text-orange-200 text-sm">{fdb.fdb_name}</h6>
+                                <h6 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
                                 <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
                               </div>
                               <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
@@ -2750,26 +2801,26 @@ export default function InstallationsLeads() {
 
             {/* Selected Node Display */}
             {selectedNode && (
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
+              <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <h4 className="font-semibold text-sm text-green-800 dark:text-green-200">Selected Node Path</h4>
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  <h4 className="font-semibold text-sm sm:text-base text-green-800 dark:text-green-200">Selected Node Path</h4>
                 </div>
-                <p className="text-sm font-mono text-green-700 dark:text-green-300">{selectedNode}</p>
+                <p className="text-xs sm:text-sm font-mono text-green-700 dark:text-green-300 break-all">{selectedNode}</p>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t mt-6">
             <Button
               variant="outline"
               onClick={() => {
                 setIsNodeSelectionOpen(false);
-                setSelectedNode("");
+                // Don't clear selectedNode when just closing the modal
                 setSelectedOlt(null);
                 setExpandedOlt(null);
               }}
-              className="text-sm"
+              className="text-sm sm:text-base h-10 sm:h-12"
             >
               Cancel
             </Button>
@@ -2779,12 +2830,12 @@ export default function InstallationsLeads() {
                 console.log("Node selected:", selectedNode);
                 alert(`Node selected: ${selectedNode}`);
                 setIsNodeSelectionOpen(false);
-                setSelectedNode("");
+                // Keep the selectedNode for use in the installation request
                 setSelectedOlt(null);
                 setExpandedOlt(null);
               }}
               disabled={!selectedNode}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm"
+              className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base h-10 sm:h-12"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               Confirm Selection
