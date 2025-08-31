@@ -38,7 +38,10 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
     // Token expired or invalid, redirect to login
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('auth-storage');
+    localStorage.removeItem('loglevel');
     window.location.href = '/admin/login';
+    
   }
   
   return result;

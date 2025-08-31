@@ -269,7 +269,7 @@ export default function OLTManagement() {
           <strong>Status:</strong> <span style="color: ${getStatusColor(olt.status)}; font-weight: 600;">${olt.status}</span>
         </p>
         <div style="margin-top: 8px;">
-          <button onclick="window.open('/olt-management/${olt._id}', '_blank')" 
+          <button onclick="window.open('/admin/olt-management/${olt._id}', '_blank')" 
                   style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
             View Details
           </button>

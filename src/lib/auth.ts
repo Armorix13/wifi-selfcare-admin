@@ -52,7 +52,7 @@ const permissions = {
     'manage-admin',
     'manage-advertisements',
     'manage-all',
-    'manage-olt',  // SUPERADMIN can manage OLT devices
+    // 'manage-olt',  // SUPERADMIN can manage OLT devices
     'view-leads'  // Only SUPERADMIN can see the "Leads" section
   ],
   [Role.ADMIN]: [
