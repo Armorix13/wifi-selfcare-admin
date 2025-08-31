@@ -172,7 +172,7 @@ export default function OLTManagement() {
       setFilteredOlts(oltData.data);
       
       // Fetch addresses for all OLTs
-      oltData.data.forEach((olt) => {
+      oltData.data.forEach((olt:any) => {
         getAddressFromCoordinates(olt.latitude, olt.longitude, olt._id);
       });
     }
