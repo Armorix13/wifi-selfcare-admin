@@ -416,6 +416,12 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.LEADS],
     }),
+    getAllSelectNodes: builder.query({
+      query: () => ({
+        url: `/network/olt/select/node`,
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -467,5 +473,6 @@ export const {
   useGetAllLeaveRequestAnalyticsQuery,
   useGetAllLeaveRequestQuery,
   useApproveRejectLeaveRequestMutation,
-  useGetOltDataQuery
+  useGetOltDataQuery,
+  useGetAllSelectNodesQuery
 } = api;

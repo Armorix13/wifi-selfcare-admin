@@ -46,7 +46,7 @@ import {
   dummyEngineers
 } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
-import { api, BASE_URL } from "@/api/index";
+import { api, BASE_URL, useGetAllSelectNodesQuery } from "@/api/index";
 
 export default function InstallationsLeads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,7 +67,10 @@ export default function InstallationsLeads() {
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
 
-  console.log("selectedNode",selectedNode);
+   const {data: selectNodes, isLoading: selectNodesLoading, error: selectNodesError} = useGetAllSelectNodesQuery({});
+
+   console.log("selectNodes",selectNodes);
+
   
   // Persist selectedNode in localStorage
   useEffect(() => {
@@ -87,279 +90,13 @@ export default function InstallationsLeads() {
   }, [selectedNode]);
   
   
-  // Sample OLT data - replace with API call later
-  const oltData = [
-    {
-      "_id": "68b412a7b3f38d64aca02dda",
-      "name": "OLT-09",
-      "oltIp": "192.09.78.9",
-      "macAddress": "10:32:98:65:90:87",
-      "serialNumber": "ZZZZZZ",
-      "latitude": 37.4219983,
-      "longitude": -122.084,
-      "oltType": "epon",
-      "powerStatus": "on",
-      "oltPower": 4,
-      "status": "active",
-      "dnsServers": [],
-      "ownedBy": {
-        "_id": "68a976f837283960f117a7c4",
-        "email": "sisko.wifiselfcare@yopmail.com"
-      },
-      "attachments": [
-        "/view/image/6cf5d3df-cd18-4f20-98b5-c956a9cd415d-1756631718418.jpg",
-        "/view/image/d4c2a6fc-58d1-495a-9421-1e2925be3e41-1756631718614.jpg",
-        "/view/image/08f86f26-eaa2-4afa-ab3b-932e1a88258e-1756631718806.jpg",
-        "/view/image/23714bfd-c926-4ff6-825d-7c7f62a7c98f-1756631718810.jpg"
-      ],
-      "outputs": [
-        {
-          "type": "ms",
-          "id": "MS7933"
-        },
-        {
-          "type": "ms",
-          "id": "MS5601"
-        },
-        {
-          "type": "ms",
-          "id": "MS5377"
-        },
-        {
-          "type": "ms",
-          "id": "MS1916"
-        }
-      ],
-      "createdAt": "2025-08-31T09:15:19.002Z",
-      "updatedAt": "2025-08-31T09:15:19.002Z",
-      "oltId": "OLT7198",
-      "location": {
-        "type": "Point",
-        "coordinates": [
-          -122.084,
-          37.4219983
-        ]
-      },
-      "__v": 0,
-      "ms_devices": [
-        {
-          "ms_id": "MS7933",
-          "ms_name": "MS-1",
-          "ms_power": "1x8",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "olt",
-            "id": "OLT7198"
-          },
-          "attachments": [
-            "/view/image/c2cb1d9a-9ae5-49ff-a7df-0f6a792bfc5b-1756631826147.jpg",
-            "/view/image/c9a68945-8fb9-45cb-acc0-655a14332637-1756631826333.jpg"
-          ],
-          "outputs": [
-            {
-              "type": "subms",
-              "id": "SUBMS2210"
-            },
-            {
-              "type": "subms",
-              "id": "SUBMS1423"
-            },
-            {
-              "type": "subms",
-              "id": "SUBMS4689"
-            }
-          ]
-        },
-        {
-          "ms_id": "MS5601",
-          "ms_name": "MS-2",
-          "ms_power": "1x8",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "olt",
-            "id": "OLT7198"
-          },
-          "attachments": [
-            "/view/image/a81fe739-9ba7-49e2-a0a5-44e4942b2356-1756631866709.jpg",
-            "/view/image/9e20435d-a0c7-449a-8a7a-d575d69c3f65-1756631866900.jpg"
-          ],
-          "outputs": []
-        },
-        {
-          "ms_id": "MS5377",
-          "ms_name": "MS-3",
-          "ms_power": "1x8",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "olt",
-            "id": "OLT7198"
-          },
-          "attachments": [
-            "/view/image/ad046add-a934-42ed-9a42-b2a7057a27bd-1756631898636.jpg",
-            "/view/image/91d3c4fe-029e-4906-bf0c-749433d03658-1756631898839.jpg"
-          ],
-          "outputs": []
-        },
-        {
-          "ms_id": "MS1916",
-          "ms_name": "MS-4",
-          "ms_power": "1x8",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "olt",
-            "id": "OLT7198"
-          },
-          "attachments": [
-            "/view/image/5c9f0c9b-dfac-493d-aecb-4d5f6d34bde0-1756631939527.jpg",
-            "/view/image/905cc470-70cb-4e0f-8d92-30566dffbdce-1756631939721.jpg"
-          ],
-          "outputs": [
-            {
-              "type": "fdb",
-              "id": "FDB5088"
-            }
-          ]
-        }
-      ],
-      "fdb_devices": [
-        {
-          "fdb_id": "FDB5088",
-          "fdb_name": "FDB-1",
-          "fdb_power": 8,
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "ms",
-            "id": "MS1916",
-            "port": 1
-          },
-          "attachments": [
-            "/view/image/4cd7288a-3abe-4270-b500-e1525c39edc5-1756661555083.jpg",
-            "/view/image/78d150ba-ad20-4c59-adbd-03a058d3d59e-1756661555279.jpg"
-          ],
-          "outputs": []
-        },
-        {
-          "fdb_id": "FDB2984",
-          "fdb_name": "FDB-09090",
-          "fdb_power": 4,
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "subms",
-            "id": "SUBMS2210",
-            "port": 1
-          },
-          "attachments": [
-            "/view/image/7f4f1b2b-bfc0-4cf9-aca5-7452b16180fd-1756640670773.jpg",
-            "/view/image/7f22a78d-7104-4dae-8546-310523791c82-1756640670973.jpg"
-          ],
-          "outputs": []
-        },
-        {
-          "fdb_id": "FDB7825",
-          "fdb_name": "FDB-2",
-          "fdb_power": 2,
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "subms",
-            "id": "SUBMS2210",
-            "port": 1
-          },
-          "attachments": [
-            "/view/image/730abfe6-663a-43d3-8db6-8f52b08f26fa-1756661808707.jpg",
-            "/view/image/ee78f1c8-b0a0-42f8-85dc-562c6df88254-1756661808888.jpg"
-          ],
-          "outputs": []
-        }
-      ],
-      "subms_devices": [
-        {
-          "subms_id": "SUBMS2210",
-          "subms_name": "POPOP",
-          "subms_power": "1x4",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "ms",
-            "id": "MS7933"
-          },
-          "attachments": [
-            "/view/image/68861c97-30b4-40fd-a3d8-2f50d37dfeb9-1756635035715.jpg",
-            "/view/image/6909960a-cb9d-4414-a2f8-1eb7abd90412-1756635035898.jpg"
-          ],
-          "outputs": [
-            {
-              "type": "fdb",
-              "id": "FDB2984"
-            },
-            {
-              "type": "fdb",
-              "id": "FDB7825"
-            }
-          ]
-        },
-        {
-          "subms_id": "SUBMS1423",
-          "subms_name": "QWET",
-          "subms_power": "1x4",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "ms",
-            "id": "MS7933"
-          },
-          "attachments": [
-            "/view/image/836965c1-663e-4b12-80f0-4f84357279a9-1756635187355.jpg",
-            "/view/image/929dc195-a006-4a88-9d56-c7d3d6f95ad9-1756635187539.jpg"
-          ],
-          "outputs": []
-        },
-        {
-          "subms_id": "SUBMS4689",
-          "subms_name": "DGGD",
-          "subms_power": "1x4",
-          "location": [
-            37.4219983,
-            -122.084
-          ],
-          "input": {
-            "type": "ms",
-            "id": "MS7933"
-          },
-          "attachments": [
-            "/view/image/60f0b797-6d91-4437-b353-5d3c10937ee9-1756640617381.jpg",
-            "/view/image/3c961c9e-8547-4586-8b6e-180e0efa5a88-1756640617577.jpg"
-          ],
-          "outputs": []
-        }
-      ],
-      "x2_devices": []
+  // Use OLT data from API
+  const oltData = useMemo(() => {
+    if (selectNodes?.success && selectNodes?.data) {
+      return selectNodes.data;
     }
-  ];
+    return [];
+  }, [selectNodes]);
 
   const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
   const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
