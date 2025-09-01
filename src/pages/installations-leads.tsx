@@ -67,11 +67,11 @@ export default function InstallationsLeads() {
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
 
-   const {data: selectNodes, isLoading: selectNodesLoading, error: selectNodesError} = useGetAllSelectNodesQuery({});
+  const { data: selectNodes, isLoading: selectNodesLoading, error: selectNodesError } = useGetAllSelectNodesQuery({});
 
-   console.log("selectNodes",selectNodes);
+  console.log("selectNodes", selectNodes);
 
-  
+
   // Persist selectedNode in localStorage
   useEffect(() => {
     const savedNode = localStorage.getItem('selectedNode');
@@ -88,8 +88,8 @@ export default function InstallationsLeads() {
       localStorage.removeItem('selectedNode');
     }
   }, [selectedNode]);
-  
-  
+
+
   // Use OLT data from API
   const oltData = useMemo(() => {
     if (selectNodes?.success && selectNodes?.data) {
@@ -97,6 +97,157 @@ export default function InstallationsLeads() {
     }
     return [];
   }, [selectNodes]);
+
+  // Power loss calculation functions
+  const getPowerLoss = (splitRatio: string | number): number => {
+    // Handle null, undefined, or empty values
+    if (!splitRatio) return 0;
+
+    // Extract numeric value from split ratio (e.g., "1x8" -> 8, "1x4" -> 4)
+    let ratio: number;
+    if (typeof splitRatio === 'string') {
+      const match = splitRatio.match(/(\d+)x(\d+)/);
+      if (match) {
+        ratio = parseInt(match[2]); // Get the second number (split count)
+      } else {
+        // Try to parse as direct number
+        const parsed = parseInt(splitRatio);
+        ratio = isNaN(parsed) ? 0 : parsed;
+      }
+    } else {
+      ratio = typeof splitRatio === 'number' ? splitRatio : 0;
+    }
+
+    // Validate ratio is a positive number
+    if (ratio <= 0) return 0;
+
+    // Power loss mapping based on split ratio
+    const powerLossMap: { [key: number]: number } = {
+      128: -40,
+      64: -20,
+      32: -17,
+      16: -13,
+      8: -10,
+      4: -7,
+      2: -3
+    };
+
+    return powerLossMap[ratio] || 0;
+  };
+
+  // Calculate cumulative power loss for a node path
+  const calculateCumulativePowerLoss = (olt: any, targetNodeId: string, targetNodeType: string): number => {
+    // Handle invalid inputs
+    if (!olt || !targetNodeId || !targetNodeType) return 0;
+
+    let totalLoss = 0;
+
+    // Start from OLT (no loss at OLT level)
+
+    // Check MS devices
+    for (const ms of olt.ms_devices || []) {
+      if (ms.ms_id === targetNodeId && targetNodeType === 'ms') {
+        totalLoss += getPowerLoss(ms.ms_power);
+        return totalLoss;
+      }
+
+      // If target is in SubMS under this MS
+      for (const subms of olt.subms_devices || []) {
+        if (subms.input?.id === ms.ms_id) {
+          if (subms.subms_id === targetNodeId && targetNodeType === 'subms') {
+            totalLoss += getPowerLoss(ms.ms_power); // MS loss
+            totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
+            return totalLoss;
+          }
+        }
+      }
+
+      // If target is in FDB under this MS
+      for (const fdb of olt.fdb_devices || []) {
+        if (fdb.input?.id === ms.ms_id && fdb.input?.type === 'ms') {
+          if (fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
+            totalLoss += getPowerLoss(ms.ms_power); // MS loss
+            totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
+            return totalLoss;
+          }
+        }
+      }
+    }
+
+    // Check FDB devices directly connected to OLT
+    for (const fdb of olt.fdb_devices || []) {
+      if (fdb.input?.type === 'olt' && fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
+        totalLoss += getPowerLoss(fdb.fdb_power);
+        return totalLoss;
+      }
+    }
+
+    // Check FDB devices connected to SubMS
+    for (const fdb of olt.fdb_devices || []) {
+      if (fdb.input?.type === 'subms') {
+        const subms = olt.subms_devices?.find((s: any) => s.subms_id === fdb.input.id);
+        if (subms && fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
+          const ms = olt.ms_devices?.find((m: any) => m.ms_id === subms.input?.id);
+          if (ms) {
+            totalLoss += getPowerLoss(ms.ms_power); // MS loss
+            totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
+            totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
+            return totalLoss;
+          }
+        }
+      }
+    }
+
+    // Check X2 devices
+    for (const x2 of olt.x2_devices || []) {
+      if (x2.x2_id === targetNodeId && targetNodeType === 'x2') {
+        const fdb = olt.fdb_devices?.find((f: any) => f.fdb_id === x2.input?.id);
+        if (fdb) {
+          if (fdb.input?.type === 'subms') {
+            const subms = olt.subms_devices?.find((s: any) => s.subms_id === fdb.input.id);
+            if (subms) {
+              const ms = olt.ms_devices?.find((m: any) => m.ms_id === subms.input?.id);
+              if (ms) {
+                totalLoss += getPowerLoss(ms.ms_power); // MS loss
+                totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
+                totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
+                totalLoss += getPowerLoss(x2.x2_power); // X2 loss
+                return totalLoss;
+              }
+            }
+          } else if (fdb.input?.type === 'ms') {
+            const ms = olt.ms_devices?.find((m: any) => m.ms_id === fdb.input.id);
+            if (ms) {
+              totalLoss += getPowerLoss(ms.ms_power); // MS loss
+              totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
+              totalLoss += getPowerLoss(x2.x2_power); // X2 loss
+              return totalLoss;
+            }
+          }
+        }
+      }
+    }
+
+    return totalLoss;
+  };
+
+  // Check if a node can accept customer connections (power loss <= 20)
+  const canAcceptCustomer = (olt: any, nodeId: string, nodeType: string): boolean => {
+    // Handle invalid inputs - default to false (cannot accept)
+    if (!olt || !nodeId || !nodeType) return false;
+
+    try {
+      const totalLoss = Math.abs(calculateCumulativePowerLoss(olt, nodeId, nodeType));
+
+      // Handle edge case where calculation returns NaN or invalid number
+      if (isNaN(totalLoss) || !isFinite(totalLoss)) return false;
+
+      return totalLoss <= 20;
+    } catch (error) {
+      console.error('Error calculating power loss for node:', { olt, nodeId, nodeType }, error);
+      return false; // Default to safe side - cannot accept customers
+    }
+  };
 
   const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
   const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
@@ -1962,13 +2113,12 @@ export default function InstallationsLeads() {
           {selectedInstallationRequest && (
             <div className="space-y-4 pt-4">
               {/* Status Banner */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${
-                selectedInstallationRequest.status === 'approved' 
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600' 
+              <div className={`p-3 sm:p-4 rounded-lg border ${selectedInstallationRequest.status === 'approved'
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600'
                   : selectedInstallationRequest.status === 'rejected'
-                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600'
-                  : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-600'
-              }`}>
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600'
+                    : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-600'
+                }`}>
                 <div className="flex items-center gap-2 flex-wrap">
                   {selectedInstallationRequest.status === 'approved' ? (
                     <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
@@ -1977,13 +2127,12 @@ export default function InstallationsLeads() {
                   ) : (
                     <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 flex-shrink-0" />
                   )}
-                  <span className={`font-medium text-xs sm:text-sm ${
-                    selectedInstallationRequest.status === 'approved' 
-                      ? 'text-green-700 dark:text-green-300' 
+                  <span className={`font-medium text-xs sm:text-sm ${selectedInstallationRequest.status === 'approved'
+                      ? 'text-green-700 dark:text-green-300'
                       : selectedInstallationRequest.status === 'rejected'
-                      ? 'text-red-700 dark:text-red-300'
-                      : 'text-yellow-700 dark:text-yellow-300'
-                  }`}>
+                        ? 'text-red-700 dark:text-red-300'
+                        : 'text-yellow-700 dark:text-yellow-300'
+                    }`}>
                     Status: {selectedInstallationRequest.status.charAt(0).toUpperCase() + selectedInstallationRequest.status.slice(1)}
                   </span>
                 </div>
@@ -1993,7 +2142,7 @@ export default function InstallationsLeads() {
                   </p>
                 )}
               </div>
-              
+
               {/* Customer Information Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-1">
@@ -2135,7 +2284,7 @@ export default function InstallationsLeads() {
               >
                 Cancel
               </Button>
-              
+
               {/* Only show Reject button if not already approved */}
               {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
                 <Button
@@ -2147,7 +2296,7 @@ export default function InstallationsLeads() {
                   Reject
                 </Button>
               )}
-              
+
               {/* Only show Engineer selection buttons if not already approved */}
               {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
                 <>
@@ -2300,6 +2449,30 @@ export default function InstallationsLeads() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Power Loss Information */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
+            <div className="flex items-start gap-2">
+              <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">Power Loss Information</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Nodes show power loss in dB. Only nodes with ≤20dB total loss (✅) can accept customers for good WiFi connection.
+                  Red nodes (❌) have &gt;20dB loss and cannot accept new customers.
+                </p>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div className="text-blue-600 dark:text-blue-400">Split 2: -3dB</div>
+                  <div className="text-blue-600 dark:text-blue-400">Split 4: -7dB</div>
+                  <div className="text-blue-600 dark:text-blue-400">Split 8: -10dB</div>
+                  <div className="text-blue-600 dark:text-blue-400">Split 16: -13dB</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 sm:space-y-6">
             {/* Search and Filter Section */}
             <div className="flex flex-col sm:flex-row gap-3">
@@ -2324,14 +2497,13 @@ export default function InstallationsLeads() {
 
             {/* OLT Selection Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {oltData.map((olt:any) => (
+              {oltData.map((olt: any) => (
                 <div
                   key={olt._id}
-                  className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                    selectedOlt?._id === olt._id
+                  className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOlt?._id === olt._id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg'
                       : 'hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'
-                  }`}
+                    }`}
                   onClick={() => {
                     setSelectedOlt(olt);
                     setExpandedOlt(expandedOlt === olt._id ? null : olt._id);
@@ -2342,20 +2514,19 @@ export default function InstallationsLeads() {
                       <div className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full"></div>
                       <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-blue-700 dark:text-blue-300">{olt.name}</h3>
                     </div>
-                    <Badge 
-                      variant="secondary" 
-                      className={`text-xs ${
-                        olt.status === 'active' 
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${olt.status === 'active'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : olt.status === 'maintenance'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}
                     >
                       {olt.status}
                     </Badge>
                   </div>
-                  
+
                   <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex justify-between">
                       <span>IP:</span>
@@ -2377,11 +2548,10 @@ export default function InstallationsLeads() {
 
                   {/* Expand/Collapse Indicator */}
                   <div className="flex justify-center mt-2 sm:mt-3">
-                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${
-                      expandedOlt === olt._id 
-                        ? 'bg-blue-100 dark:bg-blue-800 rotate-180' 
+                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${expandedOlt === olt._id
+                        ? 'bg-blue-100 dark:bg-blue-800 rotate-180'
                         : 'bg-gray-100 dark:bg-gray-700'
-                    }`}>
+                      }`}>
                       <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
@@ -2431,8 +2601,17 @@ export default function InstallationsLeads() {
                   {/* MS Devices Level */}
                   {selectedOlt.ms_devices && selectedOlt.ms_devices.map((ms: any, msIndex: number) => (
                     <div key={ms.ms_id} className="relative ml-4 sm:ml-8">
-                      <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-lg border border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 transition-colors cursor-pointer"
-                           onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} (${ms.ms_id})`)}>
+                      <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, ms.ms_id, 'ms')
+                          ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 cursor-pointer'
+                          : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                        }`}
+                        onClick={() => {
+                          if (canAcceptCustomer(selectedOlt, ms.ms_id, 'ms')) {
+                            setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} (${ms.ms_id})`);
+                          } else {
+                            alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                          }
+                        }}>
                         <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
                           <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -2440,7 +2619,10 @@ export default function InstallationsLeads() {
                         </div>
                         <div className="flex-1">
                           <h5 className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">{ms.ms_name}</h5>
-                          <p className="text-xs text-green-600 dark:text-green-400">ID: {ms.ms_id} • Power: {ms.ms_power}</p>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            ID: {ms.ms_id} • Power: {ms.ms_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, ms.ms_id, 'ms'))}dB
+                            {canAcceptCustomer(selectedOlt, ms.ms_id, 'ms') ? ' ✅' : ' ❌'}
+                          </p>
                         </div>
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
                           MS
@@ -2456,11 +2638,20 @@ export default function InstallationsLeads() {
                       {ms.outputs && ms.outputs.filter((output: any) => output.type === 'subms').map((submsOutput: any) => {
                         const subms = selectedOlt.subms_devices?.find((s: any) => s.subms_id === submsOutput.id);
                         if (!subms) return null;
-                        
+
                         return (
                           <div key={subms.subms_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
-                            <div className="flex items-center gap-2 sm:gap-3 p-2 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-lg border border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 transition-colors cursor-pointer"
-                                 onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`)}>
+                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, subms.subms_id, 'subms')
+                                ? 'bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 cursor-pointer'
+                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                              }`}
+                              onClick={() => {
+                                if (canAcceptCustomer(selectedOlt, subms.subms_id, 'subms')) {
+                                  setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`);
+                                } else {
+                                  alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                }
+                              }}>
                               <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center">
                                 <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -2468,7 +2659,10 @@ export default function InstallationsLeads() {
                               </div>
                               <div className="flex-1">
                                 <h6 className="font-medium text-xs sm:text-sm text-purple-800 dark:text-purple-200">{subms.subms_name}</h6>
-                                <p className="text-xs text-purple-600 dark:text-purple-400">ID: {subms.subms_id} • Power: {subms.subms_power}</p>
+                                <p className="text-xs text-purple-600 dark:text-purple-400">
+                                  ID: {subms.subms_id} • Power: {subms.subms_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, subms.subms_id, 'subms'))}dB
+                                  {canAcceptCustomer(selectedOlt, subms.subms_id, 'subms') ? ' ✅' : ' ❌'}
+                                </p>
                               </div>
                               <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
                                 SUBMS
@@ -2484,11 +2678,20 @@ export default function InstallationsLeads() {
                             {subms.outputs && subms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
                               const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
                               if (!fdb) return null;
-                              
+
                               return (
                                 <div key={fdb.fdb_id} className="relative ml-2 sm:ml-4 mt-1">
-                                  <div className="flex items-center gap-2 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
-                                       onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
+                                  <div className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
+                                      ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
+                                      : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                                    }`}
+                                    onClick={() => {
+                                      if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
+                                        setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                      } else {
+                                        alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                      }
+                                    }}>
                                     <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded-full flex items-center justify-center">
                                       <svg className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -2496,7 +2699,10 @@ export default function InstallationsLeads() {
                                     </div>
                                     <div className="flex-1">
                                       <h6 className="font-medium text-xs text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                      <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}</p>
+                                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                                        ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
+                                        {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
+                                      </p>
                                     </div>
                                     <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
                                       FDB
@@ -2513,11 +2719,20 @@ export default function InstallationsLeads() {
                       {ms.outputs && ms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
                         const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
                         if (!fdb) return null;
-                        
+
                         return (
                           <div key={fdb.fdb_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
-                            <div className="flex items-center gap-2 sm:gap-3 p-2 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 transition-colors cursor-pointer"
-                                 onClick={() => setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`)}>
+                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
+                                ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
+                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                              }`}
+                              onClick={() => {
+                                if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
+                                  setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                } else {
+                                  alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                }
+                              }}>
                               <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center">
                                 <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -2525,7 +2740,10 @@ export default function InstallationsLeads() {
                               </div>
                               <div className="flex-1">
                                 <h6 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}</p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400">
+                                  ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
+                                  {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
+                                </p>
                               </div>
                               <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
                                 FDB
