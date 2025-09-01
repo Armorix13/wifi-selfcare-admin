@@ -4,13 +4,13 @@ export const BASE_URL = `http://51.21.19.38:8000`;
 
 const Tags = {
   Advertisements: "Advertisements",
-  WIFI:"WIFI",
-  COMPLAINTS:"COMPLAINTS",
-  PRODUCT:"PRODUCT",
-  PLANS:"PLANS",
-  ENGINEER:"ENGINEER",
-  ADMIN:"ADMIN",
-  LEADS:"LEADS",
+  WIFI: "WIFI",
+  COMPLAINTS: "COMPLAINTS",
+  PRODUCT: "PRODUCT",
+  PLANS: "PLANS",
+  ENGINEER: "ENGINEER",
+  ADMIN: "ADMIN",
+  LEADS: "LEADS",
   LEAVE_REQUESTS: "LEAVE_REQUESTS"
 };
 
@@ -22,7 +22,7 @@ const baseQuery = fetchBaseQuery({
   prepareHeaders: (headers) => {
     // Get access token from localStorage
     const accessToken = localStorage.getItem('accessToken');
-    
+
     if (accessToken) {
       headers.set("Authorization", `Bearer ${accessToken}`);
     }
@@ -32,7 +32,7 @@ const baseQuery = fetchBaseQuery({
 
 const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions);
-  
+
   // Handle 401 unauthorized responses
   if (result.error && result.error.status === 401) {
     // Token expired or invalid, redirect to login
@@ -41,9 +41,9 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
     localStorage.removeItem('auth-storage');
     localStorage.removeItem('loglevel');
     window.location.href = '/admin/login';
-    
+
   }
-  
+
   return result;
 };
 
@@ -144,10 +144,10 @@ export const api = createApi({
       providesTags: [Tags.WIFI],
     }),
     updateInstallationRequestStatus: builder.mutation({
-      query: ({ id, status, remarks, assignedEngineer }) => ({
+      query: ({ id, status, remarks, assignedEngineer, connectedToOlt, connectedToEndDevice }) => ({
         url: `/installation-requests/${id}/status`,
         method: "PATCH",
-        body: { status, remarks, assignedEngineer },
+        body: { status, remarks, assignedEngineer, connectedToOlt, connectedToEndDevice },
       }),
       invalidatesTags: [Tags.WIFI], // This will refetch installation requests after status update
     }),
@@ -166,11 +166,11 @@ export const api = createApi({
       providesTags: [Tags.WIFI],
     }),
     getAllComplaintDasboard: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/complaints/complaint-dashboard`,
         method: "GET"
       }),
-      providesTags:[Tags.COMPLAINTS]
+      providesTags: [Tags.COMPLAINTS]
     }),
     assignEngineerToComplaint: builder.mutation({
       query: ({ id, engineerId, priority }) => ({
@@ -181,44 +181,44 @@ export const api = createApi({
       invalidatesTags: [Tags.WIFI], // This will refetch complaints after assignment
     }),
     getProductDashbaordData: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/dashboard/product-analytics`,
         method: "GET"
       }),
-      providesTags:[Tags.PRODUCT]
+      providesTags: [Tags.PRODUCT]
     }),
     getEngineerDashbaordData: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/dashboard/engineer-analytics`,
         method: "GET"
       }),
-      providesTags:[Tags.ENGINEER]
+      providesTags: [Tags.ENGINEER]
     }),
     getplansDashbaordData: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/dashboard/service-plans`,
         method: "GET"
       }),
       providesTags: [Tags.PLANS],
     }),
     addEngineerData: builder.mutation({
-      query: (body)=> ({
+      query: (body) => ({
         url: `/dashboard/add-engineer`,
         method: "POST",
         body
       }),
-      invalidatesTags:[Tags.ENGINEER]
+      invalidatesTags: [Tags.ENGINEER]
     }),
     updateEngineerData: builder.mutation({
-      query: (body)=> ({
+      query: (body) => ({
         url: `/dashboard/update-engineer`,
         method: "PUT",
         body
       }),
-      invalidatesTags:[Tags.ENGINEER]
+      invalidatesTags: [Tags.ENGINEER]
     }),
     getAllLeaveRequestAnalytics: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/dashboard/leave-requests-analytics`,
         method: "GET"
       }),
@@ -226,14 +226,14 @@ export const api = createApi({
     }),
 
     getAllLeaveRequest: builder.query({
-      query: ()=> ({
+      query: () => ({
         url: `/dashboard/leave-requests`,
         method: "GET"
       }),
       providesTags: [Tags.LEAVE_REQUESTS],
     }),
     approveRejectLeaveRequest: builder.mutation({
-      query: ({id, body})=> ({
+      query: ({ id, body }) => ({
         url: `/dashboard/leave-requests/approve-reject`,
         method: "POST",
         body
@@ -262,7 +262,7 @@ export const api = createApi({
         url: '/categories',
         method: 'GET',
       }),
-      providesTags:[Tags.PRODUCT]
+      providesTags: [Tags.PRODUCT]
     }),
     addFibrePlan: builder.mutation({
       query: (body) => ({
@@ -401,7 +401,7 @@ export const api = createApi({
       invalidatesTags: [Tags.ADMIN],
     }),
     getAllLeads: builder.query({
-      
+
       query: () => ({
         url: `/leads`,
         method: "GET",
@@ -409,7 +409,7 @@ export const api = createApi({
       providesTags: [Tags.LEADS],
     }),
     markLeadAsTracked: builder.mutation({
-      query: ({id, body}) => ({
+      query: ({ id, body }) => ({
         url: `/leads/${id}/status`,
         method: "PATCH",
         body
@@ -456,8 +456,8 @@ export const {
   useDeleteProductMutation,
   useGetEngineerDashbaordDataQuery,
   useAddEngineerDataMutation,
-   useUpdateEngineerDataMutation,
-   useDeleteEngineerMutation,
+  useUpdateEngineerDataMutation,
+  useDeleteEngineerMutation,
   // Admin hooks
   useGetAdminDashboardDataQuery,
   useAddAdminDataMutation,

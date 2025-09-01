@@ -66,6 +66,11 @@ export default function InstallationsLeads() {
   const [selectedNode, setSelectedNode] = useState("");
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
+  
+  // Toast state
+  const [toastMessage, setToastMessage] = useState<string>("");
+  const [toastType, setToastType] = useState<"success" | "error" | "warning">("success");
+  const [showToast, setShowToast] = useState<boolean>(false);
 
   const { data: selectNodes, isLoading: selectNodesLoading, error: selectNodesError } = useGetAllSelectNodesQuery({});
 
@@ -87,9 +92,25 @@ export default function InstallationsLeads() {
     } else {
       localStorage.removeItem('selectedNode');
     }
-  }, [selectedNode]);
+    }, [selectedNode]);
+  
+  // Toast helper function
+  const showToastMessage = (message: string, type: "success" | "error" | "warning" = "success") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
 
-
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+  
   // Use OLT data from API
   const oltData = useMemo(() => {
     if (selectNodes?.success && selectNodes?.data) {
@@ -231,21 +252,59 @@ export default function InstallationsLeads() {
     return totalLoss;
   };
 
-  // Check if a node can accept customer connections (power loss <= 20)
+    // Check if a node can accept customer connections (power loss <= 20)
   const canAcceptCustomer = (olt: any, nodeId: string, nodeType: string): boolean => {
     // Handle invalid inputs - default to false (cannot accept)
     if (!olt || !nodeId || !nodeType) return false;
-
+    
     try {
       const totalLoss = Math.abs(calculateCumulativePowerLoss(olt, nodeId, nodeType));
-
+      
       // Handle edge case where calculation returns NaN or invalid number
       if (isNaN(totalLoss) || !isFinite(totalLoss)) return false;
-
+      
       return totalLoss <= 20;
     } catch (error) {
       console.error('Error calculating power loss for node:', { olt, nodeId, nodeType }, error);
       return false; // Default to safe side - cannot accept customers
+    }
+  };
+
+  // Extract OLT name from selectedNode string
+  const extractOltName = (selectedNodeString: string): string => {
+    if (!selectedNodeString) return '';
+    
+    try {
+      // selectedNode format examples:
+      // "OLT-001 > MS-01 > FFHF (FDB1653)"
+      // "Huawei SmartAX MA5608T > MS-1 (MS4516)"
+      // "TESTING OLT > MS-01 > SubMS-1 > FDB-1 (FDB3018)"
+      
+      // Extract everything before the first " > "
+      const parts = selectedNodeString.split(' > ');
+      return parts[0]?.trim() || '';
+    } catch (error) {
+      console.error('Error extracting OLT name:', error);
+      return '';
+    }
+  };
+
+  // Extract end device ID from selectedNode string
+  const extractEndDeviceId = (selectedNodeString: string): string => {
+    if (!selectedNodeString) return '';
+    
+    try {
+      // selectedNode format examples:
+      // "OLT-001 > MS-01 > FFHF (FDB1653)" -> FDB1653
+      // "Huawei SmartAX MA5608T > MS-1 (MS4516)" -> MS4516
+      // "TESTING OLT > MS-01 > SubMS-1 > FDB-1 > X2-01 (X23985)" -> X23985
+      
+      // Extract the ID from the last part in parentheses
+      const match = selectedNodeString.match(/\(([^)]+)\)$/);
+      return match ? match[1].trim() : '';
+    } catch (error) {
+      console.error('Error extracting end device ID:', error);
+      return '';
     }
   };
 
@@ -354,20 +413,30 @@ export default function InstallationsLeads() {
   // Engineer assignment handler
   const handleEngineerAssignment = async () => {
     if (!selectedInstallationRequest || !selectedEngineer) {
-      alert("Please select an engineer and provide remarks");
+      showToastMessage("Please select an engineer and provide remarks", 'warning');
       return;
     }
+
+    // Extract OLT name and end device ID from selectedNode
+    const connectedToOlt = extractOltName(selectedNode);
+    const connectedToEndDevice = extractEndDeviceId(selectedNode);
+    
+    console.log("connectedToOlt:", connectedToOlt, "connectedToEndDevice:", connectedToEndDevice);
+    console.log("Full selectedNode:", selectedNode);
+    
 
     try {
       await updateInstallationRequestStatus({
         id: selectedInstallationRequest.id,
         status: "approved",
         remarks: assignmentRemarks || "Engineer assigned for installation",
-        assignedEngineer: selectedEngineer
+        assignedEngineer: selectedEngineer,
+        connectedToOlt: connectedToOlt,
+        connectedToEndDevice: connectedToEndDevice
       });
 
       console.log("Installation request approved and engineer assigned:", selectedInstallationRequest.id);
-      alert("Engineer assigned successfully!");
+      showToastMessage("Engineer assigned successfully!", 'success');
 
       // Reset modal state
       setShowEngineerAssignmentModal(false);
@@ -378,14 +447,14 @@ export default function InstallationsLeads() {
       setIsEngineerSelected(false);
     } catch (error) {
       console.error("Error assigning engineer:", error);
-      alert("Error assigning engineer. Please try again.");
+      showToastMessage("Error assigning engineer. Please try again.", 'error');
     }
   };
 
   // Reject installation request handler
   const handleRejectInstallationRequest = async () => {
     if (!selectedInstallationRequest) {
-      alert("No installation request selected");
+      showToastMessage("No installation request selected", 'warning');
       return;
     }
 
@@ -398,7 +467,7 @@ export default function InstallationsLeads() {
       });
 
       console.log("Installation request rejected:", selectedInstallationRequest.id);
-      alert("Installation request rejected successfully!");
+      showToastMessage("Installation request rejected successfully!", 'success');
 
       // Reset modal state
       setShowInstallationRequestModal(false);
@@ -408,7 +477,7 @@ export default function InstallationsLeads() {
       setIsEngineerSelected(false);
     } catch (error) {
       console.error("Error rejecting installation request:", error);
-      alert("Error rejecting installation request. Please try again.");
+      showToastMessage("Error rejecting installation request. Please try again.", 'error');
     }
   };
 
@@ -1155,10 +1224,10 @@ export default function InstallationsLeads() {
                                                   try {
                                                     await updateApplicationStatus({ id: form.id, status: 'accept' });
                                                     console.log("Application accepted:", form.displayId);
-                                                    alert("Application accepted successfully!");
+                                                    showToastMessage("Application accepted successfully!", 'success');
                                                   } catch (error) {
                                                     console.error("Error accepting application:", error);
-                                                    alert("Error accepting application. Please try again.");
+                                                    showToastMessage("Error accepting application. Please try again.", 'error');
                                                   }
                                                 }}
                                               >
@@ -1517,10 +1586,10 @@ export default function InstallationsLeads() {
                                                     try {
                                                       await updateApplicationStatus({ id: app.id, status: 'accept' });
                                                       console.log("Application accepted:", app.applicationId);
-                                                      alert("Application accepted successfully!");
+                                                      showToastMessage("Application accepted successfully!", 'success');
                                                     } catch (error) {
                                                       console.error("Error accepting application:", error);
-                                                      alert("Error accepting application. Please try again.");
+                                                      showToastMessage("Error accepting application. Please try again.", 'error');
                                                     }
                                                   }}
                                                 >
@@ -1534,7 +1603,7 @@ export default function InstallationsLeads() {
                                                     try {
                                                       await updateApplicationStatus({ id: app.id, status: 'reject' });
                                                       console.log("Application rejected:", app.applicationId);
-                                                      alert("Application rejected successfully!");
+                                                      showToastMessage("Application rejected successfully!", 'success');
                                                     } catch (error) {
                                                       console.error("Error rejecting application:", error);
                                                     }
@@ -2137,9 +2206,31 @@ export default function InstallationsLeads() {
                   </span>
                 </div>
                 {selectedInstallationRequest.status === 'approved' && (
-                  <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 mt-2">
-                    This installation request has been approved and an engineer has been assigned.
-                  </p>
+                  <div className="mt-2 space-y-2">
+                    <p className="text-xs sm:text-sm text-green-600 dark:text-green-400">
+                      This installation request has been approved and an engineer has been assigned.
+                    </p>
+                    {/* Show connected node information if available */}
+                    {(selectedInstallationRequest.connectedToOlt || selectedInstallationRequest.connectedToEndDevice) && (
+                      <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                        <h4 className="font-medium text-green-800 dark:text-green-200 text-xs sm:text-sm mb-2">📡 Connected Network Node</h4>
+                        <div className="space-y-1">
+                          {selectedInstallationRequest.connectedToOlt && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-green-700 dark:text-green-300 font-medium">OLT:</span>
+                              <span className="text-xs text-green-600 dark:text-green-400">{selectedInstallationRequest.connectedToOlt}</span>
+                            </div>
+                          )}
+                          {selectedInstallationRequest.connectedToEndDevice && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-green-700 dark:text-green-300 font-medium">End Device:</span>
+                              <span className="text-xs text-green-600 dark:text-green-400">{selectedInstallationRequest.connectedToEndDevice}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -2323,6 +2414,20 @@ export default function InstallationsLeads() {
                   >
                     🌐 Select Node
                   </Button>
+                  {/* Clear Node button - only show for non-approved requests */}
+                  {selectedNode && (
+                    <Button
+                      variant="outline"
+                      className="border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
+                      onClick={() => {
+                        setSelectedNode("");
+                        localStorage.removeItem('selectedNode');
+                        showToastMessage("Node selection cleared", 'warning');
+                      }}
+                    >
+                      🗑️ Clear Node
+                    </Button>
+                  )}
                 </>
               ) : (
                 /* Show info message for approved requests */
@@ -2334,30 +2439,20 @@ export default function InstallationsLeads() {
                 </div>
               )}
 
-              {/* Always show Select Node button for approved requests */}
-              {selectedInstallationRequest?.status === 'approved' && (
-                <Button
-                  variant="outline"
-                  className="border-green-500 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
-                  onClick={() => setIsNodeSelectionOpen(true)}
-                >
-                  🌐 Select Node
-                </Button>
+
+
+              {/* Show info message for approved requests with connected node */}
+              {selectedInstallationRequest?.status === 'approved' && 
+               (selectedInstallationRequest?.connectedToOlt || selectedInstallationRequest?.connectedToEndDevice) && (
+                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+                    Network node already assigned - installation ready
+                  </span>
+                </div>
               )}
 
-              {/* Add a button to clear selected node if needed */}
-              {selectedNode && (
-                <Button
-                  variant="outline"
-                  className="border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                  onClick={() => {
-                    setSelectedNode("");
-                    localStorage.removeItem('selectedNode');
-                  }}
-                >
-                  🗑️ Clear Node
-                </Button>
-              )}
+
             </div>
           </div>
         </DialogContent>
@@ -2439,7 +2534,7 @@ export default function InstallationsLeads() {
         </DialogContent>
       </Dialog>
 
-      {/* Node Selection Modal */}
+      {/* Node Selection Modal - Only show if request is not already approved with connected node */}
       <Dialog open={isNodeSelectionOpen} onOpenChange={setIsNodeSelectionOpen}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader className="mb-4">
@@ -2468,6 +2563,24 @@ export default function InstallationsLeads() {
                   <div className="text-blue-600 dark:text-blue-400">Split 4: -7dB</div>
                   <div className="text-blue-600 dark:text-blue-400">Split 8: -10dB</div>
                   <div className="text-blue-600 dark:text-blue-400">Split 16: -13dB</div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-blue-600 dark:text-blue-400">MS (Green)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <span className="text-blue-600 dark:text-blue-400">SubMS (Purple)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="text-blue-600 dark:text-blue-400">FDB (Orange)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                    <span className="text-blue-600 dark:text-blue-400">X2 (Cyan)</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2544,6 +2657,18 @@ export default function InstallationsLeads() {
                       <span>MS Devices:</span>
                       <span className="text-xs">{olt.ms_devices?.length || 0}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>SubMS Devices:</span>
+                      <span className="text-xs">{olt.subms_devices?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>FDB Devices:</span>
+                      <span className="text-xs">{olt.fdb_devices?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>X2 Devices:</span>
+                      <span className="text-xs">{olt.x2_devices?.length || 0}</span>
+                    </div>
                   </div>
 
                   {/* Expand/Collapse Indicator */}
@@ -2607,9 +2732,10 @@ export default function InstallationsLeads() {
                         }`}
                         onClick={() => {
                           if (canAcceptCustomer(selectedOlt, ms.ms_id, 'ms')) {
-                            setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} (${ms.ms_id})`);
+                            setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} (${ms.ms_id})`);
+                            showToastMessage(`Node selected: ${ms.ms_name} (${ms.ms_id})`, 'success');
                           } else {
-                            alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                            showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
                           }
                         }}>
                         <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
@@ -2647,9 +2773,10 @@ export default function InstallationsLeads() {
                               }`}
                               onClick={() => {
                                 if (canAcceptCustomer(selectedOlt, subms.subms_id, 'subms')) {
-                                  setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`);
+                                  setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`);
+                                  showToastMessage(`Node selected: ${subms.subms_name} (${subms.subms_id})`, 'success');
                                 } else {
-                                  alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                  showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
                                 }
                               }}>
                               <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center">
@@ -2687,9 +2814,10 @@ export default function InstallationsLeads() {
                                     }`}
                                     onClick={() => {
                                       if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
-                                        setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                        setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                        showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
                                       } else {
-                                        alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                        showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
                                       }
                                     }}>
                                     <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded-full flex items-center justify-center">
@@ -2708,6 +2836,46 @@ export default function InstallationsLeads() {
                                       FDB
                                     </Badge>
                                   </div>
+
+                                  {/* X2 Devices connected to this FDB */}
+                                  {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
+                                    const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
+                                    if (!x2) return null;
+
+                                    return (
+                                      <div key={x2.x2_id} className="relative ml-3 sm:ml-6 mt-1">
+                                        <div className={`flex items-center gap-2 p-1.5 sm:p-2 rounded-lg border transition-colors ${
+                                          canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
+                                            ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
+                                            : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                                        }`}
+                                             onClick={() => {
+                                               if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
+                                                 setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
+                                                 showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
+                                               } else {
+                                                 showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
+                                               }
+                                             }}>
+                                          <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 bg-cyan-500 rounded-full flex items-center justify-center">
+                                            <svg className="w-1 h-1 sm:w-2 sm:h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg>
+                                          </div>
+                                          <div className="flex-1">
+                                            <h6 className="font-medium text-xs text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
+                                            <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                                              ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
+                                              {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
+                                            </p>
+                                          </div>
+                                          <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
+                                            X2
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               );
                             })}
@@ -2728,9 +2896,10 @@ export default function InstallationsLeads() {
                               }`}
                               onClick={() => {
                                 if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
-                                  setSelectedNode(`${selectedOlt.name} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                  setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                                  showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
                                 } else {
-                                  alert('This node cannot accept customers due to high power loss (>20dB). Please select a different node.');
+                                  showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
                                 }
                               }}>
                               <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center">
@@ -2747,6 +2916,123 @@ export default function InstallationsLeads() {
                               </div>
                               <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
                                 FDB
+                              </Badge>
+                            </div>
+
+                            {/* X2 Devices connected to this FDB */}
+                            {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
+                              const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
+                              if (!x2) return null;
+
+                              return (
+                                <div key={x2.x2_id} className="relative ml-4 sm:ml-8 mt-1">
+                                  <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${
+                                    canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
+                                      ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
+                                      : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                                  }`}
+                                       onClick={() => {
+                                         if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
+                                           setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
+                                           showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
+                                         } else {
+                                           showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
+                                         }
+                                       }}>
+                                    <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center">
+                                      <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h6 className="font-medium text-xs sm:text-sm text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
+                                      <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                                        ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
+                                        {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
+                                      </p>
+                                    </div>
+                                    <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
+                                      X2
+                                    </Badge>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {/* Direct FDB connections from OLT */}
+                  {selectedOlt.fdb_devices && selectedOlt.fdb_devices
+                    .filter((fdb: any) => fdb.input?.type === 'olt')
+                    .map((fdb: any) => (
+                    <div key={fdb.fdb_id} className="relative ml-4 sm:ml-8 mt-2">
+                      <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-colors ${
+                        canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
+                          ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
+                          : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                      }`}
+                           onClick={() => {
+                             if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
+                               setSelectedNode(`${selectedOlt.oltId} > ${fdb.fdb_name} (${fdb.fdb_id})`);
+                               showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
+                             } else {
+                               showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
+                             }
+                           }}>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <h5 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h5>
+                          <p className="text-xs text-orange-600 dark:text-orange-400">
+                            ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
+                            {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
+                          </p>
+                        </div>
+                        <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                          FDB
+                        </Badge>
+                      </div>
+
+                      {/* X2 Devices connected to this OLT-level FDB */}
+                      {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
+                        const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
+                        if (!x2) return null;
+
+                        return (
+                          <div key={x2.x2_id} className="relative ml-4 sm:ml-8 mt-1">
+                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${
+                              canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
+                                ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
+                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
+                            }`}
+                                 onClick={() => {
+                                   if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
+                                     setSelectedNode(`${selectedOlt.oltId} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
+                                     showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
+                                   } else {
+                                     showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
+                                   }
+                                 }}>
+                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <h6 className="font-medium text-xs sm:text-sm text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
+                                <p className="text-xs text-cyan-600 dark:text-cyan-400">
+                                  ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
+                                  {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
+                                </p>
+                              </div>
+                              <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
+                                X2
                               </Badge>
                             </div>
                           </div>
@@ -2787,7 +3073,7 @@ export default function InstallationsLeads() {
               onClick={() => {
                 // Handle node selection logic here
                 console.log("Node selected:", selectedNode);
-                alert(`Node selected: ${selectedNode}`);
+                showToastMessage(`✅ Node confirmed: ${selectedNode}`, 'success');
                 setIsNodeSelectionOpen(false);
                 // Keep the selectedNode for use in the installation request
                 setSelectedOlt(null);
@@ -2802,6 +3088,57 @@ export default function InstallationsLeads() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border max-w-sm ${
+            toastType === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200'
+              : toastType === 'error'
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200'
+              : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200'
+          }`}>
+            {/* Icon */}
+            <div className="flex-shrink-0">
+              {toastType === 'success' ? (
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : toastType === 'error' ? (
+                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              )}
+            </div>
+            
+            {/* Message */}
+            <div className="flex-1">
+              <p className="text-sm font-medium">{toastMessage}</p>
+            </div>
+            
+            {/* Close button */}
+            <button
+              onClick={() => setShowToast(false)}
+              className={`flex-shrink-0 p-1 rounded-full hover:bg-opacity-20 transition-colors ${
+                toastType === 'success' 
+                  ? 'hover:bg-green-600'
+                  : toastType === 'error'
+                  ? 'hover:bg-red-600'
+                  : 'hover:bg-yellow-600'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }
