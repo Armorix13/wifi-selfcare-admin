@@ -2324,7 +2324,7 @@ export default function InstallationsLeads() {
 
             {/* OLT Selection Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {oltData.map((olt) => (
+              {oltData.map((olt:any) => (
                 <div
                   key={olt._id}
                   className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
@@ -2367,7 +2367,7 @@ export default function InstallationsLeads() {
                     </div>
                     <div className="flex justify-between">
                       <span>Power:</span>
-                      <span className="text-xs">{olt.oltPower}W</span>
+                      <span className="text-xs">{olt.oltPower}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>MS Devices:</span>
@@ -2496,7 +2496,7 @@ export default function InstallationsLeads() {
                                     </div>
                                     <div className="flex-1">
                                       <h6 className="font-medium text-xs text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                      <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
+                                      <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}</p>
                                     </div>
                                     <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
                                       FDB
@@ -2525,7 +2525,7 @@ export default function InstallationsLeads() {
                               </div>
                               <div className="flex-1">
                                 <h6 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}W</p>
+                                <p className="text-xs text-orange-600 dark:text-orange-400">ID: {fdb.fdb_id} • Power: {fdb.fdb_power}</p>
                               </div>
                               <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
                                 FDB
