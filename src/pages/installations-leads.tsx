@@ -28,11 +28,22 @@ import {
   TrendingUp,
   CalendarIcon,
   MapPin,
+  Router,
+  Network,
+  Shield,
+  User,
+  Smartphone,
+  Wifi,
+  Calendar as CalendarDays,
   Building,
+  Globe,
+  Settings,
   Target,
   Star,
   Zap,
   FileText,
+  Download as DownloadIcon,
+  Archive,
 } from "lucide-react";
 import {
   Table,
@@ -46,7 +57,7 @@ import {
   dummyEngineers
 } from "@/lib/dummyData";
 import { cn } from "@/lib/utils";
-import { api, BASE_URL, useGetAllSelectNodesQuery } from "@/api/index";
+import { api, BASE_URL } from "@/api/index";
 
 export default function InstallationsLeads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,41 +70,290 @@ export default function InstallationsLeads() {
   const [showEngineerAssignmentModal, setShowEngineerAssignmentModal] = useState(false);
   const [showInstallationRequestModal, setShowInstallationRequestModal] = useState(false);
   const [selectedInstallationRequest, setSelectedInstallationRequest] = useState<any>(null);
+
+  // New fields state management
+  const [editableFields, setEditableFields] = useState({
+    oltId: '',
+    fdbId: '',
+    modemName: '',
+    ontType: '',
+    modelNumber: '',
+    serialNumber: '',
+    ontMac: '',
+    username: '',
+    password: ''
+  });
+  // Remove manual edit mode - now based on status
   const [selectedEngineer, setSelectedEngineer] = useState("");
   const [assignmentRemarks, setAssignmentRemarks] = useState("");
   const [isEngineerSelected, setIsEngineerSelected] = useState(false);
-  const [isNodeSelectionOpen, setIsNodeSelectionOpen] = useState(false);
-  const [selectedNode, setSelectedNode] = useState("");
+
+  // API Hooks - Declare these first before any functions that use them
+  const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
+  const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
+  const { data: engineers, isLoading: engineersLoading, error: engineersError } = api.useGetEngineersQuery({});
+  const { data: oltData, isLoading: oltLoading, error: oltError } = api.useGetAllSelectNodesQuery({});
+  const [updateApplicationStatus] = api.useUpdateApplicationStatusMutation();
+  const [updateInstallationRequestStatus] = api.useUpdateInstallationRequestStatusMutation();
+
+  // State for selected OLT to handle FDB cascade
+  const [selectedOltId, setSelectedOltId] = useState<string>('');
+  const [availableFdbs, setAvailableFdbs] = useState<any[]>([]);
+
+  // Check if fields should be editable based on status
+  const isFieldsEditable = selectedInstallationRequest?.status === 'inreview';
+
+  // Helper function to update editable fields
+  const handleFieldChange = (fieldName: string, value: string) => {
+    setEditableFields(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+
+    // Auto-save when in inreview status (debounced)
+    if (isFieldsEditable) {
+      // You can add debounced auto-save here if needed
+      console.log(`Field ${fieldName} updated to: ${value}`);
+    }
+  };
+
+  // Handle OLT selection and populate FDBs
+  const handleOltSelection = (oltId: string) => {
+    setSelectedOltId(oltId);
+    handleFieldChange('oltId', oltId);
+
+    // Find the selected OLT and get its FDBs
+    if (oltData?.data) {
+      const selectedOlt = oltData.data.find((olt: any) => olt._id === oltId);
+      if (selectedOlt && selectedOlt.fdb_devices) {
+        setAvailableFdbs(selectedOlt.fdb_devices);
+      } else {
+        setAvailableFdbs([]);
+      }
+    }
+
+    // Reset FDB selection when OLT changes
+    handleFieldChange('fdbId', '');
+  };
+
+  // Effect to populate editable fields when request is selected
+  useEffect(() => {
+    if (selectedInstallationRequest) {
+      setEditableFields({
+        oltId: selectedInstallationRequest.oltId || '',
+        fdbId: selectedInstallationRequest.fdbId || '',
+        modemName: selectedInstallationRequest.modemName || '',
+        ontType: selectedInstallationRequest.ontType || '',
+        modelNumber: selectedInstallationRequest.modelNumber || '',
+        serialNumber: selectedInstallationRequest.serialNumber || '',
+        ontMac: selectedInstallationRequest.ontMac || '',
+        username: selectedInstallationRequest.username || '',
+        password: selectedInstallationRequest.password || ''
+      });
+
+      // Initialize OLT selection and FDBs if OLT is already selected
+      if (selectedInstallationRequest.oltId && oltData?.data) {
+        const selectedOlt = oltData.data.find((olt: any) => olt._id === selectedInstallationRequest.oltId);
+        if (selectedOlt && selectedOlt.fdb_devices) {
+          setAvailableFdbs(selectedOlt.fdb_devices);
+          setSelectedOltId(selectedInstallationRequest.oltId);
+        }
+      }
+    }
+  }, [selectedInstallationRequest, oltData]);
+
+  // Function to save the updated fields (auto-save when status is inreview)
+  const handleSaveFields = async () => {
+    try {
+      // Here you would call your API to update the installation request
+      // await updateInstallationRequest(selectedInstallationRequest.id, editableFields);
+
+      console.log('Auto-saving fields for inreview status:', editableFields);
+      showToastMessage('Installation details updated successfully!', 'success');
+    } catch (error) {
+      console.error('Error saving fields:', error);
+      showToastMessage('Failed to update installation details', 'error');
+    }
+  };
+
+  // Function to download a file from URL
+  const downloadFileFromUrl = async (url: string, filename: string): Promise<Blob> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${filename}`);
+      }
+      return await response.blob();
+    } catch (error) {
+      console.error(`Error downloading ${filename}:`, error);
+      throw error;
+    }
+  };
+
+  // Function to download individual file
+  const downloadIndividualFile = async (url: string, filename: string) => {
+    setDownloadingFile(filename);
+
+    try {
+      const blob = await downloadFileFromUrl(url, filename);
+
+      // Create download link
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up
+      URL.revokeObjectURL(downloadUrl);
+
+      showToastMessage(`${filename} downloaded successfully!`, 'success');
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      showToastMessage(`Failed to download ${filename}`, 'error');
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
+
+  // Function to download all documents as zip or individually
+  const handleDownloadAllDocuments = async () => {
+    if (!selectedInstallationRequest) return;
+
+    setIsDownloading(true);
+
+    try {
+      // Try to use JSZip for ZIP download
+      try {
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
+
+        const documents = [
+          {
+            url: selectedInstallationRequest.aadhaarFrontUrl ? `${BASE_URL}${selectedInstallationRequest.aadhaarFrontUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Aadhaar_Front.jpg`,
+            label: 'Aadhaar Front'
+          },
+          {
+            url: selectedInstallationRequest.aadhaarBackUrl ? `${BASE_URL}${selectedInstallationRequest.aadhaarBackUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Aadhaar_Back.jpg`,
+            label: 'Aadhaar Back'
+          },
+          {
+            url: selectedInstallationRequest.passportPhotoUrl ? `${BASE_URL}${selectedInstallationRequest.passportPhotoUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Passport_Photo.jpg`,
+            label: 'Passport Photo'
+          }
+        ];
+
+        const downloadPromises: Promise<void>[] = [];
+
+        for (const doc of documents) {
+          if (doc.url) {
+            const downloadPromise = downloadFileFromUrl(doc.url, doc.filename)
+              .then(blob => {
+                zip.file(doc.filename, blob);
+              })
+              .catch(error => {
+                console.warn(`Failed to download ${doc.label}:`, error);
+                // Add a text file indicating the missing document
+                zip.file(`${doc.label}_NOT_AVAILABLE.txt`, `${doc.label} was not available for download.`);
+              });
+            downloadPromises.push(downloadPromise);
+          } else {
+            // Add a text file for missing documents
+            zip.file(`${doc.label}_MISSING.txt`, `${doc.label} was not provided.`);
+          }
+        }
+
+        // Wait for all downloads to complete
+        await Promise.all(downloadPromises);
+
+        // Generate zip file
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+
+        // Create download link
+        const downloadUrl = URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `${selectedInstallationRequest.name}_Documents_${selectedInstallationRequest.displayId}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Clean up
+        URL.revokeObjectURL(downloadUrl);
+
+        showToastMessage('Documents downloaded as ZIP successfully!', 'success');
+      } catch (zipError) {
+        console.warn('JSZip not available, downloading files individually:', zipError);
+
+        // Fallback: Download files individually
+        const documents = [
+          {
+            url: selectedInstallationRequest.aadhaarFrontUrl ? `${BASE_URL}${selectedInstallationRequest.aadhaarFrontUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Aadhaar_Front.jpg`,
+            label: 'Aadhaar Front'
+          },
+          {
+            url: selectedInstallationRequest.aadhaarBackUrl ? `${BASE_URL}${selectedInstallationRequest.aadhaarBackUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Aadhaar_Back.jpg`,
+            label: 'Aadhaar Back'
+          },
+          {
+            url: selectedInstallationRequest.passportPhotoUrl ? `${BASE_URL}${selectedInstallationRequest.passportPhotoUrl}` : null,
+            filename: `${selectedInstallationRequest.name}_Passport_Photo.jpg`,
+            label: 'Passport Photo'
+          }
+        ];
+
+        let downloadCount = 0;
+        for (const doc of documents) {
+          if (doc.url) {
+            try {
+              const link = document.createElement('a');
+              link.href = doc.url;
+              link.download = doc.filename;
+              link.target = '_blank';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              downloadCount++;
+
+              // Add delay between downloads
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+              console.warn(`Failed to download ${doc.label}:`, error);
+            }
+          }
+        }
+
+        showToastMessage(`${downloadCount} documents downloaded individually!`, 'success');
+      }
+    } catch (error) {
+      console.error('Error downloading documents:', error);
+      showToastMessage('Failed to download documents', 'error');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const [selectedOlt, setSelectedOlt] = useState<any>(null);
   const [expandedOlt, setExpandedOlt] = useState<string | null>(null);
-  
+
   // Toast state
   const [toastMessage, setToastMessage] = useState<string>("");
   const [toastType, setToastType] = useState<"success" | "error" | "warning">("success");
   const [showToast, setShowToast] = useState<boolean>(false);
 
-  const { data: selectNodes, isLoading: selectNodesLoading, error: selectNodesError } = useGetAllSelectNodesQuery({});
+  // Download state
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
-  console.log("selectNodes", selectNodes);
 
 
-  // Persist selectedNode in localStorage
-  useEffect(() => {
-    const savedNode = localStorage.getItem('selectedNode');
-    if (savedNode) {
-      setSelectedNode(savedNode);
-    }
-  }, []);
-
-  // Save selectedNode to localStorage whenever it changes
-  useEffect(() => {
-    if (selectedNode) {
-      localStorage.setItem('selectedNode', selectedNode);
-    } else {
-      localStorage.removeItem('selectedNode');
-    }
-    }, [selectedNode]);
-  
   // Toast helper function
   const showToastMessage = (message: string, type: "success" | "error" | "warning" = "success") => {
     setToastMessage(message);
@@ -110,209 +370,7 @@ export default function InstallationsLeads() {
       return () => clearTimeout(timer);
     }
   }, [showToast]);
-  
-  // Use OLT data from API
-  const oltData = useMemo(() => {
-    if (selectNodes?.success && selectNodes?.data) {
-      return selectNodes.data;
-    }
-    return [];
-  }, [selectNodes]);
 
-  // Power loss calculation functions
-  const getPowerLoss = (splitRatio: string | number): number => {
-    // Handle null, undefined, or empty values
-    if (!splitRatio) return 0;
-
-    // Extract numeric value from split ratio (e.g., "1x8" -> 8, "1x4" -> 4)
-    let ratio: number;
-    if (typeof splitRatio === 'string') {
-      const match = splitRatio.match(/(\d+)x(\d+)/);
-      if (match) {
-        ratio = parseInt(match[2]); // Get the second number (split count)
-      } else {
-        // Try to parse as direct number
-        const parsed = parseInt(splitRatio);
-        ratio = isNaN(parsed) ? 0 : parsed;
-      }
-    } else {
-      ratio = typeof splitRatio === 'number' ? splitRatio : 0;
-    }
-
-    // Validate ratio is a positive number
-    if (ratio <= 0) return 0;
-
-    // Power loss mapping based on split ratio
-    const powerLossMap: { [key: number]: number } = {
-      128: -40,
-      64: -20,
-      32: -17,
-      16: -13,
-      8: -10,
-      4: -7,
-      2: -3
-    };
-
-    return powerLossMap[ratio] || 0;
-  };
-
-  // Calculate cumulative power loss for a node path
-  const calculateCumulativePowerLoss = (olt: any, targetNodeId: string, targetNodeType: string): number => {
-    // Handle invalid inputs
-    if (!olt || !targetNodeId || !targetNodeType) return 0;
-
-    let totalLoss = 0;
-
-    // Start from OLT (no loss at OLT level)
-
-    // Check MS devices
-    for (const ms of olt.ms_devices || []) {
-      if (ms.ms_id === targetNodeId && targetNodeType === 'ms') {
-        totalLoss += getPowerLoss(ms.ms_power);
-        return totalLoss;
-      }
-
-      // If target is in SubMS under this MS
-      for (const subms of olt.subms_devices || []) {
-        if (subms.input?.id === ms.ms_id) {
-          if (subms.subms_id === targetNodeId && targetNodeType === 'subms') {
-            totalLoss += getPowerLoss(ms.ms_power); // MS loss
-            totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
-            return totalLoss;
-          }
-        }
-      }
-
-      // If target is in FDB under this MS
-      for (const fdb of olt.fdb_devices || []) {
-        if (fdb.input?.id === ms.ms_id && fdb.input?.type === 'ms') {
-          if (fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
-            totalLoss += getPowerLoss(ms.ms_power); // MS loss
-            totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
-            return totalLoss;
-          }
-        }
-      }
-    }
-
-    // Check FDB devices directly connected to OLT
-    for (const fdb of olt.fdb_devices || []) {
-      if (fdb.input?.type === 'olt' && fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
-        totalLoss += getPowerLoss(fdb.fdb_power);
-        return totalLoss;
-      }
-    }
-
-    // Check FDB devices connected to SubMS
-    for (const fdb of olt.fdb_devices || []) {
-      if (fdb.input?.type === 'subms') {
-        const subms = olt.subms_devices?.find((s: any) => s.subms_id === fdb.input.id);
-        if (subms && fdb.fdb_id === targetNodeId && targetNodeType === 'fdb') {
-          const ms = olt.ms_devices?.find((m: any) => m.ms_id === subms.input?.id);
-          if (ms) {
-            totalLoss += getPowerLoss(ms.ms_power); // MS loss
-            totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
-            totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
-            return totalLoss;
-          }
-        }
-      }
-    }
-
-    // Check X2 devices
-    for (const x2 of olt.x2_devices || []) {
-      if (x2.x2_id === targetNodeId && targetNodeType === 'x2') {
-        const fdb = olt.fdb_devices?.find((f: any) => f.fdb_id === x2.input?.id);
-        if (fdb) {
-          if (fdb.input?.type === 'subms') {
-            const subms = olt.subms_devices?.find((s: any) => s.subms_id === fdb.input.id);
-            if (subms) {
-              const ms = olt.ms_devices?.find((m: any) => m.ms_id === subms.input?.id);
-              if (ms) {
-                totalLoss += getPowerLoss(ms.ms_power); // MS loss
-                totalLoss += getPowerLoss(subms.subms_power); // SubMS loss
-                totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
-                totalLoss += getPowerLoss(x2.x2_power); // X2 loss
-                return totalLoss;
-              }
-            }
-          } else if (fdb.input?.type === 'ms') {
-            const ms = olt.ms_devices?.find((m: any) => m.ms_id === fdb.input.id);
-            if (ms) {
-              totalLoss += getPowerLoss(ms.ms_power); // MS loss
-              totalLoss += getPowerLoss(fdb.fdb_power); // FDB loss
-              totalLoss += getPowerLoss(x2.x2_power); // X2 loss
-              return totalLoss;
-            }
-          }
-        }
-      }
-    }
-
-    return totalLoss;
-  };
-
-    // Check if a node can accept customer connections (power loss <= 20)
-  const canAcceptCustomer = (olt: any, nodeId: string, nodeType: string): boolean => {
-    // Handle invalid inputs - default to false (cannot accept)
-    if (!olt || !nodeId || !nodeType) return false;
-    
-    try {
-      const totalLoss = Math.abs(calculateCumulativePowerLoss(olt, nodeId, nodeType));
-      
-      // Handle edge case where calculation returns NaN or invalid number
-      if (isNaN(totalLoss) || !isFinite(totalLoss)) return false;
-      
-      return totalLoss <= 20;
-    } catch (error) {
-      console.error('Error calculating power loss for node:', { olt, nodeId, nodeType }, error);
-      return false; // Default to safe side - cannot accept customers
-    }
-  };
-
-  // Extract OLT name from selectedNode string
-  const extractOltName = (selectedNodeString: string): string => {
-    if (!selectedNodeString) return '';
-    
-    try {
-      // selectedNode format examples:
-      // "OLT-001 > MS-01 > FFHF (FDB1653)"
-      // "Huawei SmartAX MA5608T > MS-1 (MS4516)"
-      // "TESTING OLT > MS-01 > SubMS-1 > FDB-1 (FDB3018)"
-      
-      // Extract everything before the first " > "
-      const parts = selectedNodeString.split(' > ');
-      return parts[0]?.trim() || '';
-    } catch (error) {
-      console.error('Error extracting OLT name:', error);
-      return '';
-    }
-  };
-
-  // Extract end device ID from selectedNode string
-  const extractEndDeviceId = (selectedNodeString: string): string => {
-    if (!selectedNodeString) return '';
-    
-    try {
-      // selectedNode format examples:
-      // "OLT-001 > MS-01 > FFHF (FDB1653)" -> FDB1653
-      // "Huawei SmartAX MA5608T > MS-1 (MS4516)" -> MS4516
-      // "TESTING OLT > MS-01 > SubMS-1 > FDB-1 > X2-01 (X23985)" -> X23985
-      
-      // Extract the ID from the last part in parentheses
-      const match = selectedNodeString.match(/\(([^)]+)\)$/);
-      return match ? match[1].trim() : '';
-    } catch (error) {
-      console.error('Error extracting end device ID:', error);
-      return '';
-    }
-  };
-
-  const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
-  const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
-  const { data: engineers, isLoading: engineersLoading, error: engineersError } = api.useGetEngineersQuery({});
-  const [updateApplicationStatus] = api.useUpdateApplicationStatusMutation();
-  const [updateInstallationRequestStatus] = api.useUpdateInstallationRequestStatusMutation();
 
   console.log("applications", applications);
   console.log("installation requests", installationRequestsData);
@@ -374,6 +432,10 @@ export default function InstallationsLeads() {
       passportPhotoUrl: req.passportPhotoUrl,
       applicationId: req.applicationId,
       userId: req.userId,
+      // New fields for approved requests
+      customerDetails: req.customerDetails,
+      modemDetails: req.modemDetails,
+      isInstalled: req.customerDetails?.isInstalled || false,
       // Additional display properties
       displayId: `INST-REQ-${req._id.slice(-6)}`,
       displayType: 'WiFi Installation',
@@ -390,7 +452,7 @@ export default function InstallationsLeads() {
       displayAlternatePhone: req.alternatePhoneNumber,
       displayAlternateCountryCode: req.alternateCountryCode,
       displayEngineer: req.assignedEngineer?._id,
-      displayInstallationDate: undefined,
+      displayInstallationDate: req.customerDetails?.installationDate,
       displayCompletedDate: undefined,
       displayAadhaarFront: req.aadhaarFrontUrl,
       displayAadhaarBack: req.aadhaarBackUrl,
@@ -417,22 +479,22 @@ export default function InstallationsLeads() {
       return;
     }
 
-    // Extract OLT name and end device ID from selectedNode
-    const connectedToOlt = extractOltName(selectedNode);
-    const connectedToEndDevice = extractEndDeviceId(selectedNode);
-    
-    console.log("connectedToOlt:", connectedToOlt, "connectedToEndDevice:", connectedToEndDevice);
-    console.log("Full selectedNode:", selectedNode);
-    
-
     try {
       await updateInstallationRequestStatus({
         id: selectedInstallationRequest.id,
         status: "approved",
         remarks: assignmentRemarks || "Engineer assigned for installation",
         assignedEngineer: selectedEngineer,
-        connectedToOlt: connectedToOlt,
-        connectedToEndDevice: connectedToEndDevice
+        // Include all new technical fields from the form
+        oltId: editableFields.oltId,
+        fdbId: editableFields.fdbId,
+        modemName: editableFields.modemName,
+        ontType: editableFields.ontType,
+        modelNumber: editableFields.modelNumber,
+        serialNumber: editableFields.serialNumber,
+        ontMac: editableFields.ontMac,
+        username: editableFields.username,
+        password: editableFields.password
       });
 
       console.log("Installation request approved and engineer assigned:", selectedInstallationRequest.id);
@@ -675,908 +737,649 @@ export default function InstallationsLeads() {
 
   return (
     <MainLayout title="New Installation & Applications">
-      <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-        {/* Top Stats Row - All Data Types */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {/* Application Forms Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-blue-200 dark:border-blue-700">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-blue-800 dark:text-blue-200">
-                <HardHat className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                Application Forms
-              </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-blue-600 dark:text-blue-300">
-                Applications in review
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700 dark:text-blue-300">
-                {applicationsLoading ? "..." : transformedApplications.filter((app: any) => app.status === 'inreview').length}
-              </div>
-              <div className="text-xs lg:text-sm text-blue-600 dark:text-blue-400 mt-1">
-                {applicationsLoading ? "Loading..." : "In review applications"}
-              </div>
-              <div className="mt-2 sm:mt-3 space-y-2">
-                {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 3).map((app: any) => (
-                  <div key={app.id} className="p-2 sm:p-3 bg-white/60 dark:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-600">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs lg:text-sm font-medium truncate text-blue-900 dark:text-blue-100">{app.name}</div>
-                        <div className="text-xs text-blue-600 dark:text-blue-300">{app.applicationType}</div>
-                      </div>
-                      <Badge className={`${getStatusColor(app.status)} text-xs ml-2`}>
-                        {app.status}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-1 mt-2">
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6 sm:h-8"
-                        onClick={async () => {
-                          try {
-                            await updateApplicationStatus({ id: app.id, status: 'accept' });
-                            console.log("Application accepted:", app.id);
-                          } catch (error) {
-                            console.error("Error accepting application:", error);
-                          }
-                        }}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="text-xs px-2 py-1 h-6 sm:h-8"
-                        onClick={async () => {
-                          try {
-                            await updateApplicationStatus({ id: app.id, status: 'reject' });
-                            console.log("Application rejected:", app.id);
-                          } catch (error) {
-                            console.error("Error rejecting application:", error);
-                          }
-                        }}
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Installation Requests Stats */}
-          <Card className="shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-green-200 dark:border-green-700">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-green-800 dark:text-green-200">
-                <Building className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                Installation Requests
-              </CardTitle>
-              <CardDescription className="dashboard-text-muted text-xs lg:text-sm text-green-600 dark:text-green-300">
-                Requests in review
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-700 dark:text-green-300">
-                {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}
-              </div>
-              <div className="text-xs lg:text-sm text-green-600 dark:text-green-400 mt-1">
-                {installationRequestsLoading ? "Loading..." : "Approved requests"}
-              </div>
-              <div className="mt-2 sm:mt-3 space-y-2">
-                {installationRequestsLoading ? (
-                  <div className="text-xs text-green-600 dark:text-green-400">Loading installation requests...</div>
-                ) : (
-                  transformedInstallationRequests.slice(0, 3).map((req: any) => (
-                    <div key={req.id} className="p-2 sm:p-3 bg-white/60 dark:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-600">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs lg:text-sm font-medium truncate text-green-900 dark:text-green-100">{req.name}</div>
-                          <div className="text-xs text-green-600 dark:text-green-300">{req.displayType}</div>
-                        </div>
-                        <Badge className={`${getStatusColor(req.status)} text-xs ml-2`}>
-                          {req.status}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-1 mt-2">
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6 sm:h-8"
-                          onClick={() => {
-                            setSelectedInstallationRequest(req);
-                            setShowInstallationRequestModal(true);
-                          }}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={`text-xs px-2 py-1 h-6 sm:h-8 ${req.status === 'approved'
-                            ? 'opacity-50 cursor-not-allowed bg-gray-100 text-gray-500'
-                            : 'hover:bg-blue-50'
-                            }`}
-                          onClick={() => {
-                            if (req.status !== 'approved') {
-                              setSelectedInstallationRequest(req);
-                              setShowInstallationRequestModal(true);
-                            }
-                          }}
-                          disabled={req.status === 'approved'}
-                        >
-                          <HardHat className="h-3 w-3 mr-1" />
-                          Assign
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Overview and Recent Activity Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Quick Overview */}
-          <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border-purple-200 dark:border-purple-700">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-purple-800 dark:text-purple-200">
-                <BarChart3 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                Quick Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div className="p-2 sm:p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
-                    {applicationsLoading ? "..." : transformedApplications.length}
-                  </div>
-                  <div className="text-xs text-purple-600 dark:text-purple-400">
-                    {applicationsLoading ? "Loading..." : "Applications"}
-                  </div>
-                </div>
-                <div className="p-2 sm:p-3 bg-white/60 dark:bg-purple-900/40 rounded-lg text-center border border-purple-200 dark:border-purple-600">
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-purple-700 dark:text-purple-300">
-                    {installationRequestsLoading ? "..." : transformedInstallationRequests.length}
-                  </div>
-                  <div className="text-xs text-purple-600 dark:text-purple-400">
-                    {installationRequestsLoading ? "Loading..." : "Requests"}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Activity */}
-          <Card className="dashboard-card shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base lg:text-lg dashboard-card-title flex items-center text-orange-800 dark:text-orange-200">
-                <Clock className="mr-2 h-3 w-3 sm:h-4 sm:w-4 lg:h-5 lg:w-5" />
-                Recent Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-2 sm:space-y-3">
-                {[...transformedApplications, ...transformedInstallationRequests]
-                  .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
-                  .slice(0, 5)
-                  .map((item: any, index) => (
-                    <div key={index} className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-white/60 dark:bg-orange-900/40 rounded-lg border border-orange-200 dark:border-orange-600 hover:bg-white/80 dark:hover:bg-orange-900/60 transition-colors">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs lg:text-sm font-medium truncate text-orange-900 dark:text-orange-100">
-                          {item.name || item.customerName || item.applicationId || 'New Entry'}
-                        </div>
-                        <div className="text-xs text-orange-600 dark:text-orange-400">
-                          {format(new Date(item.createdAt || item.updatedAt), "MMM dd, HH:mm")}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content with Tabs */}
-        <div className="space-y-4 sm:space-y-6">
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 p-4 sm:p-6 lg:p-8 text-white shadow-lg">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 -m-6 p-6">
+        <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
+          {/* Hero Section */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-8 lg:p-12 text-white shadow-2xl">
             <div className="relative z-10">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2">New Installation & Applications</h1>
-              <p className="text-blue-100 text-sm sm:text-base lg:text-lg">Manage installation requests and application forms with ease</p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-3 sm:mt-4">
-                <div className="flex items-center gap-2">
-                  <HardHat className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-xs sm:text-sm">{transformedApplications.length} Applications</span>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <HardHat className="h-8 w-8" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-xs sm:text-sm">{transformedInstallationRequests.length} Installation Requests</span>
+                <div>
+                  <h1 className="text-3xl lg:text-4xl font-bold mb-2">Installation Management</h1>
+                  <p className="text-blue-100 text-lg">Streamlined workflow for applications and installations</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-6 mt-6">
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
+                  <FileText className="h-5 w-5" />
+                  <span className="text-sm font-medium">{transformedApplications.length} Applications</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
+                  <Building className="h-5 w-5" />
+                  <span className="text-sm font-medium">{transformedInstallationRequests.length} Installation Requests</span>
+                </div>
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm">
+                  <TrendingUp className="h-5 w-5" />
+                  <span className="text-sm font-medium">{analytics.applicationSuccessRate}% Success Rate</span>
                 </div>
               </div>
             </div>
-            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-white/10 to-transparent"></div>
-            <div className="absolute -right-4 top-4 h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-white/10"></div>
-            <div className="absolute -right-8 top-16 h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white/5"></div>
+            <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+            <div className="absolute -right-32 -bottom-20 h-32 w-32 rounded-full bg-white/5 blur-2xl"></div>
+            <div className="absolute right-10 top-10 h-24 w-24 rounded-full bg-gradient-to-r from-yellow-300/20 to-orange-300/20 blur-xl"></div>
           </div>
 
-          <Tabs defaultValue="all-forms" className="space-y-4 sm:space-y-6">
-            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
-              <TabsTrigger value="all-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <HardHat className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">All Forms</span>
-                <span className="sm:hidden">All</span>
-              </TabsTrigger>
-              <TabsTrigger value="application-forms" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <FileText className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">Application Forms</span>
-                <span className="sm:hidden">Apps</span>
-              </TabsTrigger>
-              <TabsTrigger value="installation-requests" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <Building className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">Installation Requests</span>
-                <span className="sm:hidden">Install</span>
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 py-2 lg:px-3 lg:py-2">
-                <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="hidden sm:inline">Analytics</span>
-                <span className="sm:hidden">Stats</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all-forms" className="space-y-4 lg:space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          {/* Top Stats Row - All Data Types */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+            {/* Application Forms Stats */}
+            <Card className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-indigo-500/10"></div>
+              <CardHeader className="relative pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white shadow-lg">
+                      <FileText className="h-6 w-6" />
+                    </div>
                     <div>
-                      <CardTitle className="text-lg lg:text-xl">All Installation Forms</CardTitle>
-                      <CardDescription className="text-sm">Complete overview of all installation forms and requests</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => {
-                        console.log("Exporting all installation forms data:", filteredAllInstallationForms);
-                        // Export functionality can be added here
-                      }} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
-                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        Export Data
-                      </Button>
+                      <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                        Application Forms
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                        Pending review applications
+                      </CardDescription>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search all forms..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm text-sm"
-                      />
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      {applicationsLoading ? "..." : transformedApplications.filter((app: any) => app.status === 'inreview').length}
                     </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="inreview">In Review</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="accept">Accepted</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                        <SelectItem value="reject">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {applicationsLoading ? "Loading..." : "Awaiting action"}
+                    </div>
                   </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative pt-0">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Applications</div>
+                  <div className="space-y-3">
+                    {transformedApplications.filter((app: any) => app.status === 'inreview').slice(0, 2).map((app: any, index: number) => (
+                      <div key={app.id} className="flex items-center justify-between p-3 bg-white/70 dark:bg-slate-700/50 rounded-lg border border-white/50 dark:border-slate-600/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                            {app.name?.charAt(0)?.toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{app.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{app.applicationType}</div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          <Button
+                            size="sm"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2 py-1 h-7 rounded-md shadow-sm"
+                            onClick={async () => {
+                              try {
+                                await updateApplicationStatus({ id: app.id, status: 'accept' });
+                                console.log("Application accepted:", app.id);
+                              } catch (error) {
+                                console.error("Error accepting application:", error);
+                              }
+                            }}
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="text-xs px-2 py-1 h-7 rounded-md shadow-sm"
+                            onClick={async () => {
+                              try {
+                                await updateApplicationStatus({ id: app.id, status: 'reject' });
+                                console.log("Application rejected:", app.id);
+                              } catch (error) {
+                                console.error("Error rejecting application:", error);
+                              }
+                            }}
+                          >
+                            <XCircle className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {transformedApplications.filter((app: any) => app.status === 'inreview').length === 0 && (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                        No applications pending review
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 dark:bg-gray-800">
-                            <TableHead className="text-xs lg:text-sm font-medium">Form Type</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">ID</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Type</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Address</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {applicationsLoading || installationRequestsLoading ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <div className="flex items-center justify-center">
-                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                  <span className="ml-2 text-sm text-gray-600">Loading data...</span>
-                                </div>
-                              </TableCell>
+            {/* Installation Requests Stats */}
+            <Card className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-teal-500/10"></div>
+              <CardHeader className="relative pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white shadow-lg">
+                      <Building className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                        Installation Requests
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                        Approved installations ready
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {installationRequestsLoading ? "..." : transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {installationRequestsLoading ? "Loading..." : "Ready for deployment"}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative pt-0">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-4 border border-emerald-100 dark:border-emerald-800">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Requests</div>
+                  <div className="space-y-3">
+                    {installationRequestsLoading ? (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                        Loading installation requests...
+                      </div>
+                    ) : (
+                      transformedInstallationRequests.slice(0, 2).map((req: any) => (
+                        <div key={req.id} className="flex items-center justify-between p-3 bg-white/70 dark:bg-slate-700/50 rounded-lg border border-white/50 dark:border-slate-600/50 backdrop-blur-sm">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                              {req.name?.charAt(0)?.toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{req.name}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{req.displayType}</div>
+                                <Badge className={`${getStatusColor(req.status)} text-xs`}>
+                                  {req.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 ml-2">
+                            <Button
+                              size="sm"
+                              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 h-7 rounded-md shadow-sm"
+                              onClick={() => {
+                                setSelectedInstallationRequest(req);
+                                setShowInstallationRequestModal(true);
+                              }}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className={`text-xs px-2 py-1 h-7 rounded-md shadow-sm ${req.status === 'approved'
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-emerald-50 hover:border-emerald-300'
+                                }`}
+                              onClick={() => {
+                                if (req.status !== 'approved') {
+                                  setSelectedInstallationRequest(req);
+                                  setShowInstallationRequestModal(true);
+                                }
+                              }}
+                              disabled={req.status === 'approved'}
+                            >
+                              <HardHat className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {!installationRequestsLoading && transformedInstallationRequests.length === 0 && (
+                      <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                        No installation requests available
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Analytics and Activity Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick Overview */}
+            <Card className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-indigo-500/10"></div>
+              <CardHeader className="relative pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl text-white shadow-lg">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                      Quick Overview
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                      System statistics
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative pt-0">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {applicationsLoading ? "..." : transformedApplications.length}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Applications
+                    </div>
+                  </div>
+                  <div className="text-center p-4 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+                    <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                      {installationRequestsLoading ? "..." : transformedInstallationRequests.length}
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Requests
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity */}
+            <Card className="lg:col-span-2 group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-red-500/10"></div>
+              <CardHeader className="relative pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl text-white shadow-lg">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                      Recent Activity
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-600 dark:text-gray-300">
+                      Latest system updates
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative pt-0">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-100 dark:border-amber-800">
+                  <div className="space-y-3">
+                    {[...transformedApplications, ...transformedInstallationRequests]
+                      .sort((a, b) => new Date(b.createdAt || b.updatedAt).getTime() - new Date(a.createdAt || a.updatedAt).getTime())
+                      .slice(0, 4)
+                      .map((item: any, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-white/70 dark:bg-slate-700/50 rounded-lg border border-white/50 dark:border-slate-600/50 backdrop-blur-sm">
+                          <div className="w-2 h-2 bg-gradient-to-r from-amber-400 to-orange-400 rounded-full animate-pulse"></div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {item.name || item.customerName || item.applicationId || 'New Entry'}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {format(new Date(item.createdAt || item.updatedAt), "MMM dd, HH:mm")}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {item.type === 'wifi_application' ? 'App' : 'Install'}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Content with Tabs */}
+          <div className="space-y-6">
+            <Tabs defaultValue="all-forms" className="space-y-6">
+              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border-0 shadow-lg p-6">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 border-0 h-auto p-2 rounded-xl shadow-inner">
+                  <TabsTrigger value="all-forms" className="flex items-center gap-2 text-sm px-4 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white transition-all duration-200 font-medium">
+                    <HardHat className="h-4 w-4" />
+                    <span className="hidden sm:inline">All Forms</span>
+                    <span className="sm:hidden">All</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="application-forms" className="flex items-center gap-2 text-sm px-4 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white transition-all duration-200 font-medium">
+                    <FileText className="h-4 w-4" />
+                    <span className="hidden sm:inline">Application Forms</span>
+                    <span className="sm:hidden">Apps</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="installation-requests" className="flex items-center gap-2 text-sm px-4 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white transition-all duration-200 font-medium">
+                    <Building className="h-4 w-4" />
+                    <span className="hidden sm:inline">Installation Requests</span>
+                    <span className="sm:hidden">Install</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="flex items-center gap-2 text-sm px-4 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-lg dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white transition-all duration-200 font-medium">
+                    <BarChart3 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Analytics</span>
+                    <span className="sm:hidden">Stats</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="all-forms" className="space-y-6">
+                <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 pb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">All Installation Forms</CardTitle>
+                          <CardDescription className="text-sm text-gray-600 dark:text-gray-300">Complete overview of all installation forms and requests</CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button onClick={() => {
+                          console.log("Exporting all installation forms data:", filteredAllInstallationForms);
+                          // Export functionality can be added here
+                        }} className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg transition-all duration-200">
+                          <Download className="mr-2 h-4 w-4" />
+                          Export Data
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search all forms..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 text-sm bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border-gray-200 dark:border-slate-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger className="w-[180px] text-sm bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border-gray-200 dark:border-slate-600 rounded-lg shadow-sm">
+                            <Filter className="h-4 w-4 mr-2" />
+                            <SelectValue placeholder="Filter by status" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border-gray-200 dark:border-slate-600">
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="inreview">In Review</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="accept">Accepted</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                            <SelectItem value="reject">Rejected</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-slate-600/50 overflow-hidden shadow-lg">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gradient-to-r from-slate-100/80 to-slate-200/80 dark:from-slate-700/80 dark:to-slate-600/80 border-b border-gray-200/50 dark:border-slate-600/50">
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Form Type</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">ID</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Customer</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Contact</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Type</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Status</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Address</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Created</TableHead>
+                              <TableHead className="text-sm font-semibold text-gray-700 dark:text-gray-200 py-4">Actions</TableHead>
                             </TableRow>
-                          ) : applicationsError || installationRequestsError ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <div className="text-red-600 text-sm">
-                                  Error loading data. Please refresh the page.
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            filteredAllInstallationForms.map((form) => (
-                              <TableRow key={`${form.type}-${form.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                <TableCell className="py-3">
-                                  <Badge variant="outline" className="capitalize text-xs">
-                                    {form.type.replace('_', ' ')}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div className="font-medium text-xs lg:text-sm">{form.displayId}</div>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div>
-                                    <div className="font-medium text-xs lg:text-sm">{form.displayName}</div>
-                                    <div className="text-xs text-gray-500 hidden lg:block">{form.displayVillage || form.displayAddress}</div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div>
-                                    <div className="text-xs lg:text-sm">{form.displayContact}</div>
-                                    {form.displayAlternatePhone && (
-                                      <div className="text-xs text-gray-500 hidden lg:block">{form.displayAlternatePhone}</div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <Badge className={`${getTypeColor(form.displayType)} text-xs`}>
-                                    {form.displayType}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <Badge className={`${getStatusColor(form.displayStatus)} text-xs`}>
-                                    {form.displayStatus}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div className="text-xs text-gray-600 max-w-xs truncate">
-                                    {form.displayAddress}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div className="text-xs lg:text-sm">
-                                    {format(parseISO(form.displayDate), "MMM dd, yyyy")}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-3">
-                                  <div className="flex gap-1">
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                          <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                        <DialogHeader>
-                                          <DialogTitle className="text-lg lg:text-xl">
-                                            {form.type.replace('_', ' ').toUpperCase()} Details - {form.displayName}
-                                          </DialogTitle>
-                                          <DialogDescription className="text-sm">
-                                            Complete form information and documents
-                                          </DialogDescription>
-                                        </DialogHeader>
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                          <div>
-                                            <Label className="text-sm font-medium">Form Type</Label>
-                                            <p className="text-sm capitalize">{form.type.replace('_', ' ')}</p>
-                                          </div>
-                                          <div>
-                                            <Label className="text-sm font-medium">ID</Label>
-                                            <p className="text-sm">{form.displayId}</p>
-                                          </div>
-                                          <div>
-                                            <Label className="text-sm font-medium">Customer Name</Label>
-                                            <p className="text-sm">{form.displayName}</p>
-                                          </div>
-                                          <div>
-                                            <Label className="text-sm font-medium">Contact Number</Label>
-                                            <p className="text-sm">{form.displayContact}</p>
-                                          </div>
-                                          {form.displayAlternatePhone && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Alternate Phone</Label>
-                                              <p className="text-sm">{form.displayAlternatePhone}</p>
-                                            </div>
-                                          )}
-                                          <div>
-                                            <Label className="text-sm font-medium">Type</Label>
-                                            <p className="text-sm capitalize">{form.displayType}</p>
-                                          </div>
-                                          <div>
-                                            <Label className="text-sm font-medium">Status</Label>
-                                            <div className="text-sm">{getStatusBadge(form.displayStatus, "installation")}</div>
-                                          </div>
-                                          <div className="lg:col-span-2">
-                                            <Label className="text-sm font-medium">Address</Label>
-                                            <p className="text-sm">{form.displayAddress}</p>
-                                          </div>
-                                          {form.displayVillage && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Village/Area</Label>
-                                              <p className="text-sm">{form.displayVillage}</p>
-                                            </div>
-                                          )}
-                                          {form.displayPincode && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Pincode</Label>
-                                              <p className="text-sm">{form.displayPincode}</p>
-                                            </div>
-                                          )}
-                                          {form.displayRemarks && (
-                                            <div className="lg:col-span-2">
-                                              <Label className="text-sm font-medium">Remarks</Label>
-                                              <p className="text-sm">{form.displayRemarks}</p>
-                                            </div>
-                                          )}
-                                          {form.displayAcceptedAt && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Accepted/Approved Date</Label>
-                                              <p className="text-sm">{format(parseISO(form.displayAcceptedAt), "MMM dd, yyyy")}</p>
-                                            </div>
-                                          )}
-                                          {form.displayRejectedAt && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Rejected Date</Label>
-                                              <p className="text-sm">{form.displayRejectedAt}</p>
-                                            </div>
-                                          )}
-                                          {form.displayEngineer && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Assigned Engineer</Label>
-                                              <p className="text-sm">{getEngineerName(form.displayEngineer as number)}</p>
-                                            </div>
-                                          )}
-                                          {form.displayInstallationDate && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Installation Date</Label>
-                                              <p className="text-sm">{format(parseISO(form.displayInstallationDate as string), "MMM dd, yyyy")}</p>
-                                            </div>
-                                          )}
-                                          {form.displayCompletedDate && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Completed Date</Label>
-                                              <p className="text-sm">{format(parseISO(form.displayCompletedDate as string), "MMM dd, yyyy")}</p>
-                                            </div>
-                                          )}
-                                          {form.displayPriority && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Priority</Label>
-                                              <p className="text-sm">{getPriorityBadge(form.displayPriority as string)}</p>
-                                            </div>
-                                          )}
-                                          {form.displayEstimatedCost && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Estimated Cost</Label>
-                                              <p className="text-sm">₹{form.displayEstimatedCost}</p>
-                                            </div>
-                                          )}
-                                          {form.displayPreferredPlan && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Preferred Plan</Label>
-                                              <p className="text-sm">{form.displayPreferredPlan}</p>
-                                            </div>
-                                          )}
-                                          {form.displayScheduledDate && (
-                                            <div>
-                                              <Label className="text-sm font-medium">Scheduled Date</Label>
-                                              <p className="text-sm">{format(parseISO(form.displayScheduledDate), "MMM dd, yyyy")}</p>
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        {/* Document Section */}
-                                        <div className="mt-6">
-                                          <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
-                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                            {form.displayAadhaarFront && (
-                                              <div className="text-center">
-                                                <Label className="text-sm font-medium">Aadhaar Front</Label>
-                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                  <p className="text-xs mt-1">Uploaded</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                            {form.displayAadhaarBack && (
-                                              <div className="text-center">
-                                                <Label className="text-sm font-medium">Aadhaar Back</Label>
-                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                  <p className="text-xs mt-1">Uploaded</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                            {form.displayPassportPhoto && (
-                                              <div className="text-center">
-                                                <Label className="text-sm font-medium">Passport Photo</Label>
-                                                <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                  <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
-                                                  <p className="text-xs mt-1">Uploaded</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        {/* Action Buttons for In Review Items */}
-                                        {(form.displayStatus === 'inreview' || form.displayStatus === 'pending') && form.type === 'wifi_application' && (
-                                          <div className="mt-6 pt-4 border-t">
-                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                              <Button
-                                                className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                                                onClick={async () => {
-                                                  try {
-                                                    await updateApplicationStatus({ id: form.id, status: 'accept' });
-                                                    console.log("Application accepted:", form.displayId);
-                                                    showToastMessage("Application accepted successfully!", 'success');
-                                                  } catch (error) {
-                                                    console.error("Error accepting application:", error);
-                                                    showToastMessage("Error accepting application. Please try again.", 'error');
-                                                  }
-                                                }}
-                                              >
-                                                <CheckCircle className="h-4 w-4 mr-2" />
-                                                Accept WiFi Application
-                                              </Button>
-                                              <Button
-                                                variant="destructive"
-                                                className="text-sm"
-                                                onClick={async () => {
-                                                  try {
-                                                    await updateApplicationStatus({ id: form.id, status: 'reject' });
-                                                    console.log("Application rejected:", form.displayId);
-                                                  } catch (error) {
-                                                    console.error("Error rejecting application:", error);
-                                                  }
-                                                }}
-                                              >
-                                                <XCircle className="h-4 w-4 mr-2" />
-                                                Reject WiFi Application
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {/* Action Buttons for Installation Requests */}
-                                        {form.type === 'installation_request' && (
-                                          <div className="mt-6 pt-4 border-t">
-                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                              <Button
-                                                className={`text-sm ${form.displayStatus === 'approved'
-                                                  ? 'bg-gray-400 cursor-not-allowed'
-                                                  : 'bg-green-600 hover:bg-green-700'
-                                                  } text-white`}
-                                                onClick={() => {
-                                                  if (form.displayStatus !== 'approved') {
-                                                    setSelectedInstallationRequest(form);
-                                                    setShowInstallationRequestModal(true);
-                                                  }
-                                                }}
-                                                disabled={form.displayStatus === 'approved'}
-                                              >
-                                                <HardHat className="h-4 w-4 mr-2" />
-                                                Assign Engineer
-                                              </Button>
-                                              <Button
-                                                variant="outline"
-                                                className="text-sm"
-                                                onClick={() => {
-                                                  setSelectedInstallationRequest(form);
-                                                  setShowInstallationRequestModal(true);
-                                                }}
-                                              >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                View Details
-                                              </Button>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </DialogContent>
-                                    </Dialog>
+                          </TableHeader>
+                          <TableBody>
+                            {applicationsLoading || installationRequestsLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={9} className="text-center py-12">
+                                  <div className="flex flex-col items-center justify-center space-y-4">
+                                    <div className="relative">
+                                      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 dark:border-blue-800"></div>
+                                      <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
+                                    </div>
+                                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Loading data...</span>
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="application-forms" className="space-y-4 lg:space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <CardTitle className="text-lg lg:text-xl">WiFi Application Forms</CardTitle>
-                      <CardDescription className="text-sm">Manage WiFi application forms and their status</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => {
-                        console.log("Exporting application forms data:", transformedApplications);
-                      }} className="bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm px-3 py-2">
-                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        Export Data
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search applications..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm text-sm"
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="inreview">In Review</SelectItem>
-                        <SelectItem value="accept">Accepted</SelectItem>
-                        <SelectItem value="reject">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="text-sm">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFilter.from ? (
-                              dateFilter.to ? (
-                                <>
-                                  {format(dateFilter.from, "LLL dd, y")} -{" "}
-                                  {format(dateFilter.to, "LLL dd, y")}
-                                </>
-                              ) : (
-                                format(dateFilter.from, "LLL dd, y")
-                              )
+                            ) : applicationsError || installationRequestsError ? (
+                              <TableRow>
+                                <TableCell colSpan={9} className="text-center py-12">
+                                  <div className="flex flex-col items-center justify-center space-y-3">
+                                    <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                                      <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                    </div>
+                                    <div className="text-red-600 dark:text-red-400 text-sm font-medium">
+                                      Error loading data. Please refresh the page.
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
                             ) : (
-                              <span>Pick a date range</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                          <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateFilter.from}
-                            selected={{ from: dateFilter.from, to: dateFilter.to }}
-                            onSelect={(range) => {
-                              if (range?.from) {
-                                setDateFilter({ from: range.from, to: range.to });
-                              }
-                            }}
-                            numberOfMonths={2}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 dark:bg-gray-800">
-                            <TableHead className="text-xs lg:text-sm font-medium">Application ID</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Plan Details</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Address</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {applicationsLoading ? (
-                            <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8">
-                                <div className="flex items-center justify-center">
-                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                  <span className="ml-2 text-sm text-gray-600">Loading applications...</span>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ) : applicationsError ? (
-                            <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8">
-                                <div className="text-red-600 text-sm">
-                                  Error loading applications. Please refresh the page.
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            transformedApplications
-                              .filter((app: any) => {
-                                const matchesSearch =
-                                  app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  app.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  app.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  app.applicationId.toLowerCase().includes(searchTerm.toLowerCase());
-
-                                const matchesStatus = statusFilter === "all" || app.status === statusFilter;
-
-                                let matchesDate = true;
-                                if (dateFilter.from && dateFilter.to) {
-                                  const appDate = parseISO(app.createdAt);
-                                  const fromDate = startOfDay(dateFilter.from);
-                                  const toDate = endOfDay(dateFilter.to);
-                                  matchesDate = isAfter(appDate, fromDate) && isBefore(appDate, toDate);
-                                }
-
-                                return matchesSearch && matchesStatus && matchesDate;
-                              })
-                              .map((app: any) => (
-                                <TableRow key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                  <TableCell className="py-3">
-                                    <div className="font-medium text-xs lg:text-sm text-blue-600">{app.applicationId}</div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div>
-                                      <div className="font-medium text-xs lg:text-sm">{app.name}</div>
-                                      <div className="text-xs text-gray-500 hidden lg:block">{app.village}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div>
-                                      <div className="text-xs lg:text-sm">{app.phoneNumber}</div>
-                                      {app.alternatePhoneNumber && (
-                                        <div className="text-xs text-gray-500 hidden lg:block">{app.alternatePhoneNumber}</div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="max-w-xs">
-                                      {app.planDetails ? (
-                                        <div className="space-y-1">
-                                          <div className="text-xs lg:text-sm font-medium">{app.planDetails.title}</div>
-                                          <div className="text-xs text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
-                                          <div className="text-xs text-gray-500">{app.planDetails.provider}</div>
-                                        </div>
-                                      ) : (
-                                        <div className="text-xs text-gray-500">No plan selected</div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Badge className={`${getStatusColor(app.status)} text-xs`}>
-                                      {app.status}
+                              filteredAllInstallationForms.map((form) => (
+                                <TableRow key={`${form.type}-${form.id}`} className="hover:bg-white/50 dark:hover:bg-slate-700/50 transition-colors duration-200 border-b border-gray-100/50 dark:border-slate-600/30">
+                                  <TableCell className="py-4 px-6">
+                                    <Badge variant="outline" className="capitalize text-xs font-medium bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 border-slate-300 dark:border-slate-500">
+                                      {form.type.replace('_', ' ')}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="text-xs text-gray-600 max-w-xs truncate">
-                                      {app.address}, {app.village} - {app.pincode}
+                                  <TableCell className="py-4 px-6">
+                                    <div className="font-mono text-sm font-medium text-blue-600 dark:text-blue-400">{form.displayId}</div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-6">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        {form.displayName?.charAt(0)?.toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <div className="font-medium text-sm text-gray-900 dark:text-white">{form.displayName}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">{form.displayVillage || form.displayAddress}</div>
+                                      </div>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="text-xs lg:text-sm">
-                                      {format(parseISO(app.createdAt), "MMM dd, yyyy")}
+                                  <TableCell className="py-4 px-6">
+                                    <div>
+                                      <div className="text-sm font-medium text-gray-900 dark:text-white">{form.displayContact}</div>
+                                      {form.displayAlternatePhone && (
+                                        <div className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">{form.displayAlternatePhone}</div>
+                                      )}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex gap-1">
+                                  <TableCell className="py-4 px-6">
+                                    <Badge className={`${getTypeColor(form.displayType)} text-xs font-medium px-2 py-1 rounded-full`}>
+                                      {form.displayType}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-6">
+                                    <Badge className={`${getStatusColor(form.displayStatus)} text-xs font-medium px-2 py-1 rounded-full`}>
+                                      {form.displayStatus}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-6">
+                                    <div className="text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate">
+                                      {form.displayAddress}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-6">
+                                    <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                                      {format(parseISO(form.displayDate), "MMM dd, yyyy")}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-6">
+                                    <div className="flex gap-2">
                                       <Dialog>
                                         <DialogTrigger asChild>
-                                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                            <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                          <Button variant="outline" size="sm" className="h-9 w-9 p-0 rounded-lg border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200">
+                                            <Eye className="h-4 w-4" />
                                           </Button>
                                         </DialogTrigger>
                                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                                           <DialogHeader>
                                             <DialogTitle className="text-lg lg:text-xl">
-                                              WiFi Application Details - {app.name}
+                                              {form.type.replace('_', ' ').toUpperCase()} Details - {form.displayName}
                                             </DialogTitle>
                                             <DialogDescription className="text-sm">
-                                              Complete application information and plan details
+                                              Complete form information and documents
                                             </DialogDescription>
                                           </DialogHeader>
                                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                             <div>
-                                              <Label className="text-sm font-medium">Application ID</Label>
-                                              <p className="text-sm font-mono">{app.applicationId}</p>
+                                              <Label className="text-sm font-medium">Form Type</Label>
+                                              <p className="text-sm capitalize">{form.type.replace('_', ' ')}</p>
                                             </div>
                                             <div>
-                                              <Label className="text-sm font-medium">Status</Label>
-                                              <Badge className={`${getStatusColor(app.status)} text-sm`}>
-                                                {app.status}
-                                              </Badge>
+                                              <Label className="text-sm font-medium">ID</Label>
+                                              <p className="text-sm">{form.displayId}</p>
                                             </div>
                                             <div>
                                               <Label className="text-sm font-medium">Customer Name</Label>
-                                              <p className="text-sm">{app.name}</p>
+                                              <p className="text-sm">{form.displayName}</p>
                                             </div>
                                             <div>
                                               <Label className="text-sm font-medium">Contact Number</Label>
-                                              <p className="text-sm">{app.countryCode} {app.phoneNumber}</p>
+                                              <p className="text-sm">{form.displayContact}</p>
                                             </div>
-                                            {app.alternatePhoneNumber && (
+                                            {form.displayAlternatePhone && (
                                               <div>
                                                 <Label className="text-sm font-medium">Alternate Phone</Label>
-                                                <p className="text-sm">{app.alternateCountryCode} {app.alternatePhoneNumber}</p>
+                                                <p className="text-sm">{form.displayAlternatePhone}</p>
                                               </div>
                                             )}
                                             <div>
-                                              <Label className="text-sm font-medium">Email</Label>
-                                              <p className="text-sm">{app.userDetails?.email || 'N/A'}</p>
+                                              <Label className="text-sm font-medium">Type</Label>
+                                              <p className="text-sm capitalize">{form.displayType}</p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium">Status</Label>
+                                              <div className="text-sm">{getStatusBadge(form.displayStatus, "installation")}</div>
                                             </div>
                                             <div className="lg:col-span-2">
                                               <Label className="text-sm font-medium">Address</Label>
-                                              <p className="text-sm">{app.address}, {app.village} - {app.pincode}</p>
+                                              <p className="text-sm">{form.displayAddress}</p>
                                             </div>
-                                            {app.planDetails && (
-                                              <>
-                                                <div className="lg:col-span-2">
-                                                  <Label className="text-sm font-medium">Selected Plan</Label>
-                                                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                      {app.planDetails.logo && (
-                                                        <img
-                                                          src={`${BASE_URL}${app.planDetails.logo}`}
-                                                          alt={app.planDetails.provider}
-                                                          className="w-12 h-12 object-cover rounded-lg"
-                                                        />
-                                                      )}
-                                                      <div className="flex-1">
-                                                        <div className="font-medium">{app.planDetails.title}</div>
-                                                        <div className="text-sm text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
-                                                        <div className="text-xs text-gray-500">{app.planDetails.provider} • {app.planDetails.validity}</div>
-                                                      </div>
-                                                    </div>
-                                                    {app.planDetails.benefits && app.planDetails.benefits.length > 0 && (
-                                                      <div className="mt-2">
-                                                        <div className="text-xs font-medium text-gray-600">Benefits:</div>
-                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                          {app.planDetails.benefits.map((benefit: string, index: number) => (
-                                                            <Badge key={index} variant="secondary" className="text-xs">
-                                                              {benefit}
-                                                            </Badge>
-                                                          ))}
-                                                        </div>
-                                                      </div>
-                                                    )}
+                                            {form.displayVillage && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Village/Area</Label>
+                                                <p className="text-sm">{form.displayVillage}</p>
+                                              </div>
+                                            )}
+                                            {form.displayPincode && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Pincode</Label>
+                                                <p className="text-sm">{form.displayPincode}</p>
+                                              </div>
+                                            )}
+                                            {form.displayRemarks && (
+                                              <div className="lg:col-span-2">
+                                                <Label className="text-sm font-medium">Remarks</Label>
+                                                <p className="text-sm">{form.displayRemarks}</p>
+                                              </div>
+                                            )}
+                                            {form.displayAcceptedAt && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Accepted/Approved Date</Label>
+                                                <p className="text-sm">{format(parseISO(form.displayAcceptedAt), "MMM dd, yyyy")}</p>
+                                              </div>
+                                            )}
+                                            {form.displayRejectedAt && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Rejected Date</Label>
+                                                <p className="text-sm">{form.displayRejectedAt}</p>
+                                              </div>
+                                            )}
+                                            {form.displayEngineer && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                                <p className="text-sm">{getEngineerName(form.displayEngineer as number)}</p>
+                                              </div>
+                                            )}
+                                            {form.displayInstallationDate && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Installation Date</Label>
+                                                <p className="text-sm">{format(parseISO(form.displayInstallationDate as string), "MMM dd, yyyy")}</p>
+                                              </div>
+                                            )}
+                                            {form.displayCompletedDate && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Completed Date</Label>
+                                                <p className="text-sm">{format(parseISO(form.displayCompletedDate as string), "MMM dd, yyyy")}</p>
+                                              </div>
+                                            )}
+                                            {form.displayPriority && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Priority</Label>
+                                                <p className="text-sm">{getPriorityBadge(form.displayPriority as string)}</p>
+                                              </div>
+                                            )}
+                                            {form.displayEstimatedCost && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Estimated Cost</Label>
+                                                <p className="text-sm">₹{form.displayEstimatedCost}</p>
+                                              </div>
+                                            )}
+                                            {form.displayPreferredPlan && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Preferred Plan</Label>
+                                                <p className="text-sm">{form.displayPreferredPlan}</p>
+                                              </div>
+                                            )}
+                                            {form.displayScheduledDate && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Scheduled Date</Label>
+                                                <p className="text-sm">{format(parseISO(form.displayScheduledDate), "MMM dd, yyyy")}</p>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Document Section */}
+                                          <div className="mt-6">
+                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                              {form.displayAadhaarFront && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Aadhaar Front</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                    <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                    <p className="text-xs mt-1">Uploaded</p>
                                                   </div>
                                                 </div>
-                                              </>
-                                            )}
-                                            <div>
-                                              <Label className="text-sm font-medium">Created Date</Label>
-                                              <p className="text-sm">{format(parseISO(app.createdAt), "MMM dd, yyyy HH:mm")}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Last Updated</Label>
-                                              <p className="text-sm">{format(parseISO(app.updatedAt), "MMM dd, yyyy HH:mm")}</p>
+                                              )}
+                                              {form.displayAadhaarBack && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Aadhaar Back</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                    <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                    <p className="text-xs mt-1">Uploaded</p>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {form.displayPassportPhoto && (
+                                                <div className="text-center">
+                                                  <Label className="text-sm font-medium">Passport Photo</Label>
+                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                    <CheckCircle className="h-6 w-6 mx-auto text-green-600" />
+                                                    <p className="text-xs mt-1">Uploaded</p>
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
 
                                           {/* Action Buttons for In Review Items */}
-                                          {app.status === 'inreview' && (
+                                          {(form.displayStatus === 'inreview' || form.displayStatus === 'pending') && form.type === 'wifi_application' && (
                                             <div className="mt-6 pt-4 border-t">
                                               <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
                                               <div className="flex flex-col sm:flex-row gap-2">
@@ -1584,8 +1387,8 @@ export default function InstallationsLeads() {
                                                   className="bg-green-600 hover:bg-green-700 text-white text-sm"
                                                   onClick={async () => {
                                                     try {
-                                                      await updateApplicationStatus({ id: app.id, status: 'accept' });
-                                                      console.log("Application accepted:", app.applicationId);
+                                                      await updateApplicationStatus({ id: form.id, status: 'accept' });
+                                                      console.log("Application accepted:", form.displayId);
                                                       showToastMessage("Application accepted successfully!", 'success');
                                                     } catch (error) {
                                                       console.error("Error accepting application:", error);
@@ -1594,46 +1397,58 @@ export default function InstallationsLeads() {
                                                   }}
                                                 >
                                                   <CheckCircle className="h-4 w-4 mr-2" />
-                                                  Accept Application
+                                                  Accept WiFi Application
                                                 </Button>
                                                 <Button
                                                   variant="destructive"
                                                   className="text-sm"
                                                   onClick={async () => {
                                                     try {
-                                                      await updateApplicationStatus({ id: app.id, status: 'reject' });
-                                                      console.log("Application rejected:", app.applicationId);
-                                                      showToastMessage("Application rejected successfully!", 'success');
+                                                      await updateApplicationStatus({ id: form.id, status: 'reject' });
+                                                      console.log("Application rejected:", form.displayId);
                                                     } catch (error) {
                                                       console.error("Error rejecting application:", error);
                                                     }
                                                   }}
                                                 >
                                                   <XCircle className="h-4 w-4 mr-2" />
-                                                  Reject Application
-                                                </Button>
-                                                <Button
-                                                  variant="outline"
-                                                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
-                                                  onClick={() => setIsNodeSelectionOpen(true)}
-                                                >
-                                                  🌐 Select Node
+                                                  Reject WiFi Application
                                                 </Button>
                                               </div>
                                             </div>
                                           )}
 
-                                          {/* Action Buttons for Accepted Items */}
-                                          {app.status === 'accept' && (
+                                          {/* Action Buttons for Installation Requests */}
+                                          {form.type === 'installation_request' && (
                                             <div className="mt-6 pt-4 border-t">
                                               <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
                                               <div className="flex flex-col sm:flex-row gap-2">
                                                 <Button
-                                                  variant="outline"
-                                                  className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
-                                                  onClick={() => setIsNodeSelectionOpen(true)}
+                                                  className={`text-sm ${form.displayStatus === 'approved'
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-green-600 hover:bg-green-700'
+                                                    } text-white`}
+                                                  onClick={() => {
+                                                    if (form.displayStatus !== 'approved') {
+                                                      setSelectedInstallationRequest(form);
+                                                      setShowInstallationRequestModal(true);
+                                                    }
+                                                  }}
+                                                  disabled={form.displayStatus === 'approved'}
                                                 >
-                                                  🌐 Select Node
+                                                  <HardHat className="h-4 w-4 mr-2" />
+                                                  Assign Engineer
+                                                </Button>
+                                                <Button
+                                                  variant="outline"
+                                                  className="text-sm"
+                                                  onClick={() => {
+                                                    setSelectedInstallationRequest(form);
+                                                    setShowInstallationRequestModal(true);
+                                                  }}
+                                                >
+                                                  <Eye className="h-4 w-4 mr-2" />
+                                                  View Details
                                                 </Button>
                                               </div>
                                             </div>
@@ -1644,652 +1459,1380 @@ export default function InstallationsLeads() {
                                   </TableCell>
                                 </TableRow>
                               ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="installation-requests" className="space-y-4 lg:space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <CardTitle className="text-lg lg:text-xl">Installation Requests</CardTitle>
-                      <CardDescription className="text-sm">Manage installation requests and assign engineers</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => {
-                        console.log("Exporting installation requests data:", transformedInstallationRequests);
-                      }} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
-                        <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
-                        Export Data
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search installation requests..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm text-sm"
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] text-sm">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="text-sm">
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateFilter.from ? (
-                              dateFilter.to ? (
-                                <>
-                                  {format(dateFilter.from, "LLL dd, y")} -{" "}
-                                  {format(dateFilter.to, "LLL dd, y")}
-                                </>
-                              ) : (
-                                format(dateFilter.from, "LLL dd, y")
-                              )
-                            ) : (
-                              <span>Pick a date range</span>
                             )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="end">
-                          <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={dateFilter.from}
-                            selected={{ from: dateFilter.from, to: dateFilter.to }}
-                            onSelect={(range) => {
-                              if (range?.from) {
-                                setDateFilter({ from: range.from, to: range.to });
-                              }
-                            }}
-                            numberOfMonths={2}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  <div className="rounded-lg border overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gray-50 dark:bg-gray-800">
-                            <TableHead className="text-xs lg:text-sm font-medium">Request ID</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Application</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Assigned Engineer</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Documents</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
-                            <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {installationRequestsLoading ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <div className="flex items-center justify-center">
-                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                  <span className="ml-2 text-sm text-gray-600">Loading installation requests...</span>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ) : installationRequestsError ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <div className="text-red-600 text-sm">
-                                  Error loading installation requests. Please refresh the page.
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            transformedInstallationRequests
-                              .filter((req: any) => {
-                                const matchesSearch =
-                                  req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  req.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  req.displayAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  req.displayId.toLowerCase().includes(searchTerm.toLowerCase());
-
-                                const matchesStatus = statusFilter === "all" || req.status === statusFilter;
-
-                                let matchesDate = true;
-                                if (dateFilter.from && dateFilter.to) {
-                                  const reqDate = parseISO(req.createdAt);
-                                  const fromDate = startOfDay(dateFilter.from);
-                                  const toDate = endOfDay(dateFilter.to);
-                                  matchesDate = isAfter(reqDate, fromDate) && isBefore(reqDate, toDate);
+              <TabsContent value="application-forms" className="space-y-4 lg:space-y-6">
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <CardTitle className="text-lg lg:text-xl">WiFi Application Forms</CardTitle>
+                        <CardDescription className="text-sm">Manage WiFi application forms and their status</CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => {
+                          console.log("Exporting application forms data:", transformedApplications);
+                        }} className="bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm px-3 py-2">
+                          <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
+                          Export Data
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search applications..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="max-w-sm text-sm"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="inreview">In Review</SelectItem>
+                          <SelectItem value="accept">Accepted</SelectItem>
+                          <SelectItem value="reject">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="text-sm">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFilter.from ? (
+                                dateFilter.to ? (
+                                  <>
+                                    {format(dateFilter.from, "LLL dd, y")} -{" "}
+                                    {format(dateFilter.to, "LLL dd, y")}
+                                  </>
+                                ) : (
+                                  format(dateFilter.from, "LLL dd, y")
+                                )
+                              ) : (
+                                <span>Pick a date range</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                              initialFocus
+                              mode="range"
+                              defaultMonth={dateFilter.from}
+                              selected={{ from: dateFilter.from, to: dateFilter.to }}
+                              onSelect={(range) => {
+                                if (range?.from) {
+                                  setDateFilter({ from: range.from, to: range.to });
                                 }
+                              }}
+                              numberOfMonths={2}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
 
-                                return matchesSearch && matchesStatus && matchesDate;
-                              })
-                              .map((req: any) => (
-                                <TableRow key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                  <TableCell className="py-3">
-                                    <div className="font-medium text-xs lg:text-sm text-green-600">{req.displayId}</div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div>
-                                      <div className="font-medium text-xs lg:text-sm">{req.name}</div>
-                                      <div className="text-xs text-gray-500 hidden lg:block">{req.displayVillage}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div>
-                                      <div className="text-xs lg:text-sm">{req.phoneNumber}</div>
-                                      {req.alternatePhoneNumber && (
-                                        <div className="text-xs text-gray-500 hidden lg:block">{req.alternatePhoneNumber}</div>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="text-xs lg:text-sm text-blue-600">
-                                      {req.applicationId?.applicationId || 'N/A'}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Badge className={`${getStatusColor(req.status)} text-xs`}>
-                                      {req.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="text-xs lg:text-sm">
-                                      {req.assignedEngineer ? (
-                                        <div className="flex items-center gap-2">
-                                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <span className="text-xs font-medium text-blue-600">
-                                              {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
-                                            </span>
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 dark:bg-gray-800">
+                              <TableHead className="text-xs lg:text-sm font-medium">Application ID</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Plan Details</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Address</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {applicationsLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8">
+                                  <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                    <span className="ml-2 text-sm text-gray-600">Loading applications...</span>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ) : applicationsError ? (
+                              <TableRow>
+                                <TableCell colSpan={8} className="text-center py-8">
+                                  <div className="text-red-600 text-sm">
+                                    Error loading applications. Please refresh the page.
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              transformedApplications
+                                .filter((app: any) => {
+                                  const matchesSearch =
+                                    app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    app.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    app.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    app.applicationId.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                  const matchesStatus = statusFilter === "all" || app.status === statusFilter;
+
+                                  let matchesDate = true;
+                                  if (dateFilter.from && dateFilter.to) {
+                                    const appDate = parseISO(app.createdAt);
+                                    const fromDate = startOfDay(dateFilter.from);
+                                    const toDate = endOfDay(dateFilter.to);
+                                    matchesDate = isAfter(appDate, fromDate) && isBefore(appDate, toDate);
+                                  }
+
+                                  return matchesSearch && matchesStatus && matchesDate;
+                                })
+                                .map((app: any) => (
+                                  <TableRow key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <TableCell className="py-3">
+                                      <div className="font-medium text-xs lg:text-sm text-blue-600">{app.applicationId}</div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div>
+                                        <div className="font-medium text-xs lg:text-sm">{app.name}</div>
+                                        <div className="text-xs text-gray-500 hidden lg:block">{app.village}</div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div>
+                                        <div className="text-xs lg:text-sm">{app.phoneNumber}</div>
+                                        {app.alternatePhoneNumber && (
+                                          <div className="text-xs text-gray-500 hidden lg:block">{app.alternatePhoneNumber}</div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="max-w-xs">
+                                        {app.planDetails ? (
+                                          <div className="space-y-1">
+                                            <div className="text-xs lg:text-sm font-medium">{app.planDetails.title}</div>
+                                            <div className="text-xs text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
+                                            <div className="text-xs text-gray-500">{app.planDetails.provider}</div>
                                           </div>
-                                          <span>{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</span>
-                                        </div>
-                                      ) : (
-                                        <span className="text-gray-500">Not assigned</span>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex gap-1">
-                                      {req.aadhaarFrontUrl && (
-                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                                          Aadhaar ✓
-                                        </Badge>
-                                      )}
-                                      {req.passportPhotoUrl && (
-                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                                          Photo ✓
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="text-xs lg:text-sm">
-                                      {format(parseISO(req.createdAt), "MMM dd, yyyy")}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex gap-1">
-                                      <Dialog>
-                                        <DialogTrigger asChild>
-                                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                                            <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
-                                          </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                                          <DialogHeader>
-                                            <DialogTitle className="text-lg lg:text-xl">
-                                              Installation Request Details - {req.name}
-                                            </DialogTitle>
-                                            <DialogDescription className="text-sm">
-                                              Complete installation request information and documents
-                                            </DialogDescription>
-                                          </DialogHeader>
-                                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                            <div>
-                                              <Label className="text-sm font-medium">Request ID</Label>
-                                              <p className="text-sm font-mono">{req.displayId}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Status</Label>
-                                              <Badge className={`${getStatusColor(req.status)} text-sm`}>
-                                                {req.status}
-                                              </Badge>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Customer Name</Label>
-                                              <p className="text-sm">{req.name}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Email</Label>
-                                              <p className="text-sm">{req.email}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Contact Number</Label>
-                                              <p className="text-sm">{req.countryCode} {req.phoneNumber}</p>
-                                            </div>
-                                            {req.alternatePhoneNumber && (
+                                        ) : (
+                                          <div className="text-xs text-gray-500">No plan selected</div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <Badge className={`${getStatusColor(app.status)} text-xs`}>
+                                        {app.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="text-xs text-gray-600 max-w-xs truncate">
+                                        {app.address}, {app.village} - {app.pincode}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="text-xs lg:text-sm">
+                                        {format(parseISO(app.createdAt), "MMM dd, yyyy")}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="flex gap-1">
+                                        <Dialog>
+                                          <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                              <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                            </Button>
+                                          </DialogTrigger>
+                                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                            <DialogHeader>
+                                              <DialogTitle className="text-lg lg:text-xl">
+                                                WiFi Application Details - {app.name}
+                                              </DialogTitle>
+                                              <DialogDescription className="text-sm">
+                                                Complete application information and plan details
+                                              </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                               <div>
-                                                <Label className="text-sm font-medium">Alternate Phone</Label>
-                                                <p className="text-sm">{req.alternateCountryCode} {req.alternatePhoneNumber}</p>
+                                                <Label className="text-sm font-medium">Application ID</Label>
+                                                <p className="text-sm font-mono">{app.applicationId}</p>
                                               </div>
-                                            )}
-                                            <div className="lg:col-span-2">
-                                              <Label className="text-sm font-medium">Address</Label>
-                                              <p className="text-sm">{req.displayAddress}, {req.displayVillage} - {req.displayPincode}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Application ID</Label>
-                                              <p className="text-sm text-blue-600">{req.applicationId?.applicationId || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                              <Label className="text-sm font-medium">Created Date</Label>
-                                              <p className="text-sm">{format(parseISO(req.createdAt), "MMM dd, yyyy HH:mm")}</p>
-                                            </div>
-                                            {req.assignedEngineer && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Status</Label>
+                                                <Badge className={`${getStatusColor(app.status)} text-sm`}>
+                                                  {app.status}
+                                                </Badge>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Customer Name</Label>
+                                                <p className="text-sm">{app.name}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Contact Number</Label>
+                                                <p className="text-sm">{app.countryCode} {app.phoneNumber}</p>
+                                              </div>
+                                              {app.alternatePhoneNumber && (
+                                                <div>
+                                                  <Label className="text-sm font-medium">Alternate Phone</Label>
+                                                  <p className="text-sm">{app.alternateCountryCode} {app.alternatePhoneNumber}</p>
+                                                </div>
+                                              )}
+                                              <div>
+                                                <Label className="text-sm font-medium">Email</Label>
+                                                <p className="text-sm">{app.userDetails?.email || 'N/A'}</p>
+                                              </div>
                                               <div className="lg:col-span-2">
-                                                <Label className="text-sm font-medium">Assigned Engineer</Label>
-                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                                                  <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                      <span className="text-sm font-medium text-blue-600">
-                                                        {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <div className="font-medium">{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</div>
-                                                      <div className="text-sm text-gray-600">{req.assignedEngineer.email}</div>
-                                                      <div className="text-sm text-gray-500">{req.assignedEngineer.phoneNumber}</div>
+                                                <Label className="text-sm font-medium">Address</Label>
+                                                <p className="text-sm">{app.address}, {app.village} - {app.pincode}</p>
+                                              </div>
+                                              {app.planDetails && (
+                                                <>
+                                                  <div className="lg:col-span-2">
+                                                    <Label className="text-sm font-medium">Selected Plan</Label>
+                                                    <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                                      <div className="flex items-center gap-3">
+                                                        {app.planDetails.logo && (
+                                                          <img
+                                                            src={`${BASE_URL}${app.planDetails.logo}`}
+                                                            alt={app.planDetails.provider}
+                                                            className="w-12 h-12 object-cover rounded-lg"
+                                                          />
+                                                        )}
+                                                        <div className="flex-1">
+                                                          <div className="font-medium">{app.planDetails.title}</div>
+                                                          <div className="text-sm text-gray-600">₹{app.planDetails.price} - {app.planDetails.speed} Mbps</div>
+                                                          <div className="text-xs text-gray-500">{app.planDetails.provider} • {app.planDetails.validity}</div>
+                                                        </div>
+                                                      </div>
+                                                      {app.planDetails.benefits && app.planDetails.benefits.length > 0 && (
+                                                        <div className="mt-2">
+                                                          <div className="text-xs font-medium text-gray-600">Benefits:</div>
+                                                          <div className="flex flex-wrap gap-1 mt-1">
+                                                            {app.planDetails.benefits.map((benefit: string, index: number) => (
+                                                              <Badge key={index} variant="secondary" className="text-xs">
+                                                                {benefit}
+                                                              </Badge>
+                                                            ))}
+                                                          </div>
+                                                        </div>
+                                                      )}
                                                     </div>
                                                   </div>
-                                                </div>
+                                                </>
+                                              )}
+                                              <div>
+                                                <Label className="text-sm font-medium">Created Date</Label>
+                                                <p className="text-sm">{format(parseISO(app.createdAt), "MMM dd, yyyy HH:mm")}</p>
                                               </div>
-                                            )}
-                                            {req.remarks && (
-                                              <div className="lg:col-span-2">
-                                                <Label className="text-sm font-medium">Remarks</Label>
-                                                <p className="text-sm">{req.remarks}</p>
+                                              <div>
+                                                <Label className="text-sm font-medium">Last Updated</Label>
+                                                <p className="text-sm">{format(parseISO(app.updatedAt), "MMM dd, yyyy HH:mm")}</p>
                                               </div>
-                                            )}
-                                          </div>
+                                            </div>
 
-                                          {/* Documents Section */}
-                                          <div className="mt-6">
-                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                              {req.aadhaarFrontUrl && (
-                                                <div className="text-center">
-                                                  <Label className="text-sm font-medium">Aadhaar Front</Label>
-                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                    <img
-                                                      src={`${BASE_URL}${req.aadhaarFrontUrl}`}
-                                                      alt="Aadhaar Front"
-                                                      className="w-full h-32 object-cover rounded-lg"
-                                                    />
-                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                            {/* Action Buttons for In Review Items */}
+                                            {app.status === 'inreview' && (
+                                              <div className="mt-6 pt-4 border-t">
+                                                <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                  <Button
+                                                    className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                                                    onClick={async () => {
+                                                      try {
+                                                        await updateApplicationStatus({ id: app.id, status: 'accept' });
+                                                        console.log("Application accepted:", app.applicationId);
+                                                        showToastMessage("Application accepted successfully!", 'success');
+                                                      } catch (error) {
+                                                        console.error("Error accepting application:", error);
+                                                        showToastMessage("Error accepting application. Please try again.", 'error');
+                                                      }
+                                                    }}
+                                                  >
+                                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                                    Accept Application
+                                                  </Button>
+                                                  <Button
+                                                    variant="destructive"
+                                                    className="text-sm"
+                                                    onClick={async () => {
+                                                      try {
+                                                        await updateApplicationStatus({ id: app.id, status: 'reject' });
+                                                        console.log("Application rejected:", app.applicationId);
+                                                        showToastMessage("Application rejected successfully!", 'success');
+                                                      } catch (error) {
+                                                        console.error("Error rejecting application:", error);
+                                                      }
+                                                    }}
+                                                  >
+                                                    <XCircle className="h-4 w-4 mr-2" />
+                                                    Reject Application
+                                                  </Button>
+
+                                                </div>
+                                              </div>
+                                            )}
+                                          </DialogContent>
+                                        </Dialog>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="installation-requests" className="space-y-4 lg:space-y-6">
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <CardTitle className="text-lg lg:text-xl">Installation Requests</CardTitle>
+                        <CardDescription className="text-sm">Manage installation requests and assign engineers</CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={() => {
+                          console.log("Exporting installation requests data:", transformedInstallationRequests);
+                        }} className="bg-green-600 hover:bg-green-700 text-white text-xs lg:text-sm px-3 py-2">
+                          <Download className="mr-1 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4" />
+                          Export Data
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search installation requests..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="max-w-sm text-sm"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px] text-sm">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="text-sm">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFilter.from ? (
+                                dateFilter.to ? (
+                                  <>
+                                    {format(dateFilter.from, "LLL dd, y")} -{" "}
+                                    {format(dateFilter.to, "LLL dd, y")}
+                                  </>
+                                ) : (
+                                  format(dateFilter.from, "LLL dd, y")
+                                )
+                              ) : (
+                                <span>Pick a date range</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                              initialFocus
+                              mode="range"
+                              defaultMonth={dateFilter.from}
+                              selected={{ from: dateFilter.from, to: dateFilter.to }}
+                              onSelect={(range) => {
+                                if (range?.from) {
+                                  setDateFilter({ from: range.from, to: range.to });
+                                }
+                              }}
+                              numberOfMonths={2}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50 dark:bg-gray-800">
+                              <TableHead className="text-xs lg:text-sm font-medium">Request ID</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Customer</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Contact</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Application</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Status</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Installation</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Assigned Engineer</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Documents</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Created</TableHead>
+                              <TableHead className="text-xs lg:text-sm font-medium">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {installationRequestsLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={10} className="text-center py-8">
+                                  <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                                    <span className="ml-2 text-sm text-gray-600">Loading installation requests...</span>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ) : installationRequestsError ? (
+                              <TableRow>
+                                <TableCell colSpan={10} className="text-center py-8">
+                                  <div className="text-red-600 text-sm">
+                                    Error loading installation requests. Please refresh the page.
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              transformedInstallationRequests
+                                .filter((req: any) => {
+                                  const matchesSearch =
+                                    req.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    req.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    req.displayAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    req.displayId.toLowerCase().includes(searchTerm.toLowerCase());
+
+                                  const matchesStatus = statusFilter === "all" || req.status === statusFilter;
+
+                                  let matchesDate = true;
+                                  if (dateFilter.from && dateFilter.to) {
+                                    const reqDate = parseISO(req.createdAt);
+                                    const fromDate = startOfDay(dateFilter.from);
+                                    const toDate = endOfDay(dateFilter.to);
+                                    matchesDate = isAfter(reqDate, fromDate) && isBefore(reqDate, toDate);
+                                  }
+
+                                  return matchesSearch && matchesStatus && matchesDate;
+                                })
+                                .map((req: any) => (
+                                  <TableRow key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                                    <TableCell className="py-3">
+                                      <div className="font-medium text-xs lg:text-sm text-green-600">{req.displayId}</div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div>
+                                        <div className="font-medium text-xs lg:text-sm">{req.name}</div>
+                                        <div className="text-xs text-gray-500 hidden lg:block">{req.displayVillage}</div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div>
+                                        <div className="text-xs lg:text-sm">{req.phoneNumber}</div>
+                                        {req.alternatePhoneNumber && (
+                                          <div className="text-xs text-gray-500 hidden lg:block">{req.alternatePhoneNumber}</div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="text-xs lg:text-sm text-blue-600">
+                                        {req.applicationId?.applicationId || 'N/A'}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <Badge className={`${getStatusColor(req.status)} text-xs`}>
+                                        {req.status}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      {req.status === 'approved' ? (
+                                        <Badge
+                                          variant={req.isInstalled ? "default" : "secondary"}
+                                          className={`text-xs ${req.isInstalled
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                            : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                                            }`}
+                                        >
+                                          {req.isInstalled ? (
+                                            <>
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Installed
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Clock className="h-3 w-3 mr-1" />
+                                              Pending
+                                            </>
+                                          )}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-xs text-gray-400">N/A</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="text-xs lg:text-sm">
+                                        {req.assignedEngineer ? (
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                              <span className="text-xs font-medium text-blue-600">
+                                                {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
+                                              </span>
+                                            </div>
+                                            <span>{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-500">Not assigned</span>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="flex gap-1">
+                                        {req.aadhaarFrontUrl && (
+                                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                            Aadhaar ✓
+                                          </Badge>
+                                        )}
+                                        {req.passportPhotoUrl && (
+                                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                            Photo ✓
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="text-xs lg:text-sm">
+                                        {format(parseISO(req.createdAt), "MMM dd, yyyy")}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-3">
+                                      <div className="flex gap-1">
+                                        <Dialog>
+                                          <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                                              <Eye className="h-3 w-3 lg:h-4 lg:w-4" />
+                                            </Button>
+                                          </DialogTrigger>
+                                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                                            <DialogHeader>
+                                              <DialogTitle className="text-lg lg:text-xl">
+                                                Installation Request Details - {req.name}
+                                              </DialogTitle>
+                                              <DialogDescription className="text-sm">
+                                                Complete installation request information and documents
+                                              </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                              <div>
+                                                <Label className="text-sm font-medium">Request ID</Label>
+                                                <p className="text-sm font-mono">{req.displayId}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Status</Label>
+                                                <Badge className={`${getStatusColor(req.status)} text-sm`}>
+                                                  {req.status}
+                                                </Badge>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Customer Name</Label>
+                                                <p className="text-sm">{req.name}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Email</Label>
+                                                <p className="text-sm">{req.email}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Contact Number</Label>
+                                                <p className="text-sm">{req.countryCode} {req.phoneNumber}</p>
+                                              </div>
+                                              {req.alternatePhoneNumber && (
+                                                <div>
+                                                  <Label className="text-sm font-medium">Alternate Phone</Label>
+                                                  <p className="text-sm">{req.alternateCountryCode} {req.alternatePhoneNumber}</p>
+                                                </div>
+                                              )}
+                                              <div className="lg:col-span-2">
+                                                <Label className="text-sm font-medium">Address</Label>
+                                                <p className="text-sm">{req.displayAddress}, {req.displayVillage} - {req.displayPincode}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Application ID</Label>
+                                                <p className="text-sm text-blue-600">{req.applicationId?.applicationId || 'N/A'}</p>
+                                              </div>
+                                              <div>
+                                                <Label className="text-sm font-medium">Created Date</Label>
+                                                <p className="text-sm">{format(parseISO(req.createdAt), "MMM dd, yyyy HH:mm")}</p>
+                                              </div>
+                                              {req.assignedEngineer && (
+                                                <div className="lg:col-span-2">
+                                                  <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                                        <span className="text-sm font-medium text-blue-600">
+                                                          {req.assignedEngineer.firstName?.[0]}{req.assignedEngineer.lastName?.[0]}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <div className="font-medium">{req.assignedEngineer.firstName} {req.assignedEngineer.lastName}</div>
+                                                        <div className="text-sm text-gray-600">{req.assignedEngineer.email}</div>
+                                                        <div className="text-sm text-gray-500">{req.assignedEngineer.phoneNumber}</div>
+                                                      </div>
+                                                    </div>
                                                   </div>
                                                 </div>
                                               )}
-                                              {req.aadhaarBackUrl && (
-                                                <div className="text-center">
-                                                  <Label className="text-sm font-medium">Aadhaar Back</Label>
-                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                    <img
-                                                      src={`${BASE_URL}${req.aadhaarBackUrl}`}
-                                                      alt="Aadhaar Back"
-                                                      className="w-full h-32 object-cover rounded-lg"
-                                                    />
-                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
-                                                  </div>
-                                                </div>
-                                              )}
-                                              {req.passportPhotoUrl && (
-                                                <div className="text-center">
-                                                  <Label className="text-sm font-medium">Passport Photo</Label>
-                                                  <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                                                    <img
-                                                      src={`${BASE_URL}${req.passportPhotoUrl}`}
-                                                      alt="Passport Photo"
-                                                      className="w-full h-32 object-cover rounded-lg"
-                                                    />
-                                                    <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
-                                                  </div>
+                                              {req.remarks && (
+                                                <div className="lg:col-span-2">
+                                                  <Label className="text-sm font-medium">Remarks</Label>
+                                                  <p className="text-sm">{req.remarks}</p>
                                                 </div>
                                               )}
                                             </div>
-                                          </div>
 
-                                          {/* Action Buttons for Installation Requests */}
-                                          <div className="mt-6 pt-4 border-t">
-                                            <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
-                                            <div className="flex flex-col sm:flex-row gap-2">
-                                              <Button
-                                                className={`text-sm ${req.status === 'approved'
-                                                  ? 'bg-gray-400 cursor-not-allowed'
-                                                  : 'bg-green-600 hover:bg-green-700'
-                                                  } text-white`}
-                                                onClick={() => {
-                                                  if (req.status !== 'approved') {
+                                            {/* Documents Section */}
+                                            <div className="mt-6">
+                                              <h4 className="font-semibold mb-3 text-sm lg:text-base">Documents</h4>
+                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                {req.aadhaarFrontUrl && (
+                                                  <div className="text-center">
+                                                    <Label className="text-sm font-medium">Aadhaar Front</Label>
+                                                    <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                      <img
+                                                        src={`${BASE_URL}${req.aadhaarFrontUrl}`}
+                                                        alt="Aadhaar Front"
+                                                        className="w-full h-32 object-cover rounded-lg"
+                                                      />
+                                                      <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                {req.aadhaarBackUrl && (
+                                                  <div className="text-center">
+                                                    <Label className="text-sm font-medium">Aadhaar Back</Label>
+                                                    <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                      <img
+                                                        src={`${BASE_URL}${req.aadhaarBackUrl}`}
+                                                        alt="Aadhaar Back"
+                                                        className="w-full h-32 object-cover rounded-lg"
+                                                      />
+                                                      <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                {req.passportPhotoUrl && (
+                                                  <div className="text-center">
+                                                    <Label className="text-sm font-medium">Passport Photo</Label>
+                                                    <div className="mt-2 p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
+                                                      <img
+                                                        src={`${BASE_URL}${req.passportPhotoUrl}`}
+                                                        alt="Passport Photo"
+                                                        className="w-full h-32 object-cover rounded-lg"
+                                                      />
+                                                      <p className="text-xs mt-1 text-green-600">✓ Uploaded</p>
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {/* Action Buttons for Installation Requests */}
+                                            <div className="mt-6 pt-4 border-t">
+                                              <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
+                                              <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button
+                                                  className={`text-sm ${req.status === 'approved'
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-green-600 hover:bg-green-700'
+                                                    } text-white`}
+                                                  onClick={() => {
+                                                    if (req.status !== 'approved') {
+                                                      setSelectedInstallationRequest(req);
+                                                      setShowInstallationRequestModal(true);
+                                                    }
+                                                  }}
+                                                  disabled={req.status === 'approved'}
+                                                >
+                                                  <HardHat className="h-4 w-4 mr-2" />
+                                                  Assign Engineer
+                                                </Button>
+                                                <Button
+                                                  variant="outline"
+                                                  className="text-sm"
+                                                  onClick={() => {
                                                     setSelectedInstallationRequest(req);
                                                     setShowInstallationRequestModal(true);
-                                                  }
-                                                }}
-                                                disabled={req.status === 'approved'}
-                                              >
-                                                <HardHat className="h-4 w-4 mr-2" />
-                                                Assign Engineer
-                                              </Button>
-                                              <Button
-                                                variant="outline"
-                                                className="text-sm"
-                                                onClick={() => {
-                                                  setSelectedInstallationRequest(req);
-                                                  setShowInstallationRequestModal(true);
-                                                }}
-                                              >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                View Details
-                                              </Button>
-                                              <Button
-                                                variant="outline"
-                                                className="border-green-500 text-green-600 hover:bg-green-50 text-sm"
-                                                onClick={() => setIsNodeSelectionOpen(true)}
-                                              >
-                                                🌐 Select Node
-                                              </Button>
+                                                  }}
+                                                >
+                                                  <Eye className="h-4 w-4 mr-2" />
+                                                  View Details
+                                                </Button>
+
+                                              </div>
                                             </div>
-                                          </div>
-                                        </DialogContent>
-                                      </Dialog>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="analytics" className="space-y-4 lg:space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">In Review Applications</CardTitle>
-                    <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold text-blue-600">{analytics.inReviewApplications}</div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      Applications under review
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Accepted Applications</CardTitle>
-                    <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold text-green-600">{analytics.acceptedApplications}</div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      {analytics.applicationSuccessRate}% success rate
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Total Applications</CardTitle>
-                    <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold text-purple-600">{transformedApplications.length}</div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      Application forms submitted
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm lg:text-base font-medium">Installation Requests</CardTitle>
-                    <Building className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-xl lg:text-2xl font-bold text-orange-600">{transformedInstallationRequests.length}</div>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      Requests in review
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                <Card className="shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base lg:text-lg">Installation Request Status Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">In Review</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length / transformedInstallationRequests.length) * 100}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Approved</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'approved').length / transformedInstallationRequests.length) * 100}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Rejected</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length / transformedInstallationRequests.length) * 100}%` }}></div>
+                                          </DialogContent>
+                                        </Dialog>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                <Card className="shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-base lg:text-lg">Application Status Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">In Review</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'inreview').length}</span>
+              <TabsContent value="analytics" className="space-y-4 lg:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm lg:text-base font-medium">In Review Applications</CardTitle>
+                      <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl lg:text-2xl font-bold text-blue-600">{analytics.inReviewApplications}</div>
+                      <p className="text-xs lg:text-sm text-muted-foreground">
+                        Applications under review
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm lg:text-base font-medium">Accepted Applications</CardTitle>
+                      <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl lg:text-2xl font-bold text-green-600">{analytics.acceptedApplications}</div>
+                      <p className="text-xs lg:text-sm text-muted-foreground">
+                        {analytics.applicationSuccessRate}% success rate
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm lg:text-base font-medium">Total Applications</CardTitle>
+                      <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl lg:text-2xl font-bold text-purple-600">{transformedApplications.length}</div>
+                      <p className="text-xs lg:text-sm text-muted-foreground">
+                        Application forms submitted
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                      <CardTitle className="text-sm lg:text-base font-medium">Installation Requests</CardTitle>
+                      <Building className="h-4 w-4 lg:h-5 lg:w-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-xl lg:text-2xl font-bold text-orange-600">{transformedInstallationRequests.length}</div>
+                      <p className="text-xs lg:text-sm text-muted-foreground">
+                        Requests in review
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-base lg:text-lg">Installation Request Status Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">In Review</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'inreview').length / transformedInstallationRequests.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'inreview').length / transformedApplications.length) * 100}%` }}></div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">Approved</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'approved').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'approved').length / transformedInstallationRequests.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Accepted</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'accept').length}</span>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">Rejected</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedInstallationRequests.filter((req: any) => req.status === 'rejected').length / transformedInstallationRequests.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'accept').length / transformedApplications.length) * 100}%` }}></div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-base lg:text-lg">Application Status Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">In Review</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'inreview').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-yellow-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'inreview').length / transformedApplications.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm lg:text-base">Rejected</span>
-                        <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'reject').length}</span>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">Accepted</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'accept').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-green-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'accept').length / transformedApplications.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'reject').length / transformedApplications.length) * 100}%` }}></div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm lg:text-base">Rejected</span>
+                          <span className="text-sm lg:text-base font-medium">{transformedApplications.filter((app: any) => app.status === 'reject').length}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(transformedApplications.filter((app: any) => app.status === 'reject').length / transformedApplications.length) * 100}%` }}></div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
 
 
 
 
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
       </div>
 
       {/* Installation Request Details Modal */}
       <Dialog open={showInstallationRequestModal} onOpenChange={setShowInstallationRequestModal}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b">
-            <DialogTitle className="text-base sm:text-lg lg:text-xl">Installation Request Details</DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Review and manage installation request
-            </DialogDescription>
+        <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-6 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white">
+                  <HardHat className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl lg:text-2xl font-bold">
+                    Installation Request Details
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    {selectedInstallationRequest?.name} • {selectedInstallationRequest?.displayId}
+                  </DialogDescription>
+                </div>
+              </div>
+              {selectedInstallationRequest?.status === 'approved' && (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Approved
+                  </Badge>
+                  {selectedInstallationRequest?.isInstalled && (
+                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Installed
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
           </DialogHeader>
 
           {selectedInstallationRequest && (
-            <div className="space-y-4 pt-4">
-              {/* Status Banner */}
-              <div className={`p-3 sm:p-4 rounded-lg border ${selectedInstallationRequest.status === 'approved'
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600'
-                  : selectedInstallationRequest.status === 'rejected'
-                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600'
-                    : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-600'
+            <div className="space-y-8 pt-6 px-1">
+              {/* Enhanced Status Banner */}
+              <div className={`p-4 sm:p-6 rounded-xl border-2 ${selectedInstallationRequest.status === 'approved'
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-600'
+                : selectedInstallationRequest.status === 'rejected'
+                  ? 'bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-300 dark:border-red-600'
+                  : 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-300 dark:border-yellow-600'
                 }`}>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedInstallationRequest.status === 'approved' ? (
-                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
-                  ) : selectedInstallationRequest.status === 'rejected' ? (
-                    <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 flex-shrink-0" />
-                  ) : (
-                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 flex-shrink-0" />
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    {selectedInstallationRequest.status === 'approved' ? (
+                      <div className="p-3 bg-green-100 dark:bg-green-800 rounded-full">
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                      </div>
+                    ) : selectedInstallationRequest.status === 'rejected' ? (
+                      <div className="p-3 bg-red-100 dark:bg-red-800 rounded-full">
+                        <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-yellow-100 dark:bg-yellow-800 rounded-full">
+                        <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                    )}
+                    <div>
+                      <h4 className={`font-bold text-lg ${selectedInstallationRequest.status === 'approved'
+                        ? 'text-green-700 dark:text-green-300'
+                        : selectedInstallationRequest.status === 'rejected'
+                          ? 'text-red-700 dark:text-red-300'
+                          : 'text-yellow-700 dark:text-yellow-300'
+                        }`}>
+                        {selectedInstallationRequest.status.charAt(0).toUpperCase() + selectedInstallationRequest.status.slice(1)} Request
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedInstallationRequest.status === 'approved' && 'Ready for installation deployment' ||
+                          selectedInstallationRequest.status === 'rejected' && 'Request has been declined' ||
+                          'Awaiting review and approval'}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedInstallationRequest.status === 'approved' && selectedInstallationRequest.customerDetails && (
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                          Installation: {selectedInstallationRequest.customerDetails.isInstalled ? 'Completed' : 'In Progress'}
+                        </p>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          {selectedInstallationRequest.customerDetails.installationDate
+                            ? format(parseISO(selectedInstallationRequest.customerDetails.installationDate), "MMM dd, yyyy")
+                            : 'Date TBD'}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={selectedInstallationRequest.customerDetails.isInstalled ? "default" : "secondary"}
+                        className={`text-sm px-3 py-1 ${selectedInstallationRequest.customerDetails.isInstalled
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                          : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                          }`}
+                      >
+                        {selectedInstallationRequest.customerDetails.isInstalled ? (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Installed
+                          </>
+                        ) : (
+                          <>
+                            <Clock className="h-4 w-4 mr-1" />
+                            Pending
+                          </>
+                        )}
+                      </Badge>
+                    </div>
                   )}
-                  <span className={`font-medium text-xs sm:text-sm ${selectedInstallationRequest.status === 'approved'
-                      ? 'text-green-700 dark:text-green-300'
-                      : selectedInstallationRequest.status === 'rejected'
-                        ? 'text-red-700 dark:text-red-300'
-                        : 'text-yellow-700 dark:text-yellow-300'
-                    }`}>
-                    Status: {selectedInstallationRequest.status.charAt(0).toUpperCase() + selectedInstallationRequest.status.slice(1)}
-                  </span>
                 </div>
-                {selectedInstallationRequest.status === 'approved' && (
-                  <div className="mt-2 space-y-2">
-                    <p className="text-xs sm:text-sm text-green-600 dark:text-green-400">
-                      This installation request has been approved and an engineer has been assigned.
-                    </p>
-                    {/* Show connected node information if available */}
-                    {(selectedInstallationRequest.connectedToOlt || selectedInstallationRequest.connectedToEndDevice) && (
-                      <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-700">
-                        <h4 className="font-medium text-green-800 dark:text-green-200 text-xs sm:text-sm mb-2">📡 Connected Network Node</h4>
-                        <div className="space-y-1">
-                          {selectedInstallationRequest.connectedToOlt && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-green-700 dark:text-green-300 font-medium">OLT:</span>
-                              <span className="text-xs text-green-600 dark:text-green-400">{selectedInstallationRequest.connectedToOlt}</span>
-                            </div>
-                          )}
-                          {selectedInstallationRequest.connectedToEndDevice && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-green-700 dark:text-green-300 font-medium">End Device:</span>
-                              <span className="text-xs text-green-600 dark:text-green-400">{selectedInstallationRequest.connectedToEndDevice}</span>
-                            </div>
-                          )}
+              </div>
+
+              {/* Customer Information Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                    <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Customer Information</h3>
+                </div>
+                <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        Customer Name
+                      </Label>
+                      <p className="text-xs sm:text-sm font-medium">{selectedInstallationRequest.name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        Request ID
+                      </Label>
+                      <p className="text-xs sm:text-sm font-mono">{selectedInstallationRequest.displayId}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        Phone Number
+                      </Label>
+                      <p className="text-xs sm:text-sm">{selectedInstallationRequest.phoneNumber}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        Email
+                      </Label>
+                      <p className="text-xs sm:text-sm break-all">{selectedInstallationRequest.email}</p>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        Address
+                      </Label>
+                      <p className="text-xs sm:text-sm">{selectedInstallationRequest.displayAddress}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Status
+                      </Label>
+                      <Badge className={`${getStatusColor(selectedInstallationRequest.status)} text-xs`}>
+                        {selectedInstallationRequest.status}
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <CalendarIcon className="h-3 w-3" />
+                        Created Date
+                      </Label>
+                      <p className="text-xs sm:text-sm">{format(parseISO(selectedInstallationRequest.createdAt), "MMM dd, yyyy")}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Details Section - Show for approved requests */}
+              {selectedInstallationRequest?.status === 'approved' && selectedInstallationRequest?.customerDetails && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                    <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg">
+                      <Building className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Customer Installation Details</h3>
+                    <Badge variant="default" className="text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Approved
+                    </Badge>
+                  </div>
+                  <div className="bg-gradient-to-br from-emerald-50/50 to-green-50/50 dark:from-emerald-900/10 dark:to-green-900/10 rounded-xl p-6 border border-emerald-100 dark:border-emerald-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Router className="h-3 w-3" />
+                          Assigned OLT
+                        </Label>
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
+                          <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
+                            {selectedInstallationRequest.customerDetails.oltId?.serialNumber || 'N/A'}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                            Power: {selectedInstallationRequest.customerDetails.oltId?.oltPower || 'N/A'}W
+                          </p>
                         </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Building className="h-3 w-3" />
+                          Assigned FDB
+                        </Label>
+                        <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
+                          <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300">
+                            {selectedInstallationRequest.customerDetails.fdbId?.fdbName || 'N/A'}
+                          </p>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Power: {selectedInstallationRequest.customerDetails.fdbId?.fdbPower || 'N/A'}W
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" />
+                          Installation Date
+                        </Label>
+                        <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {selectedInstallationRequest.customerDetails.installationDate
+                            ? format(parseISO(selectedInstallationRequest.customerDetails.installationDate), "MMM dd, yyyy HH:mm")
+                            : 'Not scheduled'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Installation Status
+                        </Label>
+                        <Badge
+                          variant={selectedInstallationRequest.customerDetails.isInstalled ? "default" : "secondary"}
+                          className={`text-xs ${selectedInstallationRequest.customerDetails.isInstalled
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                            }`}
+                        >
+                          {selectedInstallationRequest.customerDetails.isInstalled ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Completed
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-3 w-3 mr-1" />
+                              In Progress
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          Balance Due
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-yellow-50 dark:bg-yellow-900/20 px-2 py-1 rounded">
+                          ₹{selectedInstallationRequest.customerDetails.balanceDue || 0}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* </div> */}
+                </div>
+              )}
+
+              {/* Modem Details Section - Show for approved requests */}
+              {selectedInstallationRequest?.status === 'approved' && selectedInstallationRequest?.modemDetails && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg">
+                      <Wifi className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Assigned Modem Details</h3>
+                    <Badge variant="default" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <Router className="h-3 w-3 mr-1" />
+                      Configured
+                    </Badge>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Router className="h-3 w-3" />
+                          Modem Name
+                        </Label>
+                        <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded font-medium">
+                          {selectedInstallationRequest.modemDetails.modemName}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Settings className="h-3 w-3" />
+                          ONT Type
+                        </Label>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedInstallationRequest.modemDetails.ontType}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          Model Number
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {selectedInstallationRequest.modemDetails.modelNumber}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          Serial Number
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {selectedInstallationRequest.modemDetails.serialNumber}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Network className="h-3 w-3" />
+                          ONT MAC Address
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {selectedInstallationRequest.modemDetails.ontMac}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Username
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                          {selectedInstallationRequest.modemDetails.username}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <Shield className="h-3 w-3" />
+                          Password
+                        </Label>
+                        <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                          {selectedInstallationRequest.modemDetails.password ? '••••••••' : 'Not configured'}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Active Status
+                        </Label>
+                        <Badge
+                          variant={selectedInstallationRequest.modemDetails.isActive ? "default" : "secondary"}
+                          className={`text-xs ${selectedInstallationRequest.modemDetails.isActive
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}
+                        >
+                          {selectedInstallationRequest.modemDetails.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Documents Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-800 rounded-lg">
+                      <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Required Documents</h3>
+                  </div>
+                  {/* Download All Documents Button - Always visible */}
+                  <Button
+                    onClick={handleDownloadAllDocuments}
+                    disabled={isDownloading || (!selectedInstallationRequest.aadhaarFrontUrl &&
+                      !selectedInstallationRequest.aadhaarBackUrl &&
+                      !selectedInstallationRequest.passportPhotoUrl)}
+                    variant="default"
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm shadow-md"
+                  >
+                    {isDownloading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-1 sm:mr-2"></div>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Download All Docs
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="bg-white/60 dark:bg-gray-800/60 rounded-xl p-6 border border-gray-100 dark:border-gray-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+                    {selectedInstallationRequest.aadhaarFrontUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600 relative group">
+                        <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-green-700 dark:text-green-300">Aadhaar Front</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">Verified ✓</p>
+                        {/* Individual Download Button */}
+                        <Button
+                          onClick={() => {
+                            const filename = `${selectedInstallationRequest.name}_Aadhaar_Front.jpg`;
+                            const url = `${BASE_URL}${selectedInstallationRequest.aadhaarFrontUrl}`;
+                            downloadIndividualFile(url, filename);
+                          }}
+                          disabled={downloadingFile === `${selectedInstallationRequest.name}_Aadhaar_Front.jpg`}
+                          variant="default"
+                          size="sm"
+                          className="absolute top-2 right-2 h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white shadow-md opacity-90 hover:opacity-100 transition-all disabled:opacity-50"
+                        >
+                          {downloadingFile === `${selectedInstallationRequest.name}_Aadhaar_Front.jpg` ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          ) : (
+                            <DownloadIcon className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {selectedInstallationRequest.aadhaarBackUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600 relative group">
+                        <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-green-700 dark:text-green-300">Aadhaar Back</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">Verified ✓</p>
+                        {/* Individual Download Button */}
+                        <Button
+                          onClick={() => {
+                            const filename = `${selectedInstallationRequest.name}_Aadhaar_Back.jpg`;
+                            const url = `${BASE_URL}${selectedInstallationRequest.aadhaarBackUrl}`;
+                            downloadIndividualFile(url, filename);
+                          }}
+                          disabled={downloadingFile === `${selectedInstallationRequest.name}_Aadhaar_Back.jpg`}
+                          variant="default"
+                          size="sm"
+                          className="absolute top-2 right-2 h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white shadow-md opacity-90 hover:opacity-100 transition-all disabled:opacity-50"
+                        >
+                          {downloadingFile === `${selectedInstallationRequest.name}_Aadhaar_Back.jpg` ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          ) : (
+                            <DownloadIcon className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {selectedInstallationRequest.passportPhotoUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600 relative group">
+                        <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-green-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-green-700 dark:text-green-300">Passport Photo</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">Verified ✓</p>
+                        {/* Individual Download Button */}
+                        <Button
+                          onClick={() => {
+                            const filename = `${selectedInstallationRequest.name}_Passport_Photo.jpg`;
+                            const url = `${BASE_URL}${selectedInstallationRequest.passportPhotoUrl}`;
+                            downloadIndividualFile(url, filename);
+                          }}
+                          disabled={downloadingFile === `${selectedInstallationRequest.name}_Passport_Photo.jpg`}
+                          variant="default"
+                          size="sm"
+                          className="absolute top-2 right-2 h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white shadow-md opacity-90 hover:opacity-100 transition-all disabled:opacity-50"
+                        >
+                          {downloadingFile === `${selectedInstallationRequest.name}_Passport_Photo.jpg` ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                          ) : (
+                            <DownloadIcon className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                    {/* Show missing documents */}
+                    {!selectedInstallationRequest.aadhaarFrontUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600">
+                        <XCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-red-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-red-700 dark:text-red-300">Aadhaar Front</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">Missing ✗</p>
+                      </div>
+                    )}
+                    {!selectedInstallationRequest.aadhaarBackUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600">
+                        <XCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-red-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-red-700 dark:text-red-300">Aadhaar Back</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">Missing ✗</p>
+                      </div>
+                    )}
+                    {!selectedInstallationRequest.passportPhotoUrl && (
+                      <div className="text-center p-3 sm:p-4 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-600">
+                        <XCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto text-red-600" />
+                        <p className="text-xs sm:text-sm mt-2 font-medium text-red-700 dark:text-red-300">Passport Photo</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">Missing ✗</p>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-
-              {/* Customer Information Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Customer Name</Label>
-                  <p className="text-xs sm:text-sm font-medium">{selectedInstallationRequest.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Request ID</Label>
-                  <p className="text-xs sm:text-sm font-mono">{selectedInstallationRequest.displayId}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Phone Number</Label>
-                  <p className="text-xs sm:text-sm">{selectedInstallationRequest.phoneNumber}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Email</Label>
-                  <p className="text-xs sm:text-sm break-all">{selectedInstallationRequest.email}</p>
-                </div>
-                <div className="space-y-1 sm:col-span-2 lg:col-span-3">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Address</Label>
-                  <p className="text-xs sm:text-sm">{selectedInstallationRequest.displayAddress}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</Label>
-                  <Badge className={`${getStatusColor(selectedInstallationRequest.status)} text-xs`}>
-                    {selectedInstallationRequest.status}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Created Date</Label>
-                  <p className="text-xs sm:text-sm">{format(parseISO(selectedInstallationRequest.createdAt), "MMM dd, yyyy")}</p>
-                </div>
-              </div>
-
-              {/* Documents Section */}
-              <div className="space-y-2">
-                <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Documents</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-                  {selectedInstallationRequest.displayAadhaarFront && (
-                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
-                      <p className="text-xs mt-1">Aadhaar Front</p>
-                    </div>
-                  )}
-                  {selectedInstallationRequest.displayAadhaarBack && (
-                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
-                      <p className="text-xs mt-1">Aadhaar Back</p>
-                    </div>
-                  )}
-                  {selectedInstallationRequest.displayPassportPhoto && (
-                    <div className="text-center p-2 sm:p-3 border rounded-lg bg-green-50 dark:bg-green-900/20">
-                      <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 mx-auto text-green-600" />
-                      <p className="text-xs mt-1">Passport Photo</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -2309,14 +2852,7 @@ export default function InstallationsLeads() {
                     </div>
                   )}
 
-                  {selectedNode && (
-                    <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Selected Node</Label>
-                      <p className="text-xs sm:text-sm mt-1 font-mono text-green-700 dark:text-green-300 break-all">
-                        {selectedNode}
-                      </p>
-                    </div>
-                  )}
+
 
                   {/* Remarks Section - Only show if not already approved */}
                   <div className="space-y-2">
@@ -2345,116 +2881,74 @@ export default function InstallationsLeads() {
                     </div>
                   )}
 
-                  {selectedNode && (
-                    <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Selected Node</Label>
-                      <p className="text-xs sm:text-sm mt-1 font-mono text-blue-700 dark:text-blue-300 break-all">
-                        {selectedNode}
-                      </p>
+
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="sticky bottom-0 bg-background pt-6 border-t mt-8 px-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowInstallationRequestModal(false);
+                      setSelectedInstallationRequest(null);
+                      setSelectedEngineer("");
+                      setAssignmentRemarks("");
+                      setIsEngineerSelected(false);
+                    }}
+                    className="text-xs sm:text-sm order-last sm:order-none"
+                  >
+                    Cancel
+                  </Button>
+
+                  {/* Only show Reject button if not already approved */}
+                  {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
+                    <Button
+                      variant="destructive"
+                      onClick={handleRejectInstallationRequest}
+                      className="text-xs sm:text-sm"
+                    >
+                      <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Reject
+                    </Button>
+                  )}
+
+                  {/* Only show Engineer selection buttons if not already approved */}
+                  {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
+                    <>
+                      <Button
+                        onClick={() => setShowEngineerAssignmentModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                      >
+                        <HardHat className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Select Engineer
+                      </Button>
+                      {isEngineerSelected && (
+                        <Button
+                          onClick={handleEngineerAssignment}
+                          className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                        >
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Submit Assignment
+                        </Button>
+                      )}
+
+                    </>
+                  ) : (
+                    /* Show info message for approved requests */
+                    <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
+                      <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm text-green-700 dark:text-green-300">
+                        Installation request already approved and engineer assigned
+                      </span>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
+            // </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="sticky bottom-0 bg-background pt-4 border-t mt-6">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowInstallationRequestModal(false);
-                  setSelectedInstallationRequest(null);
-                  setSelectedEngineer("");
-                  setAssignmentRemarks("");
-                  setIsEngineerSelected(false);
-                  // Don't clear selectedNode here - keep it for next use
-                }}
-                className="text-xs sm:text-sm order-last sm:order-none"
-              >
-                Cancel
-              </Button>
-
-              {/* Only show Reject button if not already approved */}
-              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
-                <Button
-                  variant="destructive"
-                  onClick={handleRejectInstallationRequest}
-                  className="text-xs sm:text-sm"
-                >
-                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Reject
-                </Button>
-              )}
-
-              {/* Only show Engineer selection buttons if not already approved */}
-              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
-                <>
-                  <Button
-                    onClick={() => setShowEngineerAssignmentModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                  >
-                    <HardHat className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Select Engineer
-                  </Button>
-                  {isEngineerSelected && (
-                    <Button
-                      onClick={handleEngineerAssignment}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
-                    >
-                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Submit Assignment
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="border-green-500 text-green-600 hover:bg-green-50 text-xs sm:text-sm"
-                    onClick={() => setIsNodeSelectionOpen(true)}
-                  >
-                    🌐 Select Node
-                  </Button>
-                  {/* Clear Node button - only show for non-approved requests */}
-                  {selectedNode && (
-                    <Button
-                      variant="outline"
-                      className="border-red-500 text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-                      onClick={() => {
-                        setSelectedNode("");
-                        localStorage.removeItem('selectedNode');
-                        showToastMessage("Node selection cleared", 'warning');
-                      }}
-                    >
-                      🗑️ Clear Node
-                    </Button>
-                  )}
-                </>
-              ) : (
-                /* Show info message for approved requests */
-                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-600">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm text-green-700 dark:text-green-300">
-                    Installation request already approved and engineer assigned
-                  </span>
-                </div>
-              )}
-
-
-
-              {/* Show info message for approved requests with connected node */}
-              {selectedInstallationRequest?.status === 'approved' && 
-               (selectedInstallationRequest?.connectedToOlt || selectedInstallationRequest?.connectedToEndDevice) && (
-                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
-                    Network node already assigned - installation ready
-                  </span>
-                </div>
-              )}
-
-
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -2534,571 +3028,15 @@ export default function InstallationsLeads() {
         </DialogContent>
       </Dialog>
 
-      {/* Node Selection Modal - Only show if request is not already approved with connected node */}
-      <Dialog open={isNodeSelectionOpen} onOpenChange={setIsNodeSelectionOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg sm:text-xl lg:text-2xl">Select OLT & Node</DialogTitle>
-            <DialogDescription className="text-sm sm:text-base">
-              Choose an OLT and navigate through its network hierarchy to select a node
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Power Loss Information */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-4">
-            <div className="flex items-start gap-2">
-              <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm">Power Loss Information</h4>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Nodes show power loss in dB. Only nodes with ≤20dB total loss (✅) can accept customers for good WiFi connection.
-                  Red nodes (❌) have &gt;20dB loss and cannot accept new customers.
-                </p>
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="text-blue-600 dark:text-blue-400">Split 2: -3dB</div>
-                  <div className="text-blue-600 dark:text-blue-400">Split 4: -7dB</div>
-                  <div className="text-blue-600 dark:text-blue-400">Split 8: -10dB</div>
-                  <div className="text-blue-600 dark:text-blue-400">Split 16: -13dB</div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-blue-600 dark:text-blue-400">MS (Green)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <span className="text-blue-600 dark:text-blue-400">SubMS (Purple)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                    <span className="text-blue-600 dark:text-blue-400">FDB (Orange)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
-                    <span className="text-blue-600 dark:text-blue-400">X2 (Cyan)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4 sm:space-y-6">
-            {/* Search and Filter Section */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search OLTs..."
-                  className="text-sm sm:text-base h-10 sm:h-12"
-                />
-              </div>
-              <Select>
-                <SelectTrigger className="w-full sm:w-[180px] text-sm sm:text-base h-10 sm:h-12">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="maintenance">Maintenance</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* OLT Selection Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {oltData.map((olt: any) => (
-                <div
-                  key={olt._id}
-                  className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOlt?._id === olt._id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300'
-                    }`}
-                  onClick={() => {
-                    setSelectedOlt(olt);
-                    setExpandedOlt(expandedOlt === olt._id ? null : olt._id);
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2 sm:mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full"></div>
-                      <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-blue-700 dark:text-blue-300">{olt.name}</h3>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className={`text-xs ${olt.status === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : olt.status === 'maintenance'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}
-                    >
-                      {olt.status}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex justify-between">
-                      <span>IP:</span>
-                      <span className="font-mono text-xs">{olt.oltIp}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Type:</span>
-                      <span className="uppercase text-xs">{olt.oltType}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Power:</span>
-                      <span className="text-xs">{olt.oltPower}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>MS Devices:</span>
-                      <span className="text-xs">{olt.ms_devices?.length || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>SubMS Devices:</span>
-                      <span className="text-xs">{olt.subms_devices?.length || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>FDB Devices:</span>
-                      <span className="text-xs">{olt.fdb_devices?.length || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>X2 Devices:</span>
-                      <span className="text-xs">{olt.x2_devices?.length || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Expand/Collapse Indicator */}
-                  <div className="flex justify-center mt-2 sm:mt-3">
-                    <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-transform duration-200 ${expandedOlt === olt._id
-                        ? 'bg-blue-100 dark:bg-blue-800 rotate-180'
-                        : 'bg-gray-100 dark:bg-gray-700'
-                      }`}>
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Tree Structure for Selected OLT */}
-            {selectedOlt && expandedOlt === selectedOlt._id && (
-              <div className="border-t pt-4 sm:pt-6">
-                <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-blue-700 dark:text-blue-300">
-                    Network Hierarchy - {selectedOlt.name}
-                  </h3>
-                  <Badge variant="outline" className="text-xs">
-                    {selectedOlt.ms_devices?.length || 0} MS Devices
-                  </Badge>
-                </div>
-
-                {/* Tree Structure */}
-                <div className="space-y-3 sm:space-y-4">
-                  {/* OLT Level */}
-                  <div className="relative">
-                    <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg border border-blue-200 dark:border-blue-600">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-sm sm:text-base text-blue-800 dark:text-blue-200">{selectedOlt.name}</h4>
-                        <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400">{selectedOlt.oltIp} • {selectedOlt.oltType.toUpperCase()}</p>
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
-                        OLT
-                      </Badge>
-                    </div>
-
-                    {/* Connection Line */}
-                    {selectedOlt.ms_devices && selectedOlt.ms_devices.length > 0 && (
-                      <div className="absolute left-3 sm:left-7 top-10 sm:top-12 w-0.5 h-6 sm:h-8 bg-blue-300 dark:bg-blue-600"></div>
-                    )}
-                  </div>
-
-                  {/* MS Devices Level */}
-                  {selectedOlt.ms_devices && selectedOlt.ms_devices.map((ms: any, msIndex: number) => (
-                    <div key={ms.ms_id} className="relative ml-4 sm:ml-8">
-                      <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, ms.ms_id, 'ms')
-                          ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-200 dark:border-green-600 hover:bg-green-100 dark:hover:bg-green-800/40 cursor-pointer'
-                          : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                        }`}
-                        onClick={() => {
-                          if (canAcceptCustomer(selectedOlt, ms.ms_id, 'ms')) {
-                            setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} (${ms.ms_id})`);
-                            showToastMessage(`Node selected: ${ms.ms_name} (${ms.ms_id})`, 'success');
-                          } else {
-                            showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                          }
-                        }}>
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <h5 className="font-medium text-xs sm:text-sm text-green-800 dark:text-green-200">{ms.ms_name}</h5>
-                          <p className="text-xs text-green-600 dark:text-green-400">
-                            ID: {ms.ms_id} • Power: {ms.ms_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, ms.ms_id, 'ms'))}dB
-                            {canAcceptCustomer(selectedOlt, ms.ms_id, 'ms') ? ' ✅' : ' ❌'}
-                          </p>
-                        </div>
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                          MS
-                        </Badge>
-                      </div>
-
-                      {/* Connection Line */}
-                      {ms.outputs && ms.outputs.length > 0 && (
-                        <div className="absolute left-2 sm:left-3 top-7 sm:top-9 w-0.5 h-4 sm:h-6 bg-green-300 dark:bg-green-600"></div>
-                      )}
-
-                      {/* SUBMS Devices */}
-                      {ms.outputs && ms.outputs.filter((output: any) => output.type === 'subms').map((submsOutput: any) => {
-                        const subms = selectedOlt.subms_devices?.find((s: any) => s.subms_id === submsOutput.id);
-                        if (!subms) return null;
-
-                        return (
-                          <div key={subms.subms_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
-                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, subms.subms_id, 'subms')
-                                ? 'bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 border-purple-200 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-800/40 cursor-pointer'
-                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                              }`}
-                              onClick={() => {
-                                if (canAcceptCustomer(selectedOlt, subms.subms_id, 'subms')) {
-                                  setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} (${subms.subms_id})`);
-                                  showToastMessage(`Node selected: ${subms.subms_name} (${subms.subms_id})`, 'success');
-                                } else {
-                                  showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                }
-                              }}>
-                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center">
-                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h6 className="font-medium text-xs sm:text-sm text-purple-800 dark:text-purple-200">{subms.subms_name}</h6>
-                                <p className="text-xs text-purple-600 dark:text-purple-400">
-                                  ID: {subms.subms_id} • Power: {subms.subms_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, subms.subms_id, 'subms'))}dB
-                                  {canAcceptCustomer(selectedOlt, subms.subms_id, 'subms') ? ' ✅' : ' ❌'}
-                                </p>
-                              </div>
-                              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
-                                SUBMS
-                              </Badge>
-                            </div>
-
-                            {/* Connection Line */}
-                            {subms.outputs && subms.outputs.length > 0 && (
-                              <div className="absolute left-2 sm:left-2.5 top-6 sm:top-7 w-0.5 h-3 sm:h-4 bg-purple-300 dark:bg-purple-600"></div>
-                            )}
-
-                            {/* FDB Devices */}
-                            {subms.outputs && subms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
-                              const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
-                              if (!fdb) return null;
-
-                              return (
-                                <div key={fdb.fdb_id} className="relative ml-2 sm:ml-4 mt-1">
-                                  <div className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
-                                      ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
-                                      : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                                    }`}
-                                    onClick={() => {
-                                      if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
-                                        setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
-                                        showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
-                                      } else {
-                                        showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                      }
-                                    }}>
-                                    <div className="w-3 h-3 sm:w-4 sm:h-4 bg-orange-500 rounded-full flex items-center justify-center">
-                                      <svg className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                      </svg>
-                                    </div>
-                                    <div className="flex-1">
-                                      <h6 className="font-medium text-xs text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                      <p className="text-xs text-orange-600 dark:text-orange-400">
-                                        ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
-                                        {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
-                                      </p>
-                                    </div>
-                                    <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
-                                      FDB
-                                    </Badge>
-                                  </div>
-
-                                  {/* X2 Devices connected to this FDB */}
-                                  {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
-                                    const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
-                                    if (!x2) return null;
-
-                                    return (
-                                      <div key={x2.x2_id} className="relative ml-3 sm:ml-6 mt-1">
-                                        <div className={`flex items-center gap-2 p-1.5 sm:p-2 rounded-lg border transition-colors ${
-                                          canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
-                                            ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
-                                            : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                                        }`}
-                                             onClick={() => {
-                                               if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
-                                                 setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${subms.subms_name} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
-                                                 showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
-                                               } else {
-                                                 showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                               }
-                                             }}>
-                                          <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 bg-cyan-500 rounded-full flex items-center justify-center">
-                                            <svg className="w-1 h-1 sm:w-2 sm:h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                            </svg>
-                                          </div>
-                                          <div className="flex-1">
-                                            <h6 className="font-medium text-xs text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
-                                            <p className="text-xs text-cyan-600 dark:text-cyan-400">
-                                              ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
-                                              {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
-                                            </p>
-                                          </div>
-                                          <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
-                                            X2
-                                          </Badge>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-
-                      {/* Direct FDB connections from MS */}
-                      {ms.outputs && ms.outputs.filter((output: any) => output.type === 'fdb').map((fdbOutput: any) => {
-                        const fdb = selectedOlt.fdb_devices?.find((f: any) => f.fdb_id === fdbOutput.id);
-                        if (!fdb) return null;
-
-                        return (
-                          <div key={fdb.fdb_id} className="relative ml-3 sm:ml-6 mt-1 sm:mt-2">
-                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
-                                ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
-                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                              }`}
-                              onClick={() => {
-                                if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
-                                  setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${fdb.fdb_name} (${fdb.fdb_id})`);
-                                  showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
-                                } else {
-                                  showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                }
-                              }}>
-                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-orange-500 rounded-full flex items-center justify-center">
-                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h6 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h6>
-                                <p className="text-xs text-orange-600 dark:text-orange-400">
-                                  ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
-                                  {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
-                                </p>
-                              </div>
-                              <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
-                                FDB
-                              </Badge>
-                            </div>
-
-                            {/* X2 Devices connected to this FDB */}
-                            {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
-                              const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
-                              if (!x2) return null;
-
-                              return (
-                                <div key={x2.x2_id} className="relative ml-4 sm:ml-8 mt-1">
-                                  <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${
-                                    canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
-                                      ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
-                                      : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                                  }`}
-                                       onClick={() => {
-                                         if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
-                                           setSelectedNode(`${selectedOlt.oltId} > ${ms.ms_name} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
-                                           showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
-                                         } else {
-                                           showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                         }
-                                       }}>
-                                    <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center">
-                                      <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                      </svg>
-                                    </div>
-                                    <div className="flex-1">
-                                      <h6 className="font-medium text-xs sm:text-sm text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
-                                      <p className="text-xs text-cyan-600 dark:text-cyan-400">
-                                        ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
-                                        {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
-                                      </p>
-                                    </div>
-                                    <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
-                                      X2
-                                    </Badge>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-
-                  {/* Direct FDB connections from OLT */}
-                  {selectedOlt.fdb_devices && selectedOlt.fdb_devices
-                    .filter((fdb: any) => fdb.input?.type === 'olt')
-                    .map((fdb: any) => (
-                    <div key={fdb.fdb_id} className="relative ml-4 sm:ml-8 mt-2">
-                      <div className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-colors ${
-                        canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')
-                          ? 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-800/40 cursor-pointer'
-                          : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                      }`}
-                           onClick={() => {
-                             if (canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb')) {
-                               setSelectedNode(`${selectedOlt.oltId} > ${fdb.fdb_name} (${fdb.fdb_id})`);
-                               showToastMessage(`Node selected: ${fdb.fdb_name} (${fdb.fdb_id})`, 'success');
-                             } else {
-                               showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                             }
-                           }}>
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-orange-500 rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <h5 className="font-medium text-xs sm:text-sm text-orange-800 dark:text-orange-200">{fdb.fdb_name}</h5>
-                          <p className="text-xs text-orange-600 dark:text-orange-400">
-                            ID: {fdb.fdb_id} • Power: {fdb.fdb_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, fdb.fdb_id, 'fdb'))}dB
-                            {canAcceptCustomer(selectedOlt, fdb.fdb_id, 'fdb') ? ' ✅' : ' ❌'}
-                          </p>
-                        </div>
-                        <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
-                          FDB
-                        </Badge>
-                      </div>
-
-                      {/* X2 Devices connected to this OLT-level FDB */}
-                      {fdb.outputs && fdb.outputs.filter((output: any) => output.type === 'x2').map((x2Output: any) => {
-                        const x2 = selectedOlt.x2_devices?.find((x: any) => x.x2_id === x2Output.id);
-                        if (!x2) return null;
-
-                        return (
-                          <div key={x2.x2_id} className="relative ml-4 sm:ml-8 mt-1">
-                            <div className={`flex items-center gap-2 sm:gap-3 p-2 rounded-lg border transition-colors ${
-                              canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')
-                                ? 'bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 border-cyan-200 dark:border-cyan-600 hover:bg-cyan-100 dark:hover:bg-cyan-800/40 cursor-pointer'
-                                : 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-red-200 dark:border-red-600 opacity-60 cursor-not-allowed'
-                            }`}
-                                 onClick={() => {
-                                   if (canAcceptCustomer(selectedOlt, x2.x2_id, 'x2')) {
-                                     setSelectedNode(`${selectedOlt.oltId} > ${fdb.fdb_name} > ${x2.x2_name} (${x2.x2_id})`);
-                                     showToastMessage(`Node selected: ${x2.x2_name} (${x2.x2_id})`, 'success');
-                                   } else {
-                                     showToastMessage('This node cannot accept customers due to high power loss (>20dB). Please select a different node.', 'error');
-                                   }
-                                 }}>
-                              <div className="w-4 h-4 sm:w-5 sm:h-5 bg-cyan-500 rounded-full flex items-center justify-center">
-                                <svg className="w-2 h-2 sm:w-3 sm:h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                              </div>
-                              <div className="flex-1">
-                                <h6 className="font-medium text-xs sm:text-sm text-cyan-800 dark:text-cyan-200">{x2.x2_name}</h6>
-                                <p className="text-xs text-cyan-600 dark:text-cyan-400">
-                                  ID: {x2.x2_id} • Power: {x2.x2_power} • Loss: {Math.abs(calculateCumulativePowerLoss(selectedOlt, x2.x2_id, 'x2'))}dB
-                                  {canAcceptCustomer(selectedOlt, x2.x2_id, 'x2') ? ' ✅' : ' ❌'}
-                                </p>
-                              </div>
-                              <Badge className="bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs">
-                                X2
-                              </Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Selected Node Display */}
-            {selectedNode && (
-              <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg border border-blue-200 dark:border-blue-600">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                  <h4 className="font-semibold text-sm sm:text-base text-green-800 dark:text-green-200">Selected Node Path</h4>
-                </div>
-                <p className="text-xs sm:text-sm font-mono text-green-700 dark:text-green-300 break-all">{selectedNode}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t mt-6">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsNodeSelectionOpen(false);
-                // Don't clear selectedNode when just closing the modal
-                setSelectedOlt(null);
-                setExpandedOlt(null);
-              }}
-              className="text-sm sm:text-base h-10 sm:h-12"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                // Handle node selection logic here
-                console.log("Node selected:", selectedNode);
-                showToastMessage(`✅ Node confirmed: ${selectedNode}`, 'success');
-                setIsNodeSelectionOpen(false);
-                // Keep the selectedNode for use in the installation request
-                setSelectedOlt(null);
-                setExpandedOlt(null);
-              }}
-              disabled={!selectedNode}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base h-10 sm:h-12"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Confirm Selection
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Toast Notification */}
       {showToast && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 duration-300">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border max-w-sm ${
-            toastType === 'success' 
-              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200'
-              : toastType === 'error'
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border max-w-sm ${toastType === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 text-green-800 dark:text-green-200'
+            : toastType === 'error'
               ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 text-red-800 dark:text-red-200'
               : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200'
-          }`}>
+            }`}>
             {/* Icon */}
             <div className="flex-shrink-0">
               {toastType === 'success' ? (
@@ -3115,22 +3053,21 @@ export default function InstallationsLeads() {
                 </svg>
               )}
             </div>
-            
+
             {/* Message */}
             <div className="flex-1">
               <p className="text-sm font-medium">{toastMessage}</p>
             </div>
-            
+
             {/* Close button */}
             <button
               onClick={() => setShowToast(false)}
-              className={`flex-shrink-0 p-1 rounded-full hover:bg-opacity-20 transition-colors ${
-                toastType === 'success' 
-                  ? 'hover:bg-green-600'
-                  : toastType === 'error'
+              className={`flex-shrink-0 p-1 rounded-full hover:bg-opacity-20 transition-colors ${toastType === 'success'
+                ? 'hover:bg-green-600'
+                : toastType === 'error'
                   ? 'hover:bg-red-600'
                   : 'hover:bg-yellow-600'
-              }`}
+                }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
