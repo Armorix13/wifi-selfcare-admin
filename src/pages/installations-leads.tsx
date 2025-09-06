@@ -2436,7 +2436,10 @@ export default function InstallationsLeads() {
                 </div>
               </div>
 
-              {/* Network Configuration Section */}
+              {/* Technical Sections - Only show when status is inreview */}
+              {selectedInstallationRequest.status === 'inreview' && (
+                <>
+                  {/* Network Configuration Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b">
                   <Network className="h-5 w-5 text-green-600" />
@@ -2830,6 +2833,8 @@ export default function InstallationsLeads() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
 
               {/* Documents Section */}
               <div className="space-y-4">
