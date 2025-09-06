@@ -225,6 +225,7 @@ export default function InstallationsLeads() {
     return Object.keys(errors).length === 0;
   };
 
+
   // Effect to populate editable fields when request is selected
   useEffect(() => {
     if (selectedInstallationRequest) {
@@ -528,6 +529,10 @@ export default function InstallationsLeads() {
       passportPhotoUrl: req.passportPhotoUrl,
       applicationId: req.applicationId,
       userId: req.userId,
+      // Include the nested objects that were missing
+      customerDetails: req.customerDetails,
+      modemDetails: req.modemDetails,
+      businessInformationDetails: req.businessInformationDetails,
       // Additional display properties
       displayId: `INST-REQ-${req._id.slice(-6)}`,
       displayType: 'WiFi Installation',
@@ -2168,9 +2173,15 @@ export default function InstallationsLeads() {
                                               <Label className="text-sm font-medium">Created Date</Label>
                                               <p className="text-sm">{format(parseISO(req.createdAt), "MMM dd, yyyy HH:mm")}</p>
                                             </div>
-                                            {req.assignedEngineer && (
-                                              <div className="lg:col-span-2">
-                                                <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                            {req.approvedDate && (
+                                              <div>
+                                                <Label className="text-sm font-medium">Approved Date</Label>
+                                                <p className="text-sm">{format(parseISO(req.approvedDate), "MMM dd, yyyy HH:mm")}</p>
+                                              </div>
+                                            )}
+                                            <div>
+                                              <Label className="text-sm font-medium">Assigned Engineer</Label>
+                                              {req.assignedEngineer ? (
                                                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                                                   <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -2185,8 +2196,10 @@ export default function InstallationsLeads() {
                                                     </div>
                                                   </div>
                                                 </div>
-                                              </div>
-                                            )}
+                                              ) : (
+                                                <p className="text-sm text-gray-500">Unassigned</p>
+                                              )}
+                                            </div>
                                             {req.remarks && (
                                               <div className="lg:col-span-2">
                                                 <Label className="text-sm font-medium">Remarks</Label>
@@ -2240,6 +2253,146 @@ export default function InstallationsLeads() {
                                               )}
                                             </div>
                                           </div>
+
+                                          {/* Additional Information for Approved Requests */}
+                                          {req.status === 'approved' && (
+                                            <>
+                                              {/* Installation Status */}
+                                              {req.customerDetails && (
+                                                <div className="mt-6">
+                                                  <h4 className="font-semibold mb-3 text-sm lg:text-base">Installation Status</h4>
+                                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                    <div className={`p-3 rounded-lg border ${req.customerDetails.isInstalled 
+                                                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200' 
+                                                      : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200'
+                                                    }`}>
+                                                      <div className="flex items-center gap-2">
+                                                        {req.customerDetails.isInstalled ? (
+                                                          <CheckCircle className="h-4 w-4 text-green-600" />
+                                                        ) : (
+                                                          <Clock className="h-4 w-4 text-orange-600" />
+                                                        )}
+                                                        <span className={`text-sm font-medium ${req.customerDetails.isInstalled 
+                                                          ? 'text-green-700' : 'text-orange-700'
+                                                        }`}>
+                                                          {req.customerDetails.isInstalled ? 'Completed' : 'Pending'}
+                                                        </span>
+                                                      </div>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Installation Date</Label>
+                                                      <p className="text-sm">
+                                                        {req.customerDetails.installationDate 
+                                                          ? format(parseISO(req.customerDetails.installationDate), "MMM dd, yyyy")
+                                                          : 'Not scheduled'}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* Modem Details */}
+                                              {req.modemDetails && (
+                                                <div className="mt-6">
+                                                  <h4 className="font-semibold mb-3 text-sm lg:text-base">Modem Configuration</h4>
+                                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Modem Name</Label>
+                                                      <p className="text-sm bg-purple-50 px-2 py-1 rounded">{req.modemDetails.modemName}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">ONT Type</Label>
+                                                      <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                                        {req.modemDetails.ontType}
+                                                      </Badge>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Model</Label>
+                                                      <p className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">{req.modemDetails.modelNumber}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Serial</Label>
+                                                      <p className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">{req.modemDetails.serialNumber}</p>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* Network Infrastructure */}
+                                              {req.customerDetails && (req.customerDetails.oltId || req.customerDetails.fdbId) && (
+                                                <div className="mt-6">
+                                                  <h4 className="font-semibold mb-3 text-sm lg:text-base">Network Infrastructure</h4>
+                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {req.customerDetails.oltId && (
+                                                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                          <Router className="h-4 w-4 text-green-600" />
+                                                          <h5 className="text-sm font-semibold text-green-700">OLT</h5>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                          <p className="text-xs"><span className="font-medium">Serial:</span> {req.customerDetails.oltId.serialNumber}</p>
+                                                          <p className="text-xs"><span className="font-medium">Type:</span> {req.customerDetails.oltId.oltType?.toUpperCase()}</p>
+                                                          <Badge className="bg-green-100 text-green-800 text-xs">
+                                                            {req.customerDetails.oltId.status}
+                                                          </Badge>
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                    {req.customerDetails.fdbId && (
+                                                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                          <Building className="h-4 w-4 text-blue-600" />
+                                                          <h5 className="text-sm font-semibold text-blue-700">FDB</h5>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                          <p className="text-xs"><span className="font-medium">Name:</span> {req.customerDetails.fdbId.fdbName}</p>
+                                                          <p className="text-xs"><span className="font-medium">Type:</span> {req.customerDetails.fdbId.fdbType?.toUpperCase()}</p>
+                                                          <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                                            {req.customerDetails.fdbId.status}
+                                                          </Badge>
+                                                        </div>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* Business Information */}
+                                              {req.businessInformationDetails && (
+                                                <div className="mt-6">
+                                                  <h4 className="font-semibold mb-3 text-sm lg:text-base">Business Information</h4>
+                                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    <div>
+                                                      <Label className="text-sm font-medium">MTCE Franchise</Label>
+                                                      <p className="text-sm bg-cyan-50 px-2 py-1 rounded">{req.businessInformationDetails.mtceFranchise}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">BB User ID</Label>
+                                                      <p className="text-sm font-mono bg-gray-50 px-2 py-1 rounded">{req.businessInformationDetails.bbUserId}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">FTTH Plan</Label>
+                                                      <p className="text-sm bg-blue-50 px-2 py-1 rounded">{req.businessInformationDetails.ftthExchangePlan}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">BB Plan</Label>
+                                                      <p className="text-sm bg-blue-50 px-2 py-1 rounded">{req.businessInformationDetails.bbPlan}</p>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Area Type</Label>
+                                                      <Badge className={`${req.businessInformationDetails.ruralUrban === 'rural' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'} text-xs`}>
+                                                        {req.businessInformationDetails.ruralUrban?.charAt(0).toUpperCase() + req.businessInformationDetails.ruralUrban?.slice(1)}
+                                                      </Badge>
+                                                    </div>
+                                                    <div>
+                                                      <Label className="text-sm font-medium">Acquisition Type</Label>
+                                                      <p className="text-sm bg-gray-50 px-2 py-1 rounded">{req.businessInformationDetails.acquisitionType}</p>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </>
+                                          )}
 
                                           {/* Action Buttons for Installation Requests */}
                                           <div className="mt-6 pt-4 border-t">
@@ -2536,6 +2689,389 @@ export default function InstallationsLeads() {
                   </div>
                 </div>
               </div>
+
+
+              {/* Complete Installation Details - Show for approved requests */}
+              {selectedInstallationRequest.status === 'approved' && (
+                <div className="space-y-6">
+                  
+                  {/* Installation Status & Engineer */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Installation Status</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      {/* Installation Status */}
+                      {selectedInstallationRequest.customerDetails && (
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Settings className="h-3 w-3" />
+                            Installation Status
+                          </Label>
+                          <div className={`px-3 py-2 rounded-lg border ${selectedInstallationRequest.customerDetails.isInstalled 
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-600' 
+                            : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-600'
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              {selectedInstallationRequest.customerDetails.isInstalled ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <Clock className="h-4 w-4 text-orange-600" />
+                              )}
+                              <span className={`text-xs sm:text-sm font-medium ${selectedInstallationRequest.customerDetails.isInstalled 
+                                ? 'text-green-700 dark:text-green-300' 
+                                : 'text-orange-700 dark:text-orange-300'
+                              }`}>
+                                {selectedInstallationRequest.customerDetails.isInstalled ? 'Installation Completed' : 'Installation Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Installation Date */}
+                      {selectedInstallationRequest.customerDetails?.installationDate && (
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <CalendarIcon className="h-3 w-3" />
+                            Installation Date
+                          </Label>
+                          <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            {format(parseISO(selectedInstallationRequest.customerDetails.installationDate), "MMM dd, yyyy 'at' hh:mm a")}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Assigned Engineer */}
+                      {selectedInstallationRequest.assignedEngineer && (
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            Assigned Engineer
+                          </Label>
+                          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
+                              {selectedInstallationRequest.assignedEngineer.firstName} {selectedInstallationRequest.assignedEngineer.lastName}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              {selectedInstallationRequest.assignedEngineer.email}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              {selectedInstallationRequest.assignedEngineer.phoneNumber}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Application Details */}
+                  {selectedInstallationRequest.applicationId && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <FileText className="h-5 w-5 text-indigo-600" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Application Details</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Application ID</Label>
+                          <p className="text-xs sm:text-sm bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded font-mono">
+                            {selectedInstallationRequest.applicationId.applicationId}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Plan ID</Label>
+                          <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                            {selectedInstallationRequest.applicationId.planId}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Pincode</Label>
+                          <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.applicationId.pincode}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Village</Label>
+                          <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.applicationId.village}
+                          </p>
+                        </div>
+                        {selectedInstallationRequest.applicationId.assignedCompany && (
+                          <>
+                            <div className="space-y-1 sm:col-span-2">
+                              <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Assigned Company</Label>
+                              <p className="text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                {selectedInstallationRequest.applicationId.assignedCompany.companyName}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Company Email</Label>
+                              <p className="text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                {selectedInstallationRequest.applicationId.assignedCompany.companyEmail}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs sm:text-sm font-medium text-muted-foreground">Company Phone</Label>
+                              <p className="text-xs sm:text-sm bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                {selectedInstallationRequest.applicationId.assignedCompany.companyPhone}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modem Configuration */}
+                  {selectedInstallationRequest.status === 'approved' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <Router className="h-5 w-5 text-purple-600" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Modem Configuration</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        {selectedInstallationRequest.modemDetails ? (
+                          <>
+                            <div className="space-y-1">
+                              <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                                <Router className="h-3 w-3" />
+                                Modem Name
+                              </Label>
+                              <p className="text-xs sm:text-sm bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded font-medium">
+                                {selectedInstallationRequest.modemDetails.modemName}
+                              </p>
+                            </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Settings className="h-3 w-3" />
+                            ONT Type
+                          </Label>
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                            {selectedInstallationRequest.modemDetails.ontType}
+                          </Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Model Number
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.modemDetails.modelNumber}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Serial Number
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.modemDetails.serialNumber}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Network className="h-3 w-3" />
+                            ONT MAC Address
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.modemDetails.ontMac}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            Username
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            {selectedInstallationRequest.modemDetails.username}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            Password
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.modemDetails.password}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Status
+                          </Label>
+                          <Badge className={`${selectedInstallationRequest.modemDetails.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'} text-xs`}>
+                            {selectedInstallationRequest.modemDetails.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                          </>
+                        ) : (
+                          <div className="col-span-full p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-700">No modem details available</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Network Infrastructure */}
+                  {selectedInstallationRequest.customerDetails && (selectedInstallationRequest.customerDetails.oltId || selectedInstallationRequest.customerDetails.fdbId) && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <Network className="h-5 w-5 text-green-600" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Network Infrastructure</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        {selectedInstallationRequest.customerDetails.oltId && (
+                          <div className="space-y-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-600 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Router className="h-4 w-4 text-green-600" />
+                              <h4 className="text-sm font-semibold text-green-700 dark:text-green-300">OLT Configuration</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Serial Number</Label>
+                                <p className="text-xs font-mono">{selectedInstallationRequest.customerDetails.oltId.serialNumber}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Type</Label>
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs ml-2">
+                                  {selectedInstallationRequest.customerDetails.oltId.oltType?.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Power</Label>
+                                <p className="text-xs">{selectedInstallationRequest.customerDetails.oltId.oltPower}W</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+                                <Badge className={`${selectedInstallationRequest.customerDetails.oltId.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} text-xs ml-2`}>
+                                  {selectedInstallationRequest.customerDetails.oltId.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {selectedInstallationRequest.customerDetails.fdbId && (
+                          <div className="space-y-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-600 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Building className="h-4 w-4 text-blue-600" />
+                              <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-300">FDB Configuration</h4>
+                            </div>
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">FDB Name</Label>
+                                <p className="text-xs font-mono">{selectedInstallationRequest.customerDetails.fdbId.fdbName}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Type</Label>
+                                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs ml-2">
+                                  {selectedInstallationRequest.customerDetails.fdbId.fdbType?.toUpperCase()}
+                                </Badge>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Power</Label>
+                                <p className="text-xs">{selectedInstallationRequest.customerDetails.fdbId.fdbPower}W</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs font-medium text-muted-foreground">Status</Label>
+                                <Badge className={`${selectedInstallationRequest.customerDetails.fdbId.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} text-xs ml-2`}>
+                                  {selectedInstallationRequest.customerDetails.fdbId.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Business Information */}
+                  {selectedInstallationRequest.status === 'approved' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 pb-2 border-b">
+                        <Building className="h-5 w-5 text-cyan-600" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Business Information</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                        {selectedInstallationRequest.businessInformationDetails ? (
+                          <>
+                            <div className="space-y-1">
+                              <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                MTCE Franchise
+                              </Label>
+                              <p className="text-xs sm:text-sm bg-cyan-50 dark:bg-cyan-900/20 px-2 py-1 rounded font-medium">
+                                {selectedInstallationRequest.businessInformationDetails.mtceFranchise}
+                              </p>
+                            </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            BB User ID
+                          </Label>
+                          <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.businessInformationDetails.bbUserId}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Network className="h-3 w-3" />
+                            FTTH Exchange Plan
+                          </Label>
+                          <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            {selectedInstallationRequest.businessInformationDetails.ftthExchangePlan}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <Network className="h-3 w-3" />
+                            BB Plan
+                          </Label>
+                          <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                            {selectedInstallationRequest.businessInformationDetails.bbPlan}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Working Status
+                          </Label>
+                          <Badge className={`${selectedInstallationRequest.businessInformationDetails.workingStatus === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'} text-xs`}>
+                            {selectedInstallationRequest.businessInformationDetails.workingStatus}
+                          </Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            Area Type
+                          </Label>
+                          <Badge className={`${selectedInstallationRequest.businessInformationDetails.ruralUrban === 'rural' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'} text-xs`}>
+                            {selectedInstallationRequest.businessInformationDetails.ruralUrban?.charAt(0).toUpperCase() + selectedInstallationRequest.businessInformationDetails.ruralUrban?.slice(1)}
+                          </Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            Acquisition Type
+                          </Label>
+                          <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                            {selectedInstallationRequest.businessInformationDetails.acquisitionType}
+                          </p>
+                        </div>
+                          </>
+                        ) : (
+                          <div className="col-span-full p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-700">No business information available</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Technical Sections - Only show when status is inreview */}
               {selectedInstallationRequest.status === 'inreview' && (
