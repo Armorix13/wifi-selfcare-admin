@@ -294,17 +294,21 @@ export default function CompanyLeads() {
     if (!source) return Globe; // Default icon for undefined/null source
     
     const icons = {
+      // Source ENUM values: ["from website", "from application", "from admin panel", "from engineer", "from customer"]
       'from website': Monitor,
+      'from application': Smartphone,
+      'from admin panel': Shield,
+      'from engineer': UserCheck,
+      'from customer': Users,
+      // Legacy mappings (keeping for backward compatibility)
       'mobile app': Smartphone,
-      'admin panel': Shield,
       'ivr system': PhoneCall,
       'whatsapp': MessageSquare,
       'referral': Users,
       'cold call': Phone,
       'social media': Globe,
       'trade show': Building,
-      'advertising': TrendingUp,
-      'from application': Smartphone // Add this mapping for the API data
+      'advertising': TrendingUp
     };
     return icons[source.toLowerCase() as keyof typeof icons] || Globe;
   };
@@ -313,19 +317,47 @@ export default function CompanyLeads() {
     if (!source) return 'Direct Lead'; // Default label for undefined/null source
     
     const labels = {
+      // Source ENUM values: ["from website", "from application", "from admin panel", "from engineer", "from customer"]
       'from website': 'Website',
+      'from application': 'Application',
+      'from admin panel': 'Admin Panel',
+      'from engineer': 'Engineer',
+      'from customer': 'Customer',
+      // Legacy mappings (keeping for backward compatibility)
       'mobile app': 'Mobile App',
-      'admin panel': 'Admin Panel',
       'ivr system': 'IVR System',
       'whatsapp': 'WhatsApp',
       'referral': 'Referral',
       'cold call': 'Cold Call',
       'social media': 'Social Media',
       'trade show': 'Trade Show',
-      'advertising': 'Advertising',
-      'from application': 'Application' // Add this mapping for the API data
+      'advertising': 'Advertising'
     };
     return labels[source.toLowerCase() as keyof typeof labels] || source;
+  };
+
+  const getPlatformIcon = (platform: string) => {
+    const icons = {
+      // leadPlatform ENUM values: ["From Customer", "From Engineer", "From our website", "From our application", "From admin panel"]
+      'from customer': Users,
+      'from engineer': UserCheck,
+      'from our website': Monitor,
+      'from our application': Smartphone,
+      'from admin panel': Shield
+    };
+    return icons[platform.toLowerCase() as keyof typeof icons] || Globe;
+  };
+
+  const getPlatformLabel = (platform: string) => {
+    const labels = {
+      // leadPlatform ENUM values: ["From Customer", "From Engineer", "From our website", "From our application", "From admin panel"]
+      'from customer': 'Customer',
+      'from engineer': 'Engineer', 
+      'from our website': 'Our Website',
+      'from our application': 'Our Application',
+      'from admin panel': 'Admin Panel'
+    };
+    return labels[platform.toLowerCase() as keyof typeof labels] || platform;
   };
 
   const getLeadCreator = (lead: CompanyLead) => {
@@ -809,9 +841,15 @@ export default function CompanyLeads() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Sources</SelectItem>
+                    {/* Primary ENUM values from API */}
                     <SelectItem value="from website">Website</SelectItem>
+                    <SelectItem value="from application">Application</SelectItem>
+                    <SelectItem value="from admin panel">Admin Panel</SelectItem>
+                    <SelectItem value="from engineer">Engineer</SelectItem>
+                    <SelectItem value="from customer">Customer</SelectItem>
+                    <SelectItem value="direct">Direct Lead</SelectItem>
+                    {/* Legacy options (keeping for backward compatibility) */}
                     <SelectItem value="mobile app">Mobile App</SelectItem>
-                    <SelectItem value="admin panel">Admin Panel</SelectItem>
                     <SelectItem value="ivr system">IVR System</SelectItem>
                     <SelectItem value="whatsapp">WhatsApp</SelectItem>
                     <SelectItem value="referral">Referral</SelectItem>
@@ -819,8 +857,6 @@ export default function CompanyLeads() {
                     <SelectItem value="social media">Social Media</SelectItem>
                     <SelectItem value="trade show">Trade Show</SelectItem>
                     <SelectItem value="advertising">Advertising</SelectItem>
-                    <SelectItem value="from application">Application</SelectItem>
-                    <SelectItem value="direct">Direct Lead</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -927,8 +963,11 @@ export default function CompanyLeads() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <SourceIcon className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm">{lead.leadPlatform}</span>
+                              {(() => {
+                                const PlatformIcon = getPlatformIcon(lead.leadPlatform);
+                                return <PlatformIcon className="w-4 h-4 text-muted-foreground" />;
+                              })()}
+                              <span className="text-sm">{getPlatformLabel(lead.leadPlatform)}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1070,8 +1109,11 @@ export default function CompanyLeads() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <SourceIcon className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{lead.leadPlatform}</span>
+                      {(() => {
+                        const PlatformIcon = getPlatformIcon(lead.leadPlatform);
+                        return <PlatformIcon className="h-3 w-3 text-muted-foreground" />;
+                      })()}
+                      <span className="text-xs text-muted-foreground">{getPlatformLabel(lead.leadPlatform)}</span>
                     </div>
 
                                          <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -1280,10 +1322,10 @@ export default function CompanyLeads() {
                     <Label className="text-sm font-medium text-muted-foreground">Lead Platform</Label>
                     <div className="flex items-center gap-2 mt-1">
                       {(() => {
-                        const SourceIcon = getSourceIcon(selectedLead.source);
-                        return <SourceIcon className="h-4 w-4 text-muted-foreground" />;
+                        const PlatformIcon = getPlatformIcon(selectedLead.leadPlatform);
+                        return <PlatformIcon className="h-4 w-4 text-muted-foreground" />;
                       })()}
-                      <p className="font-medium">{selectedLead.leadPlatform}</p>
+                      <p className="font-medium">{getPlatformLabel(selectedLead.leadPlatform)}</p>
                     </div>
                   </div>
                 </div>
