@@ -1548,17 +1548,17 @@ export default function InstallationsLeads() {
                                             <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
                                             <div className="flex flex-col sm:flex-row gap-2">
                                               <Button
-                                                className={`text-sm ${form.displayStatus === 'approved'
+                                                className={`text-sm ${form.displayStatus === 'approved' || form.displayStatus === 'rejected'
                                                   ? 'bg-gray-400 cursor-not-allowed'
                                                   : 'bg-green-600 hover:bg-green-700'
                                                   } text-white`}
                                                 onClick={() => {
-                                                  if (form.displayStatus !== 'approved') {
+                                                  if (form.displayStatus !== 'approved' && form.displayStatus !== 'rejected') {
                                                     setSelectedInstallationRequest(form);
                                                     setShowInstallationRequestModal(true);
                                                   }
                                                 }}
-                                                disabled={form.displayStatus === 'approved'}
+                                                disabled={form.displayStatus === 'approved' || form.displayStatus === 'rejected'}
                                               >
                                                 <HardHat className="h-4 w-4 mr-2" />
                                                 Assign Engineer
@@ -2399,17 +2399,17 @@ export default function InstallationsLeads() {
                                             <h4 className="font-semibold mb-3 text-sm lg:text-base">Actions</h4>
                                             <div className="flex flex-col sm:flex-row gap-2">
                                               <Button
-                                                className={`text-sm ${req.status === 'approved'
+                                                className={`text-sm ${req.status === 'approved' || req.status === 'rejected'
                                                   ? 'bg-gray-400 cursor-not-allowed'
                                                   : 'bg-green-600 hover:bg-green-700'
                                                   } text-white`}
                                                 onClick={() => {
-                                                  if (req.status !== 'approved') {
+                                                  if (req.status !== 'approved' && req.status !== 'rejected') {
                                                     setSelectedInstallationRequest(req);
                                                     setShowInstallationRequestModal(true);
                                                   }
                                                 }}
-                                                disabled={req.status === 'approved'}
+                                                disabled={req.status === 'approved' || req.status === 'rejected'}
                                               >
                                                 <HardHat className="h-4 w-4 mr-2" />
                                                 Assign Engineer
@@ -3784,8 +3784,8 @@ export default function InstallationsLeads() {
                 Cancel
               </Button>
 
-              {/* Only show Reject button if not already approved */}
-              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') && (
+              {/* Only show Reject button if not already approved or rejected */}
+              {(!selectedInstallationRequest?.status || (selectedInstallationRequest?.status !== 'approved' && selectedInstallationRequest?.status !== 'rejected')) && (
                 <Button
                   variant="destructive"
                   onClick={handleRejectInstallationRequest}
@@ -3796,8 +3796,8 @@ export default function InstallationsLeads() {
                 </Button>
               )}
 
-              {/* Only show Engineer selection buttons if not already approved */}
-              {(!selectedInstallationRequest?.status || selectedInstallationRequest?.status !== 'approved') ? (
+              {/* Only show Engineer selection buttons if not already approved or rejected */}
+              {(!selectedInstallationRequest?.status || (selectedInstallationRequest?.status !== 'approved' && selectedInstallationRequest?.status !== 'rejected')) ? (
                 <>
                   <Button
                     onClick={() => setShowEngineerAssignmentModal(true)}
