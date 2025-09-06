@@ -68,7 +68,7 @@ interface CompanyLead {
   installationAddress: string;
   leadPlatform: string;
   email: string;
-  source: string;
+  source?: string; // Make source optional since some leads don't have it
   priority: string;
   createdAt: string;
   updatedAt: string;
@@ -84,6 +84,14 @@ interface CompanyLead {
     lastName: string;
   };
   byEngineerId?: {
+    _id: string;
+    email: string;
+    phoneNumber: string;
+    role: string;
+    firstName: string;
+    lastName: string;
+  };
+  assignedTo?: {
     _id: string;
     email: string;
     phoneNumber: string;
@@ -170,7 +178,7 @@ export default function CompanyLeads() {
 
       const matchesStatus = selectedStatus === 'all' || lead.status === selectedStatus;
       const matchesPriority = selectedPriority === 'all' || lead.priority === selectedPriority;
-      const matchesSource = selectedSource === 'all' || lead.source === selectedSource;
+      const matchesSource = selectedSource === 'all' || (lead.source && lead.source === selectedSource) || (!lead.source && selectedSource === 'direct');
       const matchesConnectionType = selectedConnectionType === 'all' || lead.connectionType === selectedConnectionType;
 
       let matchesDate = true;
@@ -282,7 +290,9 @@ export default function CompanyLeads() {
     return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
-  const getSourceIcon = (source: string) => {
+  const getSourceIcon = (source: string | undefined) => {
+    if (!source) return Globe; // Default icon for undefined/null source
+    
     const icons = {
       'from website': Monitor,
       'mobile app': Smartphone,
@@ -293,12 +303,15 @@ export default function CompanyLeads() {
       'cold call': Phone,
       'social media': Globe,
       'trade show': Building,
-      'advertising': TrendingUp
+      'advertising': TrendingUp,
+      'from application': Smartphone // Add this mapping for the API data
     };
     return icons[source.toLowerCase() as keyof typeof icons] || Globe;
   };
 
-  const getSourceLabel = (source: string) => {
+  const getSourceLabel = (source: string | undefined) => {
+    if (!source) return 'Direct Lead'; // Default label for undefined/null source
+    
     const labels = {
       'from website': 'Website',
       'mobile app': 'Mobile App',
@@ -309,7 +322,8 @@ export default function CompanyLeads() {
       'cold call': 'Cold Call',
       'social media': 'Social Media',
       'trade show': 'Trade Show',
-      'advertising': 'Advertising'
+      'advertising': 'Advertising',
+      'from application': 'Application' // Add this mapping for the API data
     };
     return labels[source.toLowerCase() as keyof typeof labels] || source;
   };
@@ -805,6 +819,8 @@ export default function CompanyLeads() {
                     <SelectItem value="social media">Social Media</SelectItem>
                     <SelectItem value="trade show">Trade Show</SelectItem>
                     <SelectItem value="advertising">Advertising</SelectItem>
+                    <SelectItem value="from application">Application</SelectItem>
+                    <SelectItem value="direct">Direct Lead</SelectItem>
                   </SelectContent>
                 </Select>
 
