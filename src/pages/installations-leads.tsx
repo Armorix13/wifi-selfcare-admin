@@ -94,6 +94,8 @@ export default function InstallationsLeads() {
   const [selectedEngineer, setSelectedEngineer] = useState("");
   const [assignmentRemarks, setAssignmentRemarks] = useState("");
   const [isEngineerSelected, setIsEngineerSelected] = useState(false);
+  const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
+  const [isRejectingRequest, setIsRejectingRequest] = useState(false);
 
   // Validation states
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -586,6 +588,8 @@ export default function InstallationsLeads() {
       }
     }
 
+    setIsSubmittingAssignment(true);
+
     try {
       await updateInstallationRequestStatus({
         id: selectedInstallationRequest.id,
@@ -613,18 +617,69 @@ export default function InstallationsLeads() {
       });
 
       console.log("Installation request approved and engineer assigned:", selectedInstallationRequest.id);
-      showToastMessage("Engineer assigned successfully!", 'success');
+      
+      // Get engineer name for better toast message
+      const assignedEngineerInfo = engineers?.data?.engineers?.find((e: any) => e._id === selectedEngineer);
+      const engineerName = assignedEngineerInfo 
+        ? `${assignedEngineerInfo.firstName} ${assignedEngineerInfo.lastName}`
+        : 'Engineer';
+      
+      showToastMessage(`Installation request approved and assigned to ${engineerName} successfully!`, 'success');
 
-      // Reset modal state
+      // Only reset modal state on success
       setShowEngineerAssignmentModal(false);
       setShowInstallationRequestModal(false);
       setSelectedInstallationRequest(null);
       setSelectedEngineer("");
       setAssignmentRemarks("");
       setIsEngineerSelected(false);
-    } catch (error) {
+      setShowValidationErrors(false);
+      setValidationErrors({});
+    } catch (error: any) {
       console.error("Error assigning engineer:", error);
-      showToastMessage("Error assigning engineer. Please try again.", 'error');
+      
+      // Extract error message from API response
+      let errorMessage = "Failed to assign engineer. Please try again.";
+      
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.data?.error) {
+        errorMessage = error.data.error;
+      } else if (error?.status) {
+        switch (error.status) {
+          case 400:
+            errorMessage = "Invalid request. Please check the form data and try again.";
+            break;
+          case 401:
+            errorMessage = "Unauthorized. Please log in again.";
+            break;
+          case 403:
+            errorMessage = "You don't have permission to perform this action.";
+            break;
+          case 404:
+            errorMessage = "Installation request or engineer not found.";
+            break;
+          case 409:
+            errorMessage = "This installation request has already been assigned.";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage = `Request failed with status ${error.status}. Please try again.`;
+        }
+      }
+      
+      showToastMessage(errorMessage, 'error');
+      
+      // Don't close modal or clear data on error - keep everything intact so user can retry
+      // Modal stays open, form data is preserved, engineer selection is maintained
+      // Show validation errors to indicate there was an issue
+      setShowValidationErrors(true);
+    } finally {
+      setIsSubmittingAssignment(false);
     }
   };
 
@@ -634,6 +689,8 @@ export default function InstallationsLeads() {
       showToastMessage("No installation request selected", 'warning');
       return;
     }
+
+    setIsRejectingRequest(true);
 
     try {
       await updateInstallationRequestStatus({
@@ -646,15 +703,55 @@ export default function InstallationsLeads() {
       console.log("Installation request rejected:", selectedInstallationRequest.id);
       showToastMessage("Installation request rejected successfully!", 'success');
 
-      // Reset modal state
+      // Only reset modal state on success
       setShowInstallationRequestModal(false);
       setSelectedInstallationRequest(null);
       setSelectedEngineer("");
       setAssignmentRemarks("");
       setIsEngineerSelected(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error rejecting installation request:", error);
-      showToastMessage("Error rejecting installation request. Please try again.", 'error');
+      
+      // Extract error message from API response
+      let errorMessage = "Failed to reject installation request. Please try again.";
+      
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.data?.error) {
+        errorMessage = error.data.error;
+      } else if (error?.status) {
+        switch (error.status) {
+          case 400:
+            errorMessage = "Invalid request. Please try again.";
+            break;
+          case 401:
+            errorMessage = "Unauthorized. Please log in again.";
+            break;
+          case 403:
+            errorMessage = "You don't have permission to perform this action.";
+            break;
+          case 404:
+            errorMessage = "Installation request not found.";
+            break;
+          case 409:
+            errorMessage = "This installation request cannot be rejected at this time.";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage = `Request failed with status ${error.status}. Please try again.`;
+        }
+      }
+      
+      showToastMessage(errorMessage, 'error');
+      
+      // Don't close modal or clear data on error - keep everything intact so user can retry
+      // Modal stays open, form data is preserved
+    } finally {
+      setIsRejectingRequest(false);
     }
   };
 
@@ -2580,7 +2677,27 @@ export default function InstallationsLeads() {
       </div>
 
       {/* Installation Request Details Modal */}
-      <Dialog open={showInstallationRequestModal} onOpenChange={setShowInstallationRequestModal}>
+      <Dialog 
+        open={showInstallationRequestModal} 
+        onOpenChange={(open) => {
+          // Prevent closing modal during operations
+          if (!open && (isSubmittingAssignment || isRejectingRequest)) {
+            return;
+          }
+          
+          if (!open) {
+            // Reset all state when closing modal
+            setSelectedInstallationRequest(null);
+            setSelectedEngineer("");
+            setAssignmentRemarks("");
+            setIsEngineerSelected(false);
+            setShowValidationErrors(false);
+            setValidationErrors({});
+          }
+          
+          setShowInstallationRequestModal(open);
+        }}
+      >
         <DialogContent className="max-w-7xl w-[98vw] max-h-[95vh] overflow-y-auto">
           <DialogHeader className="sticky top-0 bg-background z-10 pb-4 border-b">
             <div className="flex items-center justify-between">
@@ -3773,13 +3890,22 @@ export default function InstallationsLeads() {
               <Button
                 variant="outline"
                 onClick={() => {
+                  // Don't allow closing during operations
+                  if (isSubmittingAssignment || isRejectingRequest) {
+                    return;
+                  }
+                  
+                  // Close modal and reset all state
                   setShowInstallationRequestModal(false);
                   setSelectedInstallationRequest(null);
                   setSelectedEngineer("");
                   setAssignmentRemarks("");
                   setIsEngineerSelected(false);
+                  setShowValidationErrors(false);
+                  setValidationErrors({});
                 }}
-                className="text-xs sm:text-sm order-last sm:order-none"
+                disabled={isSubmittingAssignment || isRejectingRequest}
+                className="text-xs sm:text-sm order-last sm:order-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </Button>
@@ -3789,10 +3915,20 @@ export default function InstallationsLeads() {
                 <Button
                   variant="destructive"
                   onClick={handleRejectInstallationRequest}
-                  className="text-xs sm:text-sm"
+                  disabled={isSubmittingAssignment || isRejectingRequest}
+                  className="text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Reject
+                  {isRejectingRequest ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-1 sm:mr-2"></div>
+                      Rejecting...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Reject
+                    </>
+                  )}
                 </Button>
               )}
 
@@ -3801,7 +3937,8 @@ export default function InstallationsLeads() {
                 <>
                   <Button
                     onClick={() => setShowEngineerAssignmentModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                    disabled={isSubmittingAssignment || isRejectingRequest}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <HardHat className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Select Engineer
@@ -3810,10 +3947,20 @@ export default function InstallationsLeads() {
                     <div className="space-y-2">
                       <Button
                         onClick={handleEngineerAssignment}
-                        className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                        disabled={isSubmittingAssignment || isRejectingRequest}
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                        Submit Assignment
+                        {isSubmittingAssignment ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-1 sm:mr-2"></div>
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                            Submit Assignment
+                          </>
+                        )}
                       </Button>
                       {showValidationErrors && validationErrors.selectedEngineer && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
