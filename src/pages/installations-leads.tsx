@@ -81,7 +81,14 @@ export default function InstallationsLeads() {
     serialNumber: '',
     ontMac: '',
     username: '',
-    password: ''
+    password: '',
+    mtceFranchise: '',
+    bbUserId: '',
+    ftthExchangePlan: '',
+    bbPlan: '',
+    workingStatus: '',
+    ruralUrban: '',
+    acquisitionType: ''
   });
   // Remove manual edit mode - now based on status
   const [selectedEngineer, setSelectedEngineer] = useState("");
@@ -148,7 +155,14 @@ export default function InstallationsLeads() {
         serialNumber: selectedInstallationRequest.serialNumber || '',
         ontMac: selectedInstallationRequest.ontMac || '',
         username: selectedInstallationRequest.username || '',
-        password: selectedInstallationRequest.password || ''
+        password: selectedInstallationRequest.password || '',
+        mtceFranchise: selectedInstallationRequest.mtceFranchise || '',
+        bbUserId: selectedInstallationRequest.bbUserId || '',
+        ftthExchangePlan: selectedInstallationRequest.ftthExchangePlan || '',
+        bbPlan: selectedInstallationRequest.bbPlan || '',
+        workingStatus: selectedInstallationRequest.workingStatus || '',
+        ruralUrban: selectedInstallationRequest.ruralUrban || '',
+        acquisitionType: selectedInstallationRequest.acquisitionType || ''
       });
 
       // Initialize OLT selection and FDBs if OLT is already selected
@@ -490,7 +504,15 @@ export default function InstallationsLeads() {
         serialNumber: editableFields.serialNumber,
         ontMac: editableFields.ontMac,
         username: editableFields.username,
-        password: editableFields.password
+        password: editableFields.password,
+        // Include business information fields
+        mtceFranchise: editableFields.mtceFranchise,
+        bbUserId: editableFields.bbUserId,
+        ftthExchangePlan: editableFields.ftthExchangePlan,
+        bbPlan: editableFields.bbPlan,
+        workingStatus: editableFields.workingStatus,
+        ruralUrban: editableFields.ruralUrban,
+        acquisitionType: editableFields.acquisitionType
       });
 
       console.log("Installation request approved and engineer assigned:", selectedInstallationRequest.id);
@@ -2658,6 +2680,156 @@ export default function InstallationsLeads() {
                 </div>
               </div>
 
+              {/* Business Information Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Building className="h-5 w-5 text-cyan-600" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Business Information</h3>
+                  {isFieldsEditable && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Settings className="h-3 w-3 mr-1" />
+                      Editable
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Building className="h-3 w-3" />
+                      MTCE Franchise
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.mtceFranchise}
+                        onChange={(e) => handleFieldChange('mtceFranchise', e.target.value)}
+                        placeholder="Enter MTCE Franchise"
+                        className="text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.mtceFranchise || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      BB User ID
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.bbUserId}
+                        onChange={(e) => handleFieldChange('bbUserId', e.target.value)}
+                        placeholder="Enter BB User ID"
+                        className="text-xs sm:text-sm font-mono"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.bbUserId || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Network className="h-3 w-3" />
+                      FTTH Exchange Plan
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.ftthExchangePlan}
+                        onChange={(e) => handleFieldChange('ftthExchangePlan', e.target.value)}
+                        placeholder="Enter FTTH Exchange Plan"
+                        className="text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.ftthExchangePlan || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Network className="h-3 w-3" />
+                      BB Plan
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.bbPlan}
+                        onChange={(e) => handleFieldChange('bbPlan', e.target.value)}
+                        placeholder="Enter BB Plan"
+                        className="text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.bbPlan || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Working Status
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.workingStatus}
+                        onChange={(e) => handleFieldChange('workingStatus', e.target.value)}
+                        placeholder="Enter Working Status"
+                        className="text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.workingStatus || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      Area Type
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Select value={editableFields.ruralUrban} onValueChange={(value) => handleFieldChange('ruralUrban', value)}>
+                        <SelectTrigger className="text-xs sm:text-sm">
+                          <SelectValue placeholder="Select Area Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="rural">Rural</SelectItem>
+                          <SelectItem value="urban">Urban</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+                        {editableFields.ruralUrban ? (editableFields.ruralUrban.charAt(0).toUpperCase() + editableFields.ruralUrban.slice(1)) : 'Not selected'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      Acquisition Type
+                    </Label>
+                    {isFieldsEditable ? (
+                      <Input
+                        type="text"
+                        value={editableFields.acquisitionType}
+                        onChange={(e) => handleFieldChange('acquisitionType', e.target.value)}
+                        placeholder="Enter Acquisition Type"
+                        className="text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
+                        {editableFields.acquisitionType || 'Not specified'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* Documents Section */}
               <div className="space-y-4">
