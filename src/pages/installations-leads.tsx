@@ -95,6 +95,10 @@ export default function InstallationsLeads() {
   const [assignmentRemarks, setAssignmentRemarks] = useState("");
   const [isEngineerSelected, setIsEngineerSelected] = useState(false);
 
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+
   // API Hooks - Declare these first before any functions that use them
   const { data: applications, isLoading: applicationsLoading, error: applicationsError } = api.useGetAllApplicationsQuery({});
   const { data: installationRequestsData, isLoading: installationRequestsLoading, error: installationRequestsError } = api.useGetAllInstallationRequestsQuery({});
@@ -116,6 +120,15 @@ export default function InstallationsLeads() {
       ...prev,
       [fieldName]: value
     }));
+
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[fieldName]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
 
     // Auto-save when in inreview status (debounced)
     if (isFieldsEditable) {
@@ -141,6 +154,75 @@ export default function InstallationsLeads() {
     
     // Reset FDB selection when OLT changes
     handleFieldChange('fdbId', '');
+  };
+
+  // Validation function for technical fields
+  const validateTechnicalFields = () => {
+    const errors: {[key: string]: string} = {};
+
+    // Network Configuration validation
+    if (!editableFields.oltId.trim()) {
+      errors.oltId = "OLT Selection is required";
+    }
+    if (!editableFields.fdbId.trim()) {
+      errors.fdbId = "FDB Selection is required";
+    }
+
+    // Device & Equipment Details validation
+    if (!editableFields.modemName.trim()) {
+      errors.modemName = "Modem Name is required";
+    }
+    if (!editableFields.ontType.trim()) {
+      errors.ontType = "ONT Type is required";
+    }
+    if (!editableFields.modelNumber.trim()) {
+      errors.modelNumber = "Model Number is required";
+    }
+    if (!editableFields.serialNumber.trim()) {
+      errors.serialNumber = "Serial Number is required";
+    }
+    if (!editableFields.ontMac.trim()) {
+      errors.ontMac = "ONT MAC Address is required";
+    }
+
+    // User Credentials validation
+    if (!editableFields.username.trim()) {
+      errors.username = "Username is required";
+    }
+    if (!editableFields.password.trim()) {
+      errors.password = "Password is required";
+    }
+
+    // Business Information validation
+    if (!editableFields.mtceFranchise.trim()) {
+      errors.mtceFranchise = "MTCE Franchise is required";
+    }
+    if (!editableFields.bbUserId.trim()) {
+      errors.bbUserId = "BB User ID is required";
+    }
+    if (!editableFields.ftthExchangePlan.trim()) {
+      errors.ftthExchangePlan = "FTTH Exchange Plan is required";
+    }
+    if (!editableFields.bbPlan.trim()) {
+      errors.bbPlan = "BB Plan is required";
+    }
+    if (!editableFields.workingStatus.trim()) {
+      errors.workingStatus = "Working Status is required";
+    }
+    if (!editableFields.ruralUrban.trim()) {
+      errors.ruralUrban = "Area Type is required";
+    }
+    if (!editableFields.acquisitionType.trim()) {
+      errors.acquisitionType = "Acquisition Type is required";
+    }
+
+    // Engineer selection validation
+    if (!selectedEngineer.trim()) {
+      errors.selectedEngineer = "Engineer selection is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // Effect to populate editable fields when request is selected
@@ -489,6 +571,16 @@ export default function InstallationsLeads() {
       return;
     }
 
+    // Validate technical fields if status is inreview
+    if (selectedInstallationRequest.status === 'inreview') {
+      const isValid = validateTechnicalFields();
+      if (!isValid) {
+        setShowValidationErrors(true);
+        showToastMessage("Please fill all required technical fields before approving", 'error');
+        return;
+      }
+    }
+
     try {
       await updateInstallationRequestStatus({
         id: selectedInstallationRequest.id,
@@ -566,6 +658,15 @@ export default function InstallationsLeads() {
     setSelectedEngineer(engineerId);
     setIsEngineerSelected(true);
     setShowEngineerAssignmentModal(false);
+    
+    // Clear engineer validation error when engineer is selected
+    if (validationErrors.selectedEngineer) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.selectedEngineer;
+        return newErrors;
+      });
+    }
   };
 
   // Helper functions for application forms and installation requests
@@ -2458,22 +2559,29 @@ export default function InstallationsLeads() {
                       OLT Selection
                     </Label>
                     {isFieldsEditable ? (
-                      <Select 
-                        value={editableFields.oltId} 
-                        onValueChange={handleOltSelection}
-                        disabled={oltLoading}
-                      >
-                        <SelectTrigger className="text-xs sm:text-sm">
-                          <SelectValue placeholder={oltLoading ? "Loading OLTs..." : "Select OLT"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {oltData?.data?.map((olt: any) => (
-                            <SelectItem key={olt._id} value={olt._id}>
-                              {olt.name} - {olt.oltId}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-1">
+                        <Select 
+                          value={editableFields.oltId} 
+                          onValueChange={handleOltSelection}
+                          disabled={oltLoading}
+                        >
+                          <SelectTrigger className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.oltId ? 'border-red-500 focus:border-red-500' : ''}`}>
+                            <SelectValue placeholder={oltLoading ? "Loading OLTs..." : "Select OLT"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {oltData?.data?.map((olt: any) => (
+                              <SelectItem key={olt._id} value={olt._id}>
+                                {olt.name} - {olt.oltId}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {showValidationErrors && validationErrors.oltId && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.oltId}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.oltId ? 
@@ -2488,22 +2596,29 @@ export default function InstallationsLeads() {
                       FDB Selection
                     </Label>
                     {isFieldsEditable ? (
-                      <Select 
-                        value={editableFields.fdbId} 
-                        onValueChange={(value) => handleFieldChange('fdbId', value)}
-                        disabled={!editableFields.oltId || availableFdbs.length === 0}
-                      >
-                        <SelectTrigger className="text-xs sm:text-sm">
-                          <SelectValue placeholder={!editableFields.oltId ? "Select OLT first" : availableFdbs.length === 0 ? "No FDBs available" : "Select FDB"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableFdbs.map((fdb: any) => (
-                            <SelectItem key={fdb.fdb_id} value={fdb.fdb_id}>
-                              {fdb.fdb_name} - {fdb.fdb_id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-1">
+                        <Select 
+                          value={editableFields.fdbId} 
+                          onValueChange={(value) => handleFieldChange('fdbId', value)}
+                          disabled={!editableFields.oltId || availableFdbs.length === 0}
+                        >
+                          <SelectTrigger className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.fdbId ? 'border-red-500 focus:border-red-500' : ''}`}>
+                            <SelectValue placeholder={!editableFields.oltId ? "Select OLT first" : availableFdbs.length === 0 ? "No FDBs available" : "Select FDB"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableFdbs.map((fdb: any) => (
+                              <SelectItem key={fdb.fdb_id} value={fdb.fdb_id}>
+                                {fdb.fdb_name} - {fdb.fdb_id}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {showValidationErrors && validationErrors.fdbId && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.fdbId}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.fdbId ? 
@@ -2534,13 +2649,20 @@ export default function InstallationsLeads() {
                       Modem Name
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.modemName}
-                        onChange={(e) => handleFieldChange('modemName', e.target.value)}
-                        placeholder="Enter Modem Name"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.modemName}
+                          onChange={(e) => handleFieldChange('modemName', e.target.value)}
+                          placeholder="Enter Modem Name"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.modemName ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.modemName && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.modemName}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.modemName || 'Not specified'}
@@ -2553,16 +2675,23 @@ export default function InstallationsLeads() {
                       ONT Type
                     </Label>
                     {isFieldsEditable ? (
-                      <Select value={editableFields.ontType} onValueChange={(value) => handleFieldChange('ontType', value)}>
-                        <SelectTrigger className="text-xs sm:text-sm">
-                          <SelectValue placeholder="Select ONT Type" />
-                        </SelectTrigger>
+                      <div className="space-y-1">
+                        <Select value={editableFields.ontType} onValueChange={(value) => handleFieldChange('ontType', value)}>
+                          <SelectTrigger className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.ontType ? 'border-red-500 focus:border-red-500' : ''}`}>
+                            <SelectValue placeholder="Select ONT Type" />
+                          </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="DUAL_BAND">DUAL_BAND</SelectItem>
                           <SelectItem value="SINGLE_BAND">SINGLE_BAND</SelectItem>
                           <SelectItem value="OTHERS">OTHERS</SelectItem>
                         </SelectContent>
-                      </Select>
+                        </Select>
+                        {showValidationErrors && validationErrors.ontType && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.ontType}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
                         {editableFields.ontType || 'Not selected'}
@@ -2575,13 +2704,20 @@ export default function InstallationsLeads() {
                       Model Number
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.modelNumber}
-                        onChange={(e) => handleFieldChange('modelNumber', e.target.value)}
-                        placeholder="Enter Model Number"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.modelNumber}
+                          onChange={(e) => handleFieldChange('modelNumber', e.target.value)}
+                          placeholder="Enter Model Number"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.modelNumber ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.modelNumber && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.modelNumber}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.modelNumber || 'Not specified'}
@@ -2594,13 +2730,20 @@ export default function InstallationsLeads() {
                       Serial Number
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.serialNumber}
-                        onChange={(e) => handleFieldChange('serialNumber', e.target.value)}
-                        placeholder="Enter Serial Number"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.serialNumber}
+                          onChange={(e) => handleFieldChange('serialNumber', e.target.value)}
+                          placeholder="Enter Serial Number"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.serialNumber ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.serialNumber && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.serialNumber}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.serialNumber || 'Not specified'}
@@ -2613,13 +2756,20 @@ export default function InstallationsLeads() {
                       ONT MAC Address
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.ontMac}
-                        onChange={(e) => handleFieldChange('ontMac', e.target.value)}
-                        placeholder="Enter ONT MAC Address"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.ontMac}
+                          onChange={(e) => handleFieldChange('ontMac', e.target.value)}
+                          placeholder="Enter ONT MAC Address"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.ontMac ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.ontMac && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.ontMac}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.ontMac || 'Not specified'}
@@ -2648,13 +2798,20 @@ export default function InstallationsLeads() {
                       Username
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.username}
-                        onChange={(e) => handleFieldChange('username', e.target.value)}
-                        placeholder="Enter Username"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.username}
+                          onChange={(e) => handleFieldChange('username', e.target.value)}
+                          placeholder="Enter Username"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.username ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.username && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.username}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
                         {editableFields.username || 'Not configured'}
@@ -2667,13 +2824,20 @@ export default function InstallationsLeads() {
                       Password
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="password"
-                        value={editableFields.password}
-                        onChange={(e) => handleFieldChange('password', e.target.value)}
-                        placeholder="Enter Password"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="password"
+                          value={editableFields.password}
+                          onChange={(e) => handleFieldChange('password', e.target.value)}
+                          placeholder="Enter Password"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.password ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.password && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.password}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.password ? '••••••••' : 'Not configured'}
@@ -2702,13 +2866,20 @@ export default function InstallationsLeads() {
                       MTCE Franchise
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.mtceFranchise}
-                        onChange={(e) => handleFieldChange('mtceFranchise', e.target.value)}
-                        placeholder="Enter MTCE Franchise"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.mtceFranchise}
+                          onChange={(e) => handleFieldChange('mtceFranchise', e.target.value)}
+                          placeholder="Enter MTCE Franchise"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.mtceFranchise ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.mtceFranchise && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.mtceFranchise}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.mtceFranchise || 'Not specified'}
@@ -2721,13 +2892,20 @@ export default function InstallationsLeads() {
                       BB User ID
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.bbUserId}
-                        onChange={(e) => handleFieldChange('bbUserId', e.target.value)}
-                        placeholder="Enter BB User ID"
-                        className="text-xs sm:text-sm font-mono"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.bbUserId}
+                          onChange={(e) => handleFieldChange('bbUserId', e.target.value)}
+                          placeholder="Enter BB User ID"
+                          className={`text-xs sm:text-sm font-mono ${showValidationErrors && validationErrors.bbUserId ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.bbUserId && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.bbUserId}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm font-mono bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.bbUserId || 'Not specified'}
@@ -2740,13 +2918,20 @@ export default function InstallationsLeads() {
                       FTTH Exchange Plan
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.ftthExchangePlan}
-                        onChange={(e) => handleFieldChange('ftthExchangePlan', e.target.value)}
-                        placeholder="Enter FTTH Exchange Plan"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.ftthExchangePlan}
+                          onChange={(e) => handleFieldChange('ftthExchangePlan', e.target.value)}
+                          placeholder="Enter FTTH Exchange Plan"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.ftthExchangePlan ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.ftthExchangePlan && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.ftthExchangePlan}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.ftthExchangePlan || 'Not specified'}
@@ -2759,13 +2944,20 @@ export default function InstallationsLeads() {
                       BB Plan
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.bbPlan}
-                        onChange={(e) => handleFieldChange('bbPlan', e.target.value)}
-                        placeholder="Enter BB Plan"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.bbPlan}
+                          onChange={(e) => handleFieldChange('bbPlan', e.target.value)}
+                          placeholder="Enter BB Plan"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.bbPlan ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.bbPlan && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.bbPlan}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.bbPlan || 'Not specified'}
@@ -2778,13 +2970,20 @@ export default function InstallationsLeads() {
                       Working Status
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.workingStatus}
-                        onChange={(e) => handleFieldChange('workingStatus', e.target.value)}
-                        placeholder="Enter Working Status"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.workingStatus}
+                          onChange={(e) => handleFieldChange('workingStatus', e.target.value)}
+                          placeholder="Enter Working Status"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.workingStatus ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.workingStatus && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.workingStatus}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.workingStatus || 'Not specified'}
@@ -2797,15 +2996,22 @@ export default function InstallationsLeads() {
                       Area Type
                     </Label>
                     {isFieldsEditable ? (
-                      <Select value={editableFields.ruralUrban} onValueChange={(value) => handleFieldChange('ruralUrban', value)}>
-                        <SelectTrigger className="text-xs sm:text-sm">
-                          <SelectValue placeholder="Select Area Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="rural">Rural</SelectItem>
-                          <SelectItem value="urban">Urban</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="space-y-1">
+                        <Select value={editableFields.ruralUrban} onValueChange={(value) => handleFieldChange('ruralUrban', value)}>
+                          <SelectTrigger className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.ruralUrban ? 'border-red-500 focus:border-red-500' : ''}`}>
+                            <SelectValue placeholder="Select Area Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="rural">Rural</SelectItem>
+                            <SelectItem value="urban">Urban</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {showValidationErrors && validationErrors.ruralUrban && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.ruralUrban}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
                         {editableFields.ruralUrban ? (editableFields.ruralUrban.charAt(0).toUpperCase() + editableFields.ruralUrban.slice(1)) : 'Not selected'}
@@ -2818,13 +3024,20 @@ export default function InstallationsLeads() {
                       Acquisition Type
                     </Label>
                     {isFieldsEditable ? (
-                      <Input
-                        type="text"
-                        value={editableFields.acquisitionType}
-                        onChange={(e) => handleFieldChange('acquisitionType', e.target.value)}
-                        placeholder="Enter Acquisition Type"
-                        className="text-xs sm:text-sm"
-                      />
+                      <div className="space-y-1">
+                        <Input
+                          type="text"
+                          value={editableFields.acquisitionType}
+                          onChange={(e) => handleFieldChange('acquisitionType', e.target.value)}
+                          placeholder="Enter Acquisition Type"
+                          className={`text-xs sm:text-sm ${showValidationErrors && validationErrors.acquisitionType ? 'border-red-500 focus:border-red-500' : ''}`}
+                        />
+                        {showValidationErrors && validationErrors.acquisitionType && (
+                          <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {validationErrors.acquisitionType}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <p className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded">
                         {editableFields.acquisitionType || 'Not specified'}
@@ -3058,13 +3271,20 @@ export default function InstallationsLeads() {
                     Select Engineer
                   </Button>
                   {isEngineerSelected && (
-                    <Button
-                      onClick={handleEngineerAssignment}
-                      className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
-                    >
-                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Submit Assignment
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={handleEngineerAssignment}
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm"
+                      >
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                        Submit Assignment
+                      </Button>
+                      {showValidationErrors && validationErrors.selectedEngineer && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <span>⚠</span> {validationErrors.selectedEngineer}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                 </>

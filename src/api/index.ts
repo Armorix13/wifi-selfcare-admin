@@ -144,10 +144,15 @@ export const api = createApi({
       providesTags: [Tags.WIFI],
     }),
     updateInstallationRequestStatus: builder.mutation({
-      query: ({ id, status, remarks, assignedEngineer, oltId, fdbId, modemName, ontType, modelNumber, serialNumber, ontMac, username, password }) => ({
+      query: ({ id, status, remarks, assignedEngineer, oltId, fdbId, modemName, ontType, modelNumber, serialNumber, ontMac, username, password,
+        mtceFranchise, bbUserId, ftthExchangePlan, bbPlan, workingStatus, ruralUrban, acquisitionType
+      }) => ({
         url: `/installation-requests/${id}/status`,
         method: "PATCH",
-        body: { status, remarks, assignedEngineer, oltId, fdbId, modemName, ontType, modelNumber, serialNumber, ontMac, username, password },
+        body: {
+          status, remarks, assignedEngineer, oltId, fdbId, modemName, ontType, modelNumber, serialNumber, ontMac, username, password,
+          mtceFranchise, bbUserId, ftthExchangePlan, bbPlan, workingStatus, ruralUrban, acquisitionType
+        },
       }),
       invalidatesTags: [Tags.WIFI], // This will refetch installation requests after status update
     }),
