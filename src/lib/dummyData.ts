@@ -15,21 +15,57 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
+  countryCode: string;
+  phoneNumber: string;
+  lat?: number;
+  long?: number;
+  profileImage?: string;
+  country: string;
+  userName: string;
+  firstName: string;
+  lastName: string;
   address: string;
   location: string;
-  serviceProvider: string | null;
-  planName: string | null;
+  permanentAddress: string;
+  billingAddress: string;
+  balanceDue: number;
   activationDate: string | null;
   expirationDate: string | null;
-  balanceDue: number;
   staticIp: string | null;
+  macIp: string | null;
+  type: string;
+  fatherName: string;
+  isDeleted: boolean;
+  isDeactivated: boolean;
+  lastLogin: string | null;
+  isSuspended: boolean;
+  password: string;
+  installationDate: string | null;
+  lastBillingDate: string | null;
+  assignedCompany?: string;
+  oltIp?: string;
+  mtceFranchise?: string;
+  category?: string;
+  mobile?: string;
+  bbUserId?: string;
+  ftthExchangePlan?: string;
+  bbPlan?: string;
+  llInstallDate?: string | null;
+  workingStatus?: string;
+  ruralUrban?: string;
+  acquisitionType?: string;
+  modemUserName?: string;
+  modemPassword?: string;
+  isActivated: boolean;
+  serviceProvider: string | null;
+  planName: string | null;
   macAddress: string | null;
   status: 'active' | 'suspended' | 'expired' | 'pending';
   area: 'rural' | 'urban';
   mode: 'online' | 'offline';
   isActive: boolean;
   createdAt: string;
-  profileImageUrl?: string; // Add profile image URL field
+  profileImageUrl?: string;
 }
 
 export interface Engineer {
@@ -397,105 +433,285 @@ export const generateDummyCustomers = (): Customer[] => [
   {
     id: 1,
     name: "Rajesh Kumar",
+    firstName: "Rajesh",
+    lastName: "Kumar",
+    userName: "rajesh.kumar",
     email: "rajesh@email.com",
     phone: "+91 98765 43210",
+    countryCode: "+91",
+    phoneNumber: "9876543210",
+    mobile: "9876543210",
+    lat: 19.0760,
+    long: 72.8777,
+    profileImage: "/uploads/profile-image-1.jpg",
+    country: "India",
     address: "123 Main St, Mumbai Central",
     location: "Mumbai Central",
+    permanentAddress: "123 Main St, Mumbai Central, Maharashtra 400001",
+    billingAddress: "123 Main St, Mumbai Central, Maharashtra 400001",
+    fatherName: "Suresh Kumar",
+    type: "residential",
     serviceProvider: "Jio Fiber",
     planName: "Jio Fiber 100 Mbps",
     activationDate: "2024-01-15",
     expirationDate: "2024-12-15",
+    installationDate: "2024-01-10",
+    lastBillingDate: "2024-01-01",
     balanceDue: 0,
     staticIp: "192.168.1.100",
     macAddress: "AA:BB:CC:DD:EE:01",
+    macIp: "192.168.1.100",
+    oltIp: "10.0.0.1",
+    mtceFranchise: "Mumbai Central",
+    category: "Premium",
+    bbUserId: "BB001",
+    ftthExchangePlan: "FTTH-100",
+    bbPlan: "Broadband Premium",
+    llInstallDate: "2024-01-10",
+    workingStatus: "Active",
+    ruralUrban: "Urban",
+    acquisitionType: "New",
+    modemUserName: "rajesh_modem",
+    modemPassword: "modem@123",
+    password: "user@123",
     status: "active",
     area: "urban",
     mode: "online",
     isActive: true,
+    isActivated: true,
+    isDeleted: false,
+    isDeactivated: false,
+    isSuspended: false,
+    lastLogin: "2024-01-20T10:00:00Z",
+    assignedCompany: "TechConnect Solutions",
     createdAt: "2024-01-15T10:00:00Z",
     profileImageUrl: "/uploads/profile-image-1.jpg"
   },
   {
     id: 2,
     name: "Priya Sharma",
+    firstName: "Priya",
+    lastName: "Sharma",
+    userName: "priya.sharma",
     email: "priya@email.com",
     phone: "+91 87654 32109",
+    countryCode: "+91",
+    phoneNumber: "8765432109",
+    mobile: "8765432109",
+    lat: 28.7041,
+    long: 77.1025,
+    profileImage: "/uploads/profile-image-2.jpg",
+    country: "India",
     address: "456 Park Ave, Delhi NCR",
     location: "Delhi NCR",
+    permanentAddress: "456 Park Ave, Delhi NCR, Delhi 110001",
+    billingAddress: "456 Park Ave, Delhi NCR, Delhi 110001",
+    fatherName: "Raj Sharma",
+    type: "residential",
     serviceProvider: null,
     planName: null,
     activationDate: null,
     expirationDate: null,
+    installationDate: null,
+    lastBillingDate: null,
     balanceDue: 0,
     staticIp: null,
     macAddress: null,
+    macIp: null,
+    oltIp: "192.168.121.19",
+    mtceFranchise: "Delhi NCR",
+    category: "Basic",
+    bbUserId: undefined,
+    ftthExchangePlan: "   ",
+    bbPlan: "BB-4625",
+    llInstallDate: null,
+    workingStatus: "Pending",
+    ruralUrban: "Urban",
+    acquisitionType: "New",
+    modemUserName: undefined,
+    modemPassword: undefined,
+    password: "user@456",
     status: "pending",
     area: "urban",
     mode: "offline",
     isActive: true,
+    isActivated: false,
+    isDeleted: false,
+    isDeactivated: false,
+    isSuspended: false,
+    lastLogin: null,
+    assignedCompany: "DigitalNet Services",
     createdAt: "2024-02-01T10:00:00Z",
     profileImageUrl: "/uploads/profile-image-2.jpg"
   },
   {
     id: 3,
     name: "Amit Patel",
+    firstName: "Amit",
+    lastName: "Patel",
+    userName: "amit.patel",
     email: "amit@email.com",
     phone: "+91 76543 21098",
+    countryCode: "+91",
+    phoneNumber: "7654321098",
+    mobile: "7654321098",
+    lat: 12.9716,
+    long: 77.5946,
+    profileImage: "/uploads/profile-image-3.jpg",
+    country: "India",
     address: "789 Tech Park, Bangalore",
     location: "Bangalore",
+    permanentAddress: "789 Tech Park, Bangalore, Karnataka 560001",
+    billingAddress: "789 Tech Park, Bangalore, Karnataka 560001",
+    fatherName: "Ramesh Patel",
+    type: "commercial",
     serviceProvider: "BSNL Broadband",
     planName: "BSNL Standard 50 Mbps",
     activationDate: "2023-12-01",
     expirationDate: "2024-11-30",
+    installationDate: "2023-11-25",
+    lastBillingDate: "2024-01-01",
     balanceDue: 1200,
     staticIp: "192.168.1.102",
     macAddress: "AA:BB:CC:DD:EE:03",
+    macIp: "192.168.1.102",
+    oltIp: "10.0.0.3",
+    mtceFranchise: "Bangalore Tech",
+    category: "Standard",
+    bbUserId: "BB003",
+    ftthExchangePlan: "FTTH-50",
+    bbPlan: "Broadband Standard",
+    llInstallDate: "2023-11-25",
+    workingStatus: "Suspended",
+    ruralUrban: "Rural",
+    acquisitionType: "Upgrade",
+    modemUserName: "amit_modem",
+    modemPassword: "modem@789",
+    password: "user@789",
     status: "suspended",
     area: "rural",
     mode: "offline",
     isActive: false,
+    isActivated: true,
+    isDeleted: false,
+    isDeactivated: false,
+    isSuspended: true,
+    lastLogin: "2024-01-10T10:00:00Z",
+    assignedCompany: "ConnectWave Communications",
     createdAt: "2023-12-01T10:00:00Z",
     profileImageUrl: "/uploads/profile-image-3.jpg"
   },
   {
     id: 4,
     name: "Sunita Verma",
+    firstName: "Sunita",
+    lastName: "Verma",
+    userName: "sunita.verma",
     email: "sunita.verma@email.com",
     phone: "+91 91234 56789",
+    countryCode: "+91",
+    phoneNumber: "9123456789",
+    mobile: "9123456789",
+    lat: 25.5941,
+    long: 85.1376,
+    profileImage: "/uploads/profile-image-4.jpg",
+    country: "India",
     address: "321 Rural Lane, Patna",
     location: "Patna",
+    permanentAddress: "321 Rural Lane, Patna, Bihar 800001",
+    billingAddress: "321 Rural Lane, Patna, Bihar 800001",
+    fatherName: "Ram Verma",
+    type: "residential",
     serviceProvider: "Airtel",
     planName: "Airtel Xstream 200 Mbps",
     activationDate: "2024-02-01",
     expirationDate: "2025-01-31",
+    installationDate: "2024-01-28",
+    lastBillingDate: "2024-02-01",
     balanceDue: 500,
     staticIp: "192.168.1.101",
     macAddress: "AA:BB:CC:DD:EE:02",
+    macIp: "192.168.1.101",
+    oltIp: "10.0.0.2",
+    mtceFranchise: "Patna Rural",
+    category: "Premium",
+    bbUserId: "BB002",
+    ftthExchangePlan: "FTTH-200",
+    bbPlan: "Broadband Premium",
+    llInstallDate: "2024-01-28",
+    workingStatus: "Active",
+    ruralUrban: "Rural",
+    acquisitionType: "New",
+    modemUserName: "sunita_modem",
+    modemPassword: "modem@321",
+    password: "user@321",
     status: "active",
     area: "rural",
     mode: "online",
     isActive: true,
+    isActivated: true,
+    isDeleted: false,
+    isDeactivated: false,
+    isSuspended: false,
+    lastLogin: "2024-01-25T15:30:00Z",
+    assignedCompany: "NetSpeed Solutions",
     createdAt: "2024-02-01T10:00:00Z",
     profileImageUrl: "/uploads/profile-image-4.jpg"
   },
   {
     id: 5,
     name: "Vikram Singh",
+    firstName: "Vikram",
+    lastName: "Singh",
+    userName: "vikram.singh",
     email: "vikram.singh@email.com",
     phone: "+91 98123 45678",
+    countryCode: "+91",
+    phoneNumber: "9812345678",
+    mobile: "9812345678",
+    lat: 17.3850,
+    long: 78.4867,
+    profileImage: "/uploads/profile-image-5.jpg",
+    country: "India",
     address: "654 Tech Park, Hyderabad",
     location: "Hyderabad",
+    permanentAddress: "654 Tech Park, Hyderabad, Telangana 500001",
+    billingAddress: "654 Tech Park, Hyderabad, Telangana 500001",
+    fatherName: "Jasbir Singh",
+    type: "commercial",
     serviceProvider: "My Internet",
     planName: "My Internet Premium 300 Mbps",
     activationDate: "2024-03-10",
     expirationDate: "2025-03-09",
+    installationDate: "2024-03-05",
+    lastBillingDate: "2024-03-01",
     balanceDue: 0,
     staticIp: "192.168.1.103",
     macAddress: "AA:BB:CC:DD:EE:04",
+    macIp: "192.168.1.103",
+    oltIp: "10.0.0.4",
+    mtceFranchise: "Hyderabad Tech",
+    category: "Enterprise",
+    bbUserId: "BB004",
+    ftthExchangePlan: "FTTH-300",
+    bbPlan: "Broadband Enterprise",
+    llInstallDate: "2024-03-05",
+    workingStatus: "Active",
+    ruralUrban: "Urban",
+    acquisitionType: "Upgrade",
+    modemUserName: "vikram_modem",
+    modemPassword: "modem@654",
+    password: "user@654",
     status: "active",
     area: "urban",
     mode: "online",
     isActive: true,
+    isActivated: true,
+    isDeleted: false,
+    isDeactivated: false,
+    isSuspended: false,
+    lastLogin: "2024-01-28T12:00:00Z",
+    assignedCompany: "FiberTech Networks",
     createdAt: "2024-03-10T10:00:00Z",
     profileImageUrl: "/uploads/profile-image-5.jpg"
   }
