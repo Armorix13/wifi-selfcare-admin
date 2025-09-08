@@ -11,7 +11,8 @@ export interface User {
 }
 
 export interface Customer {
-  id: number;
+  _id: string;
+  id: number; // Keep for backward compatibility
   name: string;
   email: string;
   phone: string;
@@ -69,7 +70,8 @@ export interface Customer {
 }
 
 export interface Engineer {
-  id: number;
+  _id: string;
+  id: number; // Keep for backward compatibility
   name: string;
   email: string;
   phone: string;
@@ -234,7 +236,8 @@ export interface NewInstallation {
 }
 
 export interface Lead {
-  id: number;
+  _id: string;
+  id: number; // Keep for backward compatibility
   name: string;
   email: string | null;
   phone: string;
@@ -258,7 +261,8 @@ export interface Lead {
 }
 
 export interface Complaint {
-  id: number;
+  _id: string;
+  id: number; // Keep for backward compatibility
   customerId: number;
   customerName: string;
   title: string;
@@ -361,7 +365,8 @@ export interface Product {
 }
 
 export interface Order {
-  id: number;
+  _id: string;
+  id: number; // Keep for backward compatibility
   orderNumber: string;
   productId: number;
   productName: string;
@@ -431,6 +436,7 @@ export const generateDummyUsers = (): User[] => [
 
 export const generateDummyCustomers = (): Customer[] => [
   {
+    _id: "507f1f77bcf86cd799439011",
     id: 1,
     name: "Rajesh Kumar",
     firstName: "Rajesh",
@@ -488,6 +494,7 @@ export const generateDummyCustomers = (): Customer[] => [
     profileImageUrl: "/uploads/profile-image-1.jpg"
   },
   {
+    _id: "507f1f77bcf86cd799439012",
     id: 2,
     name: "Priya Sharma",
     firstName: "Priya",
@@ -545,6 +552,7 @@ export const generateDummyCustomers = (): Customer[] => [
     profileImageUrl: "/uploads/profile-image-2.jpg"
   },
   {
+    _id: "507f1f77bcf86cd799439013",
     id: 3,
     name: "Amit Patel",
     firstName: "Amit",
@@ -602,6 +610,7 @@ export const generateDummyCustomers = (): Customer[] => [
     profileImageUrl: "/uploads/profile-image-3.jpg"
   },
   {
+    _id: "507f1f77bcf86cd799439014",
     id: 4,
     name: "Sunita Verma",
     firstName: "Sunita",
@@ -659,6 +668,7 @@ export const generateDummyCustomers = (): Customer[] => [
     profileImageUrl: "/uploads/profile-image-4.jpg"
   },
   {
+    _id: "507f1f77bcf86cd799439015",
     id: 5,
     name: "Vikram Singh",
     firstName: "Vikram",
@@ -719,6 +729,7 @@ export const generateDummyCustomers = (): Customer[] => [
 
 export const generateDummyEngineers = (): Engineer[] => [
   {
+    _id: "507f1f77bcf86cd799439021",
     id: 1,
     name: "Mike Johnson",
     email: "mike.johnson@company.com",
@@ -732,6 +743,7 @@ export const generateDummyEngineers = (): Engineer[] => [
     createdAt: "2024-01-10T10:00:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439022",
     id: 2,
     name: "Sarah Davis",
     email: "sarah.davis@company.com",
@@ -745,6 +757,7 @@ export const generateDummyEngineers = (): Engineer[] => [
     createdAt: "2024-01-12T10:00:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439023",
     id: 3,
     name: "Tom Wilson",
     email: "tom.wilson@company.com",
@@ -758,6 +771,7 @@ export const generateDummyEngineers = (): Engineer[] => [
     createdAt: "2024-01-08T10:00:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439024",
     id: 4,
     name: "Jennifer Lee",
     email: "jennifer.lee@company.com",
@@ -771,6 +785,7 @@ export const generateDummyEngineers = (): Engineer[] => [
     createdAt: "2024-01-05T10:00:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439025",
     id: 5,
     name: "David Brown",
     email: "david.brown@company.com",
@@ -937,6 +952,7 @@ export const generateDummyServicePlans = (): ServicePlan[] => [
 
 export const generateDummyComplaints = (): Complaint[] => [
   {
+    _id: "507f1f77bcf86cd799439031",
     id: 1,
     customerId: 1,
     customerName: "Rajesh Kumar",
@@ -951,6 +967,7 @@ export const generateDummyComplaints = (): Complaint[] => [
     updatedAt: "2024-01-15T10:30:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439032",
     id: 2,
     customerId: 2,
     customerName: "Priya Sharma",
@@ -965,6 +982,7 @@ export const generateDummyComplaints = (): Complaint[] => [
     updatedAt: "2024-01-15T09:15:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439033",
     id: 3,
     customerId: 3,
     customerName: "Amit Patel",
@@ -979,6 +997,7 @@ export const generateDummyComplaints = (): Complaint[] => [
     updatedAt: "2024-01-14T11:30:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439034",
     id: 4,
     customerId: 4,
     customerName: "Sunita Verma",
@@ -997,6 +1016,7 @@ export const generateDummyComplaints = (): Complaint[] => [
     resolvedAt: "2024-01-13T15:20:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439035",
     id: 5,
     customerId: 5,
     customerName: "Vikram Singh",
@@ -1537,6 +1557,7 @@ export const generateDummyProducts = (): Product[] => [
 
 export const generateDummyOrders = (): Order[] => [
   {
+    _id: "507f1f77bcf86cd799439041",
     id: 1,
     orderNumber: "ORD-2024-001",
     productId: 1,
@@ -1556,6 +1577,7 @@ export const generateDummyOrders = (): Order[] => [
     deliveredAt: "2024-01-25T16:30:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439042",
     id: 2,
     orderNumber: "ORD-2024-002",
     productId: 3,
@@ -1574,6 +1596,7 @@ export const generateDummyOrders = (): Order[] => [
     updatedAt: "2024-01-22T14:20:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439043",
     id: 3,
     orderNumber: "ORD-2024-003",
     productId: 4,
@@ -1591,6 +1614,7 @@ export const generateDummyOrders = (): Order[] => [
     updatedAt: "2024-01-26T09:45:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439044",
     id: 4,
     orderNumber: "ORD-2024-004",
     productId: 6,
@@ -1609,6 +1633,7 @@ export const generateDummyOrders = (): Order[] => [
     updatedAt: "2024-01-26T14:00:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439045",
     id: 5,
     orderNumber: "ORD-2024-005",
     productId: 7,
@@ -1815,6 +1840,7 @@ export const generateDummyNewInstallations = (): NewInstallation[] => [
 // Generate Leads dummy data
 export const generateDummyLeads = (): Lead[] => [
   {
+    _id: "507f1f77bcf86cd799439051",
     id: 1,
     name: "Deepak Agarwal",
     email: "deepak.agarwal@email.com",
@@ -1839,6 +1865,7 @@ export const generateDummyLeads = (): Lead[] => [
     updatedAt: "2024-01-30T14:22:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439052",
     id: 2,
     name: "Kavya Reddy",
     email: "kavya.reddy@gmail.com",
@@ -1863,6 +1890,7 @@ export const generateDummyLeads = (): Lead[] => [
     updatedAt: "2024-01-29T16:45:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439053",
     id: 3,
     name: "Mohit Gupta",
     email: null,
@@ -1887,6 +1915,7 @@ export const generateDummyLeads = (): Lead[] => [
     updatedAt: "2024-01-27T14:20:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439054",
     id: 4,
     name: "Ananya Joshi",
     email: "ananya.joshi@company.com",
@@ -1911,6 +1940,7 @@ export const generateDummyLeads = (): Lead[] => [
     updatedAt: "2024-01-25T10:15:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439055",
     id: 5,
     name: "Suresh Yadav",
     email: "suresh.yadav@yahoo.com",
@@ -1935,6 +1965,7 @@ export const generateDummyLeads = (): Lead[] => [
     updatedAt: "2024-01-23T13:45:00Z"
   },
   {
+    _id: "507f1f77bcf86cd799439056",
     id: 6,
     name: "Ravi Kumar",
     email: "ravi.kumar@tech.in",

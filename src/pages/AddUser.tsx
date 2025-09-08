@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useAddUserMutation, useGetFdbsByOltIdQuery} from "@/api";
 import { 
   UserPlus, 
   User, 
@@ -28,22 +29,22 @@ import {
   Building, 
   Wifi, 
   CreditCard, 
-  Calendar,
-  Shield,
-  Zap,
-  Target,
-  Network,
-  Server,
-  Database,
-  FileText,
-  Star,
-  Award,
-  Rocket,
-  Sparkles,
-  ChevronRight,
-  ChevronLeft,
-  Save,
-  X,
+  Calendar, 
+  Shield, 
+  Zap, 
+  Target, 
+  Network, 
+  Server, 
+  Database, 
+  FileText, 
+  Star, 
+  Award, 
+  Rocket, 
+  Sparkles, 
+  ChevronRight, 
+  ChevronLeft, 
+  Save, 
+  X, 
   Users
 } from "lucide-react";
 import { Step1Data, Step2Data, Step3Data, UserFormData, AreaType, Mode } from "@/lib/types/users";
@@ -51,135 +52,119 @@ import { Step1Data, Step2Data, Step3Data, UserFormData, AreaType, Mode } from "@
 // Validation schemas for each step
 const step1Schema = z.object({
   email: z.string().email("Invalid email address"),
-  userName: z.string().min(3, "Username must be at least 3 characters"),
   firstName: z.string().min(2, "First name must be at least 2 characters"),
   lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  countryCode: z.string().min(1, "Country code is required"),
   phoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
-  mobile: z.string().optional(),
-  language: z.string().optional(),
-  country: z.string().min(1, "Country is required"),
+  countryCode: z.string().min(1, "Country code is required"),
+  companyPreference: z.string().optional(),
+  customCompany: z.string().optional(),
+  permanentAddress: z.string().optional(),
+  residentialAddress: z.string().optional(),
+  landlineNumber: z.string().optional(),
 });
 
 const step2Schema = z.object({
-  permanentAddress: z.string().optional(),
-  billingAddress: z.string().optional(),
-  area: z.nativeEnum(AreaType).optional(),
-  zone: z.string().optional(),
-  ruralUrban: z.string().optional(),
-  category: z.string().optional(),
-  customerType: z.string().optional(),
-  group: z.string().optional(),
+  modemName: z.string().optional(),
+  ontType: z.string().optional(),
+  modelNumber: z.string().optional(),
+  serialNumber: z.string().optional(),
+  ontMac: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
 });
 
 const step3Schema = z.object({
-  status: z.string().optional(),
-  mode: z.nativeEnum(Mode).optional(),
-  customerPower: z.string().optional(),
-  bandwidth: z.number().min(0).optional(),
-  planId: z.string().optional(),
-  bbPlan: z.string().optional(),
-  ftthExchangePlan: z.string().optional(),
-  staticIp: z.string().optional(),
-  macIp: z.string().optional(),
-  oltIp: z.string().optional(),
+  oltId: z.string().optional(),
+  fdbId: z.string().optional(),
   mtceFranchise: z.string().optional(),
   bbUserId: z.string().optional(),
-  workingStatus: z.string().optional(),
-  assigned: z.string().optional(),
+  bbPassword: z.string().optional(),
+  ruralUrban: z.string().optional(),
   acquisitionType: z.string().optional(),
-  balanceDue: z.number().min(0).optional(),
-  activationDate: z.string().optional(),
-  expirationDate: z.string().optional(),
-  installationDate: z.string().optional(),
-  lastBillingDate: z.string().optional(),
+  category: z.string().optional(),
+  ftthExchangePlan: z.string().optional(),
   llInstallDate: z.string().optional(),
-  isAccountVerified: z.boolean().optional(),
+  bbPlan: z.string().optional(),
+  workingStatus: z.string().optional(),
 });
 
 export default function AddUser() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [addUser, { isLoading: isAddingUser }] = useAddUserMutation();
+  const { data: oltData, isLoading: isLoadingOlt } = useGetFdbsByOltIdQuery({});
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<Partial<UserFormData>>({});
+  const [formData, setFormData] = useState<Partial<Step1Data & Step2Data & Step3Data>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSameAsResidential, setIsSameAsResidential] = useState(false);
+  const [showCustomCompany, setShowCustomCompany] = useState(false);
 
   const step1Form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
       email: "",
-      userName: "",
       firstName: "",
       lastName: "",
-      countryCode: "+91",
       phoneNumber: "",
-      mobile: "",
-      language: "English",
-      country: "India",
+      countryCode: "+91",
+      companyPreference: "",
+      customCompany: "",
+      permanentAddress: "",
+      residentialAddress: "",
+      landlineNumber: "",
     },
   });
 
   const step2Form = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
     defaultValues: {
-      permanentAddress: "",
-      billingAddress: "",
-      area: AreaType.URBAN,
-      zone: "",
-      ruralUrban: "Urban",
-      category: "Residential",
-      customerType: "residential",
-      group: "Standard",
+      modemName: "",
+      ontType: "",
+      modelNumber: "",
+      serialNumber: "",
+      ontMac: "",
+      username: "",
+      password: "",
     },
   });
 
   const step3Form = useForm<Step3Data>({
     resolver: zodResolver(step3Schema),
     defaultValues: {
-      status: "active",
-      mode: Mode.ONLINE,
-      customerPower: "on",
-      bandwidth: 100,
-      planId: "",
-      bbPlan: "Basic",
-      ftthExchangePlan: "Standard",
-      staticIp: "",
-      macIp: "",
-      oltIp: "",
+      oltId: "",
+      fdbId: "",
       mtceFranchise: "",
       bbUserId: "",
-      workingStatus: "active",
-      assigned: "",
+      bbPassword: "",
+      ruralUrban: "Urban",
       acquisitionType: "new",
-      balanceDue: 0,
-      activationDate: "",
-      expirationDate: "",
-      installationDate: "",
-      lastBillingDate: "",
+      category: "Residential",
+      ftthExchangePlan: "",
       llInstallDate: "",
-      isAccountVerified: false,
+      bbPlan: "Basic",
+      workingStatus: "active",
     },
   });
 
   const steps = [
     {
       id: 1,
-      title: "Basic Information",
-      description: "Personal and contact details",
+      title: "User Details",
+      description: "Personal and contact information",
       icon: User,
       color: "from-blue-500 to-cyan-500",
     },
     {
       id: 2,
-      title: "Location & Category",
-      description: "Address and customer classification",
-      icon: MapPin,
+      title: "Modem Details",
+      description: "Hardware and device information",
+      icon: Wifi,
       color: "from-green-500 to-emerald-500",
     },
     {
       id: 3,
-      title: "Service & Network",
-      description: "Technical and service details",
+      title: "Soft Details",
+      description: "Service and configuration details",
       icon: Settings,
       color: "from-purple-500 to-pink-500",
     },
@@ -199,28 +184,63 @@ export default function AddUser() {
     try {
       setIsSubmitting(true);
       const finalData = { ...formData, ...data };
+    
       
-      // Generate unique customer ID
-      const customerId = `CUS${Date.now().toString().slice(-6)}`;
-      finalData.customerId = customerId;
+      // Prepare the data for API
+      const userData = {
+        // Step 1 Data
+        email: finalData.email,
+        firstName: finalData.firstName,
+        lastName: finalData.lastName,
+        phoneNumber: finalData.phoneNumber,
+        countryCode: finalData.countryCode,
+        companyPreference: finalData.companyPreference,
+        customCompany: finalData.customCompany,
+        permanentAddress: finalData.permanentAddress,
+        residentialAddress: finalData.residentialAddress,
+        landlineNumber: finalData.landlineNumber,
+        
+        // Step 2 Data
+        modemName: finalData.modemName,
+        ontType: finalData.ontType,
+        modelNumber: finalData.modelNumber,
+        serialNumber: finalData.serialNumber,
+        ontMac: finalData.ontMac,
+        username: finalData.username,
+        password: finalData.password,
+        
+        // Step 3 Data
+        oltId: finalData.oltId,
+        fdbId: finalData.fdbId,
+        mtceFranchise: finalData.mtceFranchise,
+        bbUserId: finalData.bbUserId,
+        bbPassword: finalData.bbPassword,
+        ruralUrban: finalData.ruralUrban,
+        acquisitionType: finalData.acquisitionType,
+        category: finalData.category,
+        ftthExchangePlan: finalData.ftthExchangePlan,
+        llInstallDate: finalData.llInstallDate,
+        bbPlan: finalData.bbPlan,
+        workingStatus: finalData.workingStatus,
+      };
       
-      // Here you would typically send the data to your API
-      console.log("Final user data:", finalData);
+      console.log("Sending user data to API:", userData);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the API
+      const result = await addUser(userData).unwrap();
       
       toast({
         title: "Success! 🎉",
-        description: "User has been added successfully with ID: " + customerId,
+        description: `User has been added successfully`,
       });
       
       // Navigate to users management page
       navigate("/users");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error adding user:", error);
       toast({
         title: "Error",
-        description: "Failed to add user. Please try again.",
+        description: error?.data?.message || "Failed to add user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -261,22 +281,6 @@ export default function AddUser() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="userName" className="flex items-center gap-2">
-            <User className="h-4 w-4 text-blue-500" />
-            Username *
-          </Label>
-          <Input
-            id="userName"
-            placeholder="johndoe123"
-            {...step1Form.register("userName")}
-            className="border-2 focus:border-blue-500"
-          />
-          {step1Form.formState.errors.userName && (
-            <p className="text-sm text-red-500">{step1Form.formState.errors.userName.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
           <Label htmlFor="firstName" className="flex items-center gap-2">
             <User className="h-4 w-4 text-blue-500" />
             First Name *
@@ -309,6 +313,35 @@ export default function AddUser() {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="phoneNumber" className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-blue-500" />
+            Phone Number *
+          </Label>
+          <Input
+            id="phoneNumber"
+            placeholder="9876543210"
+            {...step1Form.register("phoneNumber")}
+            className="border-2 focus:border-blue-500"
+          />
+          {step1Form.formState.errors.phoneNumber && (
+            <p className="text-sm text-red-500">{step1Form.formState.errors.phoneNumber.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="landlineNumber" className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-blue-500" />
+            Landline Number
+          </Label>
+          <Input
+            id="landlineNumber"
+            placeholder="Enter landline number"
+            {...step1Form.register("landlineNumber")}
+            className="border-2 focus:border-blue-500"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="countryCode" className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-blue-500" />
             Country Code *
@@ -331,76 +364,91 @@ export default function AddUser() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phoneNumber" className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-blue-500" />
-            Phone Number *
+          <Label htmlFor="companyPreference" className="flex items-center gap-2">
+            <Building className="h-4 w-4 text-blue-500" />
+            Company Preference
           </Label>
-          <Input
-            id="phoneNumber"
-            placeholder="9876543210"
-            {...step1Form.register("phoneNumber")}
-            className="border-2 focus:border-blue-500"
-          />
-          {step1Form.formState.errors.phoneNumber && (
-            <p className="text-sm text-red-500">{step1Form.formState.errors.phoneNumber.message}</p>
+          <Select
+            value={step1Form.watch("companyPreference")}
+            onValueChange={(value) => {
+              step1Form.setValue("companyPreference", value);
+              setShowCustomCompany(value === "Other");
+              if (value !== "Other") {
+                step1Form.setValue("customCompany", "");
+              }
+            }}
+          >
+            <SelectTrigger className="border-2 focus:border-blue-500">
+              <SelectValue placeholder="Select company preference" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="BSNL">🏢 BSNL</SelectItem>
+              <SelectItem value="Rail wire">🚂 Rail wire</SelectItem>
+              <SelectItem value="My internet">🌐 My internet</SelectItem>
+              <SelectItem value="Connect Broadband">📡 Connect Broadband</SelectItem>
+              <SelectItem value="Other">➕ Other</SelectItem>
+            </SelectContent>
+          </Select>
+          {showCustomCompany && (
+            <Input
+              id="customCompany"
+              placeholder="Enter company name"
+              {...step1Form.register("customCompany")}
+              className="border-2 focus:border-blue-500 mt-2"
+              onChange={(e) => {
+                step1Form.setValue("customCompany", e.target.value);
+                step1Form.setValue("companyPreference", e.target.value);
+              }}
+            />
           )}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="mobile" className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-blue-500" />
-            Mobile Number
+          <Label htmlFor="residentialAddress" className="flex items-center gap-2">
+            <Home className="h-4 w-4 text-blue-500" />
+            Residential Address
           </Label>
-          <Input
-            id="mobile"
-            placeholder="9876543210"
-            {...step1Form.register("mobile")}
-            className="border-2 focus:border-blue-500"
+          <Textarea
+            id="residentialAddress"
+            placeholder="Enter residential address"
+            {...step1Form.register("residentialAddress")}
+            className="border-2 focus:border-blue-500 min-h-[100px]"
+            onChange={(e) => {
+              step1Form.setValue("residentialAddress", e.target.value);
+              if (isSameAsResidential) {
+                step1Form.setValue("permanentAddress", e.target.value);
+              }
+            }}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="language" className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-blue-500" />
-            Language
-          </Label>
-          <Select
-            value={step1Form.watch("language")}
-            onValueChange={(value) => step1Form.setValue("language", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-blue-500">
-              <SelectValue placeholder="Select language" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="English">🇺🇸 English</SelectItem>
-              <SelectItem value="Hindi">🇮🇳 Hindi</SelectItem>
-              <SelectItem value="Spanish">🇪🇸 Spanish</SelectItem>
-              <SelectItem value="French">🇫🇷 French</SelectItem>
-              <SelectItem value="German">🇩🇪 German</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="country" className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-blue-500" />
-            Country *
-          </Label>
-          <Select
-            value={step1Form.watch("country")}
-            onValueChange={(value) => step1Form.setValue("country", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-blue-500">
-              <SelectValue placeholder="Select country" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="India">🇮🇳 India</SelectItem>
-              <SelectItem value="USA">🇺🇸 United States</SelectItem>
-              <SelectItem value="UK">🇬🇧 United Kingdom</SelectItem>
-              <SelectItem value="Australia">🇦🇺 Australia</SelectItem>
-              <SelectItem value="Canada">🇨🇦 Canada</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center space-x-2 mb-2">
+            <Checkbox
+              id="sameAsResidential"
+              checked={isSameAsResidential}
+              onCheckedChange={(checked) => {
+                setIsSameAsResidential(checked as boolean);
+                if (checked) {
+                  const residentialAddress = step1Form.getValues("residentialAddress");
+                  step1Form.setValue("permanentAddress", residentialAddress);
+                }
+              }}
+              className="border-2 border-blue-500"
+            />
+            <Label htmlFor="sameAsResidential" className="flex items-center gap-2 cursor-pointer text-sm">
+              <Home className="h-4 w-4 text-blue-500" />
+              Use same as residential address
+            </Label>
+          </div>
+          <Textarea
+            id="permanentAddress"
+            placeholder={isSameAsResidential ? "Same as residential address" : "Enter permanent address"}
+            {...step1Form.register("permanentAddress")}
+            className="border-2 focus:border-blue-500 min-h-[100px]"
+            disabled={isSameAsResidential}
+            style={{ backgroundColor: isSameAsResidential ? '#f3f4f6' : 'white' }}
+          />
         </div>
       </div>
 
@@ -420,143 +468,102 @@ export default function AddUser() {
     <form onSubmit={step2Form.handleSubmit(handleStep2Submit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="permanentAddress" className="flex items-center gap-2">
-            <Home className="h-4 w-4 text-green-500" />
-            Permanent Address
-          </Label>
-          <Textarea
-            id="permanentAddress"
-            placeholder="Enter permanent address"
-            {...step2Form.register("permanentAddress")}
-            className="border-2 focus:border-green-500 min-h-[100px]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="billingAddress" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-green-500" />
-            Billing Address
-          </Label>
-          <Textarea
-            id="billingAddress"
-            placeholder="Enter billing address"
-            {...step2Form.register("billingAddress")}
-            className="border-2 focus:border-green-500 min-h-[100px]"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="area" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-500" />
-            Area Type
-          </Label>
-          <Select
-            value={step2Form.watch("area")}
-            onValueChange={(value) => step2Form.setValue("area", value as AreaType)}
-          >
-            <SelectTrigger className="border-2 focus:border-green-500">
-              <SelectValue placeholder="Select area type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={AreaType.URBAN}>🏙️ Urban</SelectItem>
-              <SelectItem value={AreaType.RURAL}>🌾 Rural</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="zone" className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-green-500" />
-            Zone
+          <Label htmlFor="modemName" className="flex items-center gap-2">
+            <Wifi className="h-4 w-4 text-green-500" />
+            Modem Name
           </Label>
           <Input
-            id="zone"
-            placeholder="Enter zone"
-            {...step2Form.register("zone")}
+            id="modemName"
+            placeholder="Enter modem name"
+            {...step2Form.register("modemName")}
             className="border-2 focus:border-green-500"
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="ruralUrban" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-green-500" />
-            Rural/Urban Classification
+          <Label htmlFor="ontType" className="flex items-center gap-2">
+            <Network className="h-4 w-4 text-green-500" />
+            ONT Type
           </Label>
           <Select
-            value={step2Form.watch("ruralUrban")}
-            onValueChange={(value) => step2Form.setValue("ruralUrban", value)}
+            value={step2Form.watch("ontType")}
+            onValueChange={(value) => step2Form.setValue("ontType", value)}
           >
             <SelectTrigger className="border-2 focus:border-green-500">
-              <SelectValue placeholder="Select classification" />
+              <SelectValue placeholder="Select ONT type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Urban">🏙️ Urban</SelectItem>
-              <SelectItem value="Rural">🌾 Rural</SelectItem>
-              <SelectItem value="Semi-Urban">🏘️ Semi-Urban</SelectItem>
+              <SelectItem value="DUAL_BAND">📡 DUAL_BAND</SelectItem>
+              <SelectItem value="SINGLE_BAND">📡 SINGLE_BAND</SelectItem>
+              <SelectItem value="OTHERS">📡 OTHERS</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="category" className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-green-500" />
-            Category
+          <Label htmlFor="modelNumber" className="flex items-center gap-2">
+            <Server className="h-4 w-4 text-green-500" />
+            Model Number
           </Label>
-          <Select
-            value={step2Form.watch("category")}
-            onValueChange={(value) => step2Form.setValue("category", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-green-500">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Residential">🏠 Residential</SelectItem>
-              <SelectItem value="Commercial">🏢 Commercial</SelectItem>
-              <SelectItem value="Enterprise">🏭 Enterprise</SelectItem>
-              <SelectItem value="Government">🏛️ Government</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="modelNumber"
+            placeholder="Enter model number"
+            {...step2Form.register("modelNumber")}
+            className="border-2 focus:border-green-500"
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="customerType" className="flex items-center gap-2">
+          <Label htmlFor="serialNumber" className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-green-500" />
+            Serial Number
+          </Label>
+          <Input
+            id="serialNumber"
+            placeholder="Enter serial number"
+            {...step2Form.register("serialNumber")}
+            className="border-2 focus:border-green-500"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ontMac" className="flex items-center gap-2">
+            <Network className="h-4 w-4 text-green-500" />
+            ONT MAC Address
+          </Label>
+          <Input
+            id="ontMac"
+            placeholder="00:11:22:33:44:55"
+            {...step2Form.register("ontMac")}
+            className="border-2 focus:border-green-500"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="username" className="flex items-center gap-2">
             <User className="h-4 w-4 text-green-500" />
-            Customer Type
+            Username
           </Label>
-          <Select
-            value={step2Form.watch("customerType")}
-            onValueChange={(value) => step2Form.setValue("customerType", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-green-500">
-              <SelectValue placeholder="Select customer type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="residential">🏠 Residential</SelectItem>
-              <SelectItem value="commercial">🏢 Commercial</SelectItem>
-              <SelectItem value="enterprise">🏭 Enterprise</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="username"
+            placeholder="Enter username"
+            {...step2Form.register("username")}
+            className="border-2 focus:border-green-500"
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="group" className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-green-500" />
-            Group
+          <Label htmlFor="password" className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-green-500" />
+            Password
           </Label>
-          <Select
-            value={step2Form.watch("group")}
-            onValueChange={(value) => step2Form.setValue("group", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-green-500">
-              <SelectValue placeholder="Select group" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Standard">⭐ Standard</SelectItem>
-              <SelectItem value="Premium">💎 Premium</SelectItem>
-              <SelectItem value="VIP">👑 VIP</SelectItem>
-              <SelectItem value="Enterprise">🚀 Enterprise</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="password"
+            type="text"
+            placeholder="Enter password"
+            {...step2Form.register("password")}
+            className="border-2 focus:border-green-500"
+          />
         </div>
       </div>
 
@@ -585,164 +592,59 @@ export default function AddUser() {
     <form onSubmit={step3Form.handleSubmit(handleStep3Submit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="status" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-purple-500" />
-            Status
-          </Label>
-          <Select
-            value={step3Form.watch("status")}
-            onValueChange={(value) => step3Form.setValue("status", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-purple-500">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">🟢 Active</SelectItem>
-              <SelectItem value="inactive">🔴 Inactive</SelectItem>
-              <SelectItem value="pending">🟡 Pending</SelectItem>
-              <SelectItem value="suspended">⏸️ Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="mode" className="flex items-center gap-2">
-            <Wifi className="h-4 w-4 text-purple-500" />
-            Mode
-          </Label>
-          <Select
-            value={step3Form.watch("mode")}
-            onValueChange={(value) => step3Form.setValue("mode", value as Mode)}
-          >
-            <SelectTrigger className="border-2 focus:border-purple-500">
-              <SelectValue placeholder="Select mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={Mode.ONLINE}>🟢 Online</SelectItem>
-              <SelectItem value={Mode.OFFLINE}>🔴 Offline</SelectItem>
-              <SelectItem value={Mode.STANDBY}>🟡 Standby</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="customerPower" className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-purple-500" />
-            Customer Power
-          </Label>
-          <Select
-            value={step3Form.watch("customerPower")}
-            onValueChange={(value) => step3Form.setValue("customerPower", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-purple-500">
-              <SelectValue placeholder="Select power status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="on">🟢 On</SelectItem>
-              <SelectItem value="off">🔴 Off</SelectItem>
-              <SelectItem value="standby">🟡 Standby</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="bandwidth" className="flex items-center gap-2">
-            <Network className="h-4 w-4 text-purple-500" />
-            Bandwidth (Mbps)
-          </Label>
-          <Input
-            id="bandwidth"
-            type="number"
-            placeholder="100"
-            {...step3Form.register("bandwidth", { valueAsNumber: true })}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="planId" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-purple-500" />
-            Plan ID
-          </Label>
-          <Input
-            id="planId"
-            placeholder="Enter plan ID"
-            {...step3Form.register("planId")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="bbPlan" className="flex items-center gap-2">
-            <Wifi className="h-4 w-4 text-purple-500" />
-            Broadband Plan
-          </Label>
-          <Select
-            value={step3Form.watch("bbPlan")}
-            onValueChange={(value) => step3Form.setValue("bbPlan", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-purple-500">
-              <SelectValue placeholder="Select broadband plan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Basic">📱 Basic (50 Mbps)</SelectItem>
-              <SelectItem value="Standard">🚀 Standard (100 Mbps)</SelectItem>
-              <SelectItem value="Premium">💎 Premium (200 Mbps)</SelectItem>
-              <SelectItem value="Ultra">⚡ Ultra (500 Mbps)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="ftthExchangePlan" className="flex items-center gap-2">
+          <Label htmlFor="oltId" className="flex items-center gap-2">
             <Server className="h-4 w-4 text-purple-500" />
-            FTTH Exchange Plan
+            OLT Select *
           </Label>
-          <Input
-            id="ftthExchangePlan"
-            placeholder="Enter FTTH plan"
-            {...step3Form.register("ftthExchangePlan")}
-            className="border-2 focus:border-purple-500"
-          />
+          <Select
+            value={step3Form.watch("oltId")}
+            onValueChange={(value) => {
+              step3Form.setValue("oltId", value);
+              step3Form.setValue("fdbId", ""); // Reset FDB when OLT changes
+            }}
+            disabled={isLoadingOlt}
+          >
+            <SelectTrigger className="border-2 focus:border-purple-500">
+              <SelectValue placeholder={isLoadingOlt ? "Loading OLTs..." : "Select OLT"} />
+            </SelectTrigger>
+            <SelectContent>
+              {oltData?.data?.map((olt: any) => (
+                <SelectItem key={olt._id} value={olt.oltId}>
+                  🏢 {olt.name || olt.oltId} - {olt.oltIp}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="staticIp" className="flex items-center gap-2">
+          <Label htmlFor="fdbId" className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
-            Static IP
+            FDB Select
           </Label>
-          <Input
-            id="staticIp"
-            placeholder="192.168.1.100"
-            {...step3Form.register("staticIp")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="macIp" className="flex items-center gap-2">
-            <Network className="h-4 w-4 text-purple-500" />
-            MAC IP
-          </Label>
-          <Input
-            id="macIp"
-            placeholder="Enter MAC IP"
-            {...step3Form.register("macIp")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="oltIp" className="flex items-center gap-2">
-            <Server className="h-4 w-4 text-purple-500" />
-            OLT IP
-          </Label>
-          <Input
-            id="oltIp"
-            placeholder="Enter OLT IP"
-            {...step3Form.register("oltIp")}
-            className="border-2 focus:border-purple-500"
-          />
+          <Select
+            value={step3Form.watch("fdbId")}
+            onValueChange={(value) => step3Form.setValue("fdbId", value)}
+            disabled={!step3Form.watch("oltId")}
+          >
+            <SelectTrigger className="border-2 focus:border-purple-500">
+              <SelectValue placeholder={
+                !step3Form.watch("oltId") 
+                  ? "Select OLT first" 
+                  : "Select FDB"
+              } />
+            </SelectTrigger>
+            <SelectContent>
+              {step3Form.watch("oltId") && oltData?.data && (() => {
+                const selectedOlt = oltData.data.find((olt: any) => olt.oltId === step3Form.watch("oltId"));
+                return selectedOlt?.fdb_devices?.map((fdb: any) => (
+                  <SelectItem key={fdb.fdb_id} value={fdb.fdb_id}>
+                    📦 {fdb.fdb_name} - {fdb.fdb_id}
+                  </SelectItem>
+                ));
+              })()}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -752,7 +654,7 @@ export default function AddUser() {
           </Label>
           <Input
             id="mtceFranchise"
-            placeholder="Enter franchise"
+            placeholder="Enter maintenance franchise"
             {...step3Form.register("mtceFranchise")}
             className="border-2 focus:border-purple-500"
           />
@@ -772,36 +674,36 @@ export default function AddUser() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="workingStatus" className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-purple-500" />
-            Working Status
+          <Label htmlFor="bbPassword" className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-purple-500" />
+            Broadband Password
           </Label>
-          <Select
-            value={step3Form.watch("workingStatus")}
-            onValueChange={(value) => step3Form.setValue("workingStatus", value)}
-          >
-            <SelectTrigger className="border-2 focus:border-purple-500">
-              <SelectValue placeholder="Select working status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">🟢 Active</SelectItem>
-              <SelectItem value="inactive">🔴 Inactive</SelectItem>
-              <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            id="bbPassword"
+            type="text"
+            placeholder="Enter BB password"
+            {...step3Form.register("bbPassword")}
+            className="border-2 focus:border-purple-500"
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assigned" className="flex items-center gap-2">
-            <User className="h-4 w-4 text-purple-500" />
-            Assigned To
+          <Label htmlFor="ruralUrban" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-purple-500" />
+            Rural/Urban
           </Label>
-          <Input
-            id="assigned"
-            placeholder="Enter assigned person"
-            {...step3Form.register("assigned")}
-            className="border-2 focus:border-purple-500"
-          />
+          <Select
+            value={step3Form.watch("ruralUrban")}
+            onValueChange={(value) => step3Form.setValue("ruralUrban", value)}
+          >
+            <SelectTrigger className="border-2 focus:border-purple-500">
+              <SelectValue placeholder="Select Rural/Urban" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Rural">🌾 Rural</SelectItem>
+              <SelectItem value="Urban">🏙️ Urban</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
@@ -825,67 +727,35 @@ export default function AddUser() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="balanceDue" className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-purple-500" />
-            Balance Due
+          <Label htmlFor="category" className="flex items-center gap-2">
+            <Building className="h-4 w-4 text-purple-500" />
+            Category
           </Label>
-          <Input
-            id="balanceDue"
-            type="number"
-            placeholder="0.00"
-            {...step3Form.register("balanceDue", { valueAsNumber: true })}
-            className="border-2 focus:border-purple-500"
-          />
+          <Select
+            value={step3Form.watch("category")}
+            onValueChange={(value) => step3Form.setValue("category", value)}
+          >
+            <SelectTrigger className="border-2 focus:border-purple-500">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Residential">🏠 Residential</SelectItem>
+              <SelectItem value="Commercial">🏢 Commercial</SelectItem>
+              <SelectItem value="Enterprise">🏭 Enterprise</SelectItem>
+              <SelectItem value="Government">🏛️ Government</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="activationDate" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
-            Activation Date
+          <Label htmlFor="ftthExchangePlan" className="flex items-center gap-2">
+            <Server className="h-4 w-4 text-purple-500" />
+            FTTH Exchange Plan
           </Label>
           <Input
-            id="activationDate"
-            type="date"
-            {...step3Form.register("activationDate")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="expirationDate" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
-            Expiration Date
-          </Label>
-          <Input
-            id="expirationDate"
-            type="date"
-            {...step3Form.register("expirationDate")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="installationDate" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
-            Installation Date
-          </Label>
-          <Input
-            id="installationDate"
-            type="date"
-            {...step3Form.register("installationDate")}
-            className="border-2 focus:border-purple-500"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="lastBillingDate" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
-            Last Billing Date
-          </Label>
-          <Input
-            id="lastBillingDate"
-            type="date"
-            {...step3Form.register("lastBillingDate")}
+            id="ftthExchangePlan"
+            placeholder="Enter FTTH plan"
+            {...step3Form.register("ftthExchangePlan")}
             className="border-2 focus:border-purple-500"
           />
         </div>
@@ -903,17 +773,37 @@ export default function AddUser() {
           />
         </div>
 
-        <div className="space-y-2 flex items-center space-x-2">
-          <Checkbox
-            id="isAccountVerified"
-            checked={step3Form.watch("isAccountVerified")}
-            onCheckedChange={(checked) => step3Form.setValue("isAccountVerified", checked as boolean)}
-            className="border-2 border-purple-500"
-          />
-          <Label htmlFor="isAccountVerified" className="flex items-center gap-2 cursor-pointer">
-            <Shield className="h-4 w-4 text-purple-500" />
-            Account Verified
+        <div className="space-y-2">
+          <Label htmlFor="bbPlan" className="flex items-center gap-2">
+            <Wifi className="h-4 w-4 text-purple-500" />
+            Broadband Plan
           </Label>
+          <Input
+            id="bbPlan"
+            placeholder="Enter broadband plan"
+            {...step3Form.register("bbPlan")}
+            className="border-2 focus:border-purple-500"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="workingStatus" className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-purple-500" />
+            Working Status
+          </Label>
+          <Select
+            value={step3Form.watch("workingStatus")}
+            onValueChange={(value) => step3Form.setValue("workingStatus", value)}
+          >
+            <SelectTrigger className="border-2 focus:border-purple-500">
+              <SelectValue placeholder="Select working status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">🟢 Active</SelectItem>
+              <SelectItem value="inactive">🔴 Inactive</SelectItem>
+              <SelectItem value="maintenance">🔧 Maintenance</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -929,10 +819,10 @@ export default function AddUser() {
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isAddingUser}
           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? (
+          {isSubmitting || isAddingUser ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
               Adding User...
@@ -1029,7 +919,7 @@ export default function AddUser() {
                 "bg-gradient-to-r from-purple-500 to-pink-500"
               }`}>
                   {currentStep === 1 ? <User className="h-5 w-5 text-white" /> :
-                   currentStep === 2 ? <MapPin className="h-5 w-5 text-white" /> :
+                   currentStep === 2 ? <Wifi className="h-5 w-5 text-white" /> :
                    <Settings className="h-5 w-5 text-white" />}
                 </div>
               <div>
@@ -1050,7 +940,7 @@ export default function AddUser() {
         </Card>
 
         {/* Success Message */}
-        {isSubmitting && (
+        {(isSubmitting || isAddingUser) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl">
               <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>

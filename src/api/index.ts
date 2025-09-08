@@ -433,6 +433,13 @@ export const api = createApi({
         method: "GET",
       }),
     }),
+    addUser: builder.mutation({
+      query: (body) => ({
+        url: `/dashboard/add-user`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -486,5 +493,6 @@ export const {
   useApproveRejectLeaveRequestMutation,
   useGetOltDataQuery,
   useGetAllSelectNodesQuery,
-  useGetFdbsByOltIdQuery
+  useGetFdbsByOltIdQuery,
+  useAddUserMutation
 } = api;

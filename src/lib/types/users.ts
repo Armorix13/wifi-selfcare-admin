@@ -71,48 +71,38 @@ export interface UserFormData extends Omit<UserData, 'activationDate' | 'expirat
 
 export interface Step1Data {
   email: string;
-  userName: string;
   firstName: string;
   lastName: string;
-  countryCode: string;
   phoneNumber: string;
-  mobile?: string;
-  language?: string;
-  country: string;
+  countryCode: string;
+  companyPreference?: string;
+  customCompany?: string;
+  permanentAddress?: string;
+  residentialAddress?: string;
+  landlineNumber?: string;
 }
 
 export interface Step2Data {
-  permanentAddress?: string;
-  billingAddress?: string;
-  area?: AreaType;
-  zone?: string;
-  ruralUrban?: string;
-  category?: string;
-  customerType?: string;
-  group?: string;
+  modemName?: string;
+  ontType?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+  ontMac?: string;
+  username?: string;
+  password?: string;
 }
 
 export interface Step3Data {
-  status?: string;
-  mode?: Mode;
-  customerPower?: string;
-  bandwidth?: number;
-  planId?: string;
-  bbPlan?: string;
-  ftthExchangePlan?: string;
-  staticIp?: string;
-  macIp?: string;
-  oltIp?: string;
+  oltId?: string; // OLT ID field
+  fdbId?: string; // FDB ID field
   mtceFranchise?: string;
   bbUserId?: string;
-  workingStatus?: string;
-  assigned?: string;
+  bbPassword?: string;
+  ruralUrban?: string;
   acquisitionType?: string;
-  balanceDue?: number;
-  activationDate?: string;
-  expirationDate?: string;
-  installationDate?: string;
-  lastBillingDate?: string;
+  category?: string;
+  ftthExchangePlan?: string;
   llInstallDate?: string;
-  isAccountVerified?: boolean;
+  bbPlan?: string;
+  workingStatus?: string;
 }
