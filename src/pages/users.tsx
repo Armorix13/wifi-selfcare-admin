@@ -18,6 +18,7 @@ import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, Li
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { generateDummyCustomers, type Customer } from "@/lib/dummyData";
+import { useGetUserManagementDataQuery } from "@/api";
 
 // NOTE: Excel import functionality is currently implemented as a dummy/demo version
 // In production, this will be replaced with API integration for file processing
@@ -57,6 +58,9 @@ export default function Users() {
   const [activeTab, setActiveTab] = useState("overview");
   const itemsPerPage = 6;
 
+  // API hook for user management data
+  const { data: userManagementData, isLoading: isLoadingUserData, error: userDataError } = useGetUserManagementDataQuery({ page: currentPage });
+
   // Image handling states for user profile
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -69,8 +73,39 @@ export default function Users() {
 
   const { toast } = useToast();
 
-  // Load dummy data
-  const [users, setUsers] = useState(generateDummyCustomers());
+  // Load user data from API
+  const users = userManagementData?.data?.users?.map((item: any) => ({
+    id: item.user._id,
+    name: `${item.user.firstName} ${item.user.lastName}`,
+    email: item.user.email,
+    phone: item.user.phoneNumber,
+    address: item.user.residentialAddress || item.user.permanentAddress || "N/A",
+    location: item.user.ruralUrban || "N/A",
+    serviceProvider: item.user.companyPreference || "N/A",
+    planName: item.user.bbPlan || "N/A",
+    activationDate: item.user.createdAt ? new Date(item.user.createdAt).toLocaleDateString() : "N/A",
+    expirationDate: "N/A",
+    balanceDue: 0,
+    staticIp: "N/A",
+    macAddress: item.modem?.ontMac || "N/A",
+    status: item.user.workingStatus === "active" ? "active" : "pending",
+    area: item.user.ruralUrban?.toLowerCase() === "urban" ? "urban" : "rural",
+    mode: "online",
+    isActive: item.user.workingStatus === "active",
+    profileImageUrl: null,
+    // Additional fields from API
+    oltId: item.customer?.oltId?.oltId || "N/A",
+    fdbId: item.customer?.fdbId?.fdbId || "N/A",
+    isInstalled: item.customer?.isInstalled || false,
+    modemName: item.modem?.modemName || "N/A",
+    ontType: item.modem?.ontType || "N/A",
+    bbUserId: item.user.bbUserId || "N/A",
+    acquisitionType: item.user.acquisitionType || "N/A",
+    category: item.user.category || "N/A",
+    ftthExchangePlan: item.user.ftthExchangePlan || "N/A",
+    llInstallDate: item.user.llInstallDate ? new Date(item.user.llInstallDate).toLocaleDateString() : "N/A",
+    mtceFranchise: item.user.mtceFranchise || "N/A",
+  })) || [];
 
   // Image handling functions for user profile
   const handleUserImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,15 +246,16 @@ export default function Users() {
 
     const newUsers: UserData[] = importedData.map((data, index) => ({
       ...data,
-      id: Math.max(...users.map(u => u.id)) + index + 1,
+      id: Math.max(...users.map((u: any) => u.id)) + index + 1,
       createdAt: new Date().toISOString(),
     }));
 
-    setUsers([...users, ...newUsers]);
+    // Note: User import is disabled when using API data
+    // setUsers([...users, ...newUsers]);
     
     toast({
-      title: "Import Successful",
-      description: `${newUsers.length} users imported successfully`,
+      title: "Import Disabled",
+      description: "User import is not available with API data. Please use the Add User form instead.",
     });
 
     setIsImportDialogOpen(false);
@@ -247,7 +283,7 @@ export default function Users() {
   });
 
   // Filter users based on search and filter criteria
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = users.filter((user: any) => {
     const matchesSearch = 
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -270,14 +306,15 @@ export default function Users() {
   const handleCreateUser = (data: UserData) => {
     const newUser: UserData = {
       ...data,
-      id: Math.max(...users.map(u => u.id)) + 1,
+      id: Math.max(...users.map((u: any) => u.id)) + 1,
       createdAt: new Date().toISOString(),
       profileImageUrl: profileImagePreview ? profileImagePreview : undefined, // Properly handle null to undefined
     };
-    setUsers([...users, newUser]);
+    // Note: User creation is disabled when using API data
+    // setUsers([...users, newUser]);
     toast({
-      title: "Success",
-      description: "User created successfully",
+      title: "Create Disabled",
+      description: "User creation is not available with API data. Please use the Add User form instead.",
     });
     setIsCreateDialogOpen(false);
     form.reset();
@@ -288,22 +325,24 @@ export default function Users() {
 
 
   const handleDeleteUser = (userId: number) => {
-    setUsers(users.filter(user => user.id !== userId));
+    // Note: User deletion is disabled when using API data
+    // setUsers(users.filter(user => user.id !== userId));
     toast({
-      title: "Success",
-      description: "User deleted successfully",
+      title: "Delete Disabled",
+      description: "User deletion is not available with API data. Please contact administrator.",
     });
   };
 
   const handleSuspendUser = (userId: number) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, status: user.status === 'suspended' ? 'active' : 'suspended' }
-        : user
-    ));
+    // Note: User suspension is disabled when using API data
+    // setUsers(users.map(user => 
+    //   user.id === userId 
+    //     ? { ...user, status: user.status === 'suspended' ? 'active' : 'suspended' }
+    //     : user
+    // ));
     toast({
-      title: "Success",
-      description: "User status updated successfully",
+      title: "Suspend Disabled",
+      description: "User suspension is not available with API data. Please contact administrator.",
     });
   };
 
@@ -331,10 +370,10 @@ export default function Users() {
   };
 
   const stats = {
-    total: users.length,
-    active: users.filter(u => u.status === "active").length,
-    pending: users.filter(u => u.status === "pending").length,
-    suspended: users.filter(u => u.status === "suspended").length,
+    total: userManagementData?.data?.summary?.totalUsers || 0,
+    active: userManagementData?.data?.summary?.installedUsers || 0,
+    pending: userManagementData?.data?.summary?.pendingInstallation || 0,
+    suspended: 0, // This might need to be calculated based on workingStatus
   };
 
   return (
@@ -363,8 +402,30 @@ export default function Users() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Loading State */}
+            {isLoadingUserData && (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>Loading user data...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {userDataError && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load data</h3>
+                  <p className="text-gray-600">Please try refreshing the page</p>
+                </div>
+              </div>
+            )}
+
             {/* Enhanced Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {!isLoadingUserData && !userDataError && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -425,6 +486,7 @@ export default function Users() {
                 </CardContent>
               </Card>
             </div>
+            )}
 
             {/* Enhanced Overview Dashboard */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -548,9 +610,9 @@ export default function Users() {
                   <div className="w-16 h-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MapPin className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{users.filter(u => u.area === "urban").length}</h3>
+                  <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{users.filter((u: any) => u.area === "urban").length}</h3>
                   <p className="text-sm text-indigo-600 dark:text-indigo-400">Urban Users</p>
-                  <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">{Math.round((users.filter(u => u.area === "urban").length / stats.total) * 100)}% of total</p>
+                  <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">{Math.round((users.filter((u: any) => u.area === "urban").length / stats.total) * 100)}% of total</p>
                 </CardContent>
               </Card>
               
@@ -559,9 +621,9 @@ export default function Users() {
                   <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Home className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-300">{users.filter(u => u.area === "rural").length}</h3>
+                  <h3 className="text-2xl font-bold text-purple-700 dark:text-purple-300">{users.filter((u: any) => u.area === "rural").length}</h3>
                   <p className="text-sm text-purple-600 dark:text-purple-400">Rural Users</p>
-                  <p className="text-xs text-purple-500 dark:text-purple-400 mt-1">{Math.round((users.filter(u => u.area === "rural").length / stats.total) * 100)}% of total</p>
+                  <p className="text-xs text-purple-500 dark:text-purple-400 mt-1">{Math.round((users.filter((u: any) => u.area === "rural").length / stats.total) * 100)}% of total</p>
                 </CardContent>
               </Card>
               
@@ -570,9 +632,9 @@ export default function Users() {
                   <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Wifi className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-300">{users.filter(u => u.mode === "online").length}</h3>
+                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-300">{users.filter((u: any) => u.mode === "online").length}</h3>
                   <p className="text-sm text-green-600 dark:text-green-400">Online Now</p>
-                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">{Math.round((users.filter(u => u.mode === "online").length / stats.total) * 100)}% active</p>
+                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">{Math.round((users.filter((u: any) => u.mode === "online").length / stats.total) * 100)}% active</p>
                 </CardContent>
               </Card>
             </div>
@@ -580,7 +642,30 @@ export default function Users() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            {/* Enhanced Search and Filters */}
+            {/* Loading State */}
+            {isLoadingUserData && (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                  <span>Loading users...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {userDataError && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load users</h3>
+                  <p className="text-gray-600">Please try refreshing the page</p>
+                </div>
+              </div>
+            )}
+
+            {/* Users Content */}
+            {!isLoadingUserData && !userDataError && (
+              <>
             <Card className="border-0 shadow-lg bg-gradient-to-r from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
@@ -688,7 +773,7 @@ export default function Users() {
             {/* Users Grid/Table */}
             {viewMode === "card" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {currentUsers.map((user) => (
+                {currentUsers.map((user: any) => (
                   <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border-0 bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50">
                     <CardContent className="p-6">
                       {/* Header with Profile and Status */}
@@ -852,7 +937,7 @@ export default function Users() {
                         </tr>
                       </thead>
                       <tbody>
-                        {currentUsers.map((user, index) => (
+                        {currentUsers.map((user: any, index: number) => (
                           <tr key={user.id} className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-blue-900/10 dark:hover:to-purple-900/10 transition-all duration-200 ${index % 2 === 0 ? 'bg-white/50 dark:bg-gray-900/50' : 'bg-gray-50/30 dark:bg-gray-800/30'}`}>
                             {/* Profile Column */}
                             <td className="p-4">
@@ -1064,6 +1149,8 @@ export default function Users() {
                 </CardContent>
               </Card>
             )}
+              </>
+            )}
           </TabsContent>
 
           {/* Analytics Tab */}
@@ -1204,12 +1291,12 @@ export default function Users() {
                         <span className="text-sm font-medium">Urban Coverage</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-indigo-600">{users.filter(u => u.area === "urban").length}</span>
-                        <p className="text-xs text-gray-500">{Math.round((users.filter(u => u.area === "urban").length / stats.total) * 100)}%</p>
+                        <span className="text-lg font-bold text-indigo-600">{users.filter((u: any) => u.area === "urban").length}</span>
+                        <p className="text-xs text-gray-500">{Math.round((users.filter((u: any) => u.area === "urban").length / stats.total) * 100)}%</p>
                       </div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div className="bg-indigo-500 h-3 rounded-full" style={{width: `${(users.filter(u => u.area === "urban").length / stats.total) * 100}%`}}></div>
+                      <div className="bg-indigo-500 h-3 rounded-full" style={{width: `${(users.filter((u: any) => u.area === "urban").length / stats.total) * 100}%`}}></div>
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -1218,12 +1305,12 @@ export default function Users() {
                         <span className="text-sm font-medium">Rural Coverage</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-lg font-bold text-purple-600">{users.filter(u => u.area === "rural").length}</span>
-                        <p className="text-xs text-gray-500">{Math.round((users.filter(u => u.area === "rural").length / stats.total) * 100)}%</p>
+                        <span className="text-lg font-bold text-purple-600">{users.filter((u: any) => u.area === "rural").length}</span>
+                        <p className="text-xs text-gray-500">{Math.round((users.filter((u: any) => u.area === "rural").length / stats.total) * 100)}%</p>
                       </div>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div className="bg-purple-500 h-3 rounded-full" style={{width: `${(users.filter(u => u.area === "rural").length / stats.total) * 100}%`}}></div>
+                      <div className="bg-purple-500 h-3 rounded-full" style={{width: `${(users.filter((u: any) => u.area === "rural").length / stats.total) * 100}%`}}></div>
                     </div>
                   </div>
                 </CardContent>
@@ -1246,18 +1333,18 @@ export default function Users() {
                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                         <span className="text-sm font-medium">Online</span>
                       </div>
-                      <span className="text-lg font-bold text-green-600">{users.filter(u => u.mode === "online").length}</span>
+                      <span className="text-lg font-bold text-green-600">{users.filter((u: any) => u.mode === "online").length}</span>
                       </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                         <span className="text-sm font-medium">Offline</span>
                       </div>
-                      <span className="text-lg font-bold text-gray-600">{users.filter(u => u.mode === "offline").length}</span>
+                      <span className="text-lg font-bold text-gray-600">{users.filter((u: any) => u.mode === "offline").length}</span> {/* Fixed type annotation */}
                     </div>
                     <div className="pt-2 border-t">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-green-600">{Math.round((users.filter(u => u.mode === "online").length / stats.total) * 100)}%</p>
+                        <p className="text-2xl font-bold text-green-600">{Math.round((users.filter((u: any) => u.mode === "online").length / stats.total) * 100)}%</p>
                         <p className="text-xs text-gray-500">Uptime Rate</p>
                   </div>
                     </div>

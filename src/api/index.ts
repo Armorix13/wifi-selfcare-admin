@@ -11,7 +11,8 @@ const Tags = {
   ENGINEER: "ENGINEER",
   ADMIN: "ADMIN",
   LEADS: "LEADS",
-  LEAVE_REQUESTS: "LEAVE_REQUESTS"
+  LEAVE_REQUESTS: "LEAVE_REQUESTS",
+  USERMANAGEMENT: "USERMANAGEMENT"
 };
 
 export const LIMIT = 20;
@@ -439,6 +440,14 @@ export const api = createApi({
         method: "POST",
         body,
       }),
+      invalidatesTags: [Tags.USERMANAGEMENT],
+    }),
+    getUserManagementData: builder.query({
+      query: ({page}) => ({
+        url: `/dashboard/user-management?page=${page}`,
+        method: "GET",
+      }),
+      providesTags: [Tags.USERMANAGEMENT],
     }),
   }),
 });
@@ -494,5 +503,6 @@ export const {
   useGetOltDataQuery,
   useGetAllSelectNodesQuery,
   useGetFdbsByOltIdQuery,
-  useAddUserMutation
+  useAddUserMutation,
+  useGetUserManagementDataQuery
 } = api;
