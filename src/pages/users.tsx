@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -20,8 +20,6 @@ import { z } from "zod";
 import { generateDummyCustomers, type Customer } from "@/lib/dummyData";
 import { useGetUserManagementDataQuery } from "@/api";
 
-// NOTE: Excel import functionality is currently implemented as a dummy/demo version
-// In production, this will be replaced with API integration for file processing
 
 // Define user schema for form validation
 const userSchema = z.object({
@@ -50,6 +48,7 @@ export default function Users() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [providerFilter, setProviderFilter] = useState("all");
   const [areaFilter, setAreaFilter] = useState("all");
@@ -58,8 +57,24 @@ export default function Users() {
   const [activeTab, setActiveTab] = useState("overview");
   const itemsPerPage = 6;
 
-  // API hook for user management data
-  const { data: userManagementData, isLoading: isLoadingUserData, error: userDataError } = useGetUserManagementDataQuery({ page: currentPage });
+  // Debounce search query to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      // Reset to first page when search changes
+      if (searchQuery !== debouncedSearchQuery) {
+        setCurrentPage(1);
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, debouncedSearchQuery]);
+
+  // API hook for user management data with search
+  const { data: userManagementData, isLoading: isLoadingUserData, error: userDataError } = useGetUserManagementDataQuery({ 
+    page: currentPage,
+    ...(debouncedSearchQuery && { search: debouncedSearchQuery })
+  });
 
   // Image handling states for user profile
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
@@ -74,38 +89,40 @@ export default function Users() {
   const { toast } = useToast();
 
   // Load user data from API
-  const users = userManagementData?.data?.users?.map((item: any) => ({
-    id: item.user._id,
-    name: `${item.user.firstName} ${item.user.lastName}`,
-    email: item.user.email,
-    phone: item.user.phoneNumber,
-    address: item.user.residentialAddress || item.user.permanentAddress || "N/A",
-    location: item.user.ruralUrban || "N/A",
-    serviceProvider: item.user.companyPreference || "N/A",
-    planName: item.user.bbPlan || "N/A",
-    activationDate: item.user.createdAt ? new Date(item.user.createdAt).toLocaleDateString() : "N/A",
-    expirationDate: "N/A",
-    balanceDue: 0,
-    staticIp: "N/A",
-    macAddress: item.modem?.ontMac || "N/A",
-    status: item.user.workingStatus === "active" ? "active" : "pending",
-    area: item.user.ruralUrban?.toLowerCase() === "urban" ? "urban" : "rural",
-    mode: "online",
-    isActive: item.user.workingStatus === "active",
-    profileImageUrl: null,
-    // Additional fields from API
-    oltId: item.customer?.oltId?.oltId || "N/A",
-    fdbId: item.customer?.fdbId?.fdbId || "N/A",
-    isInstalled: item.customer?.isInstalled || false,
-    modemName: item.modem?.modemName || "N/A",
-    ontType: item.modem?.ontType || "N/A",
-    bbUserId: item.user.bbUserId || "N/A",
-    acquisitionType: item.user.acquisitionType || "N/A",
-    category: item.user.category || "N/A",
-    ftthExchangePlan: item.user.ftthExchangePlan || "N/A",
-    llInstallDate: item.user.llInstallDate ? new Date(item.user.llInstallDate).toLocaleDateString() : "N/A",
-    mtceFranchise: item.user.mtceFranchise || "N/A",
-  })) || [];
+  const users = useMemo(() => {
+    return userManagementData?.data?.users?.map((item: any) => ({
+      id: item.user._id,
+      name: `${item.user.firstName} ${item.user.lastName}`,
+      email: item.user.email,
+      phone: item.user.phoneNumber,
+      address: item.user.residentialAddress || item.user.permanentAddress || "N/A",
+      location: item.user.ruralUrban || "N/A",
+      serviceProvider: item.user.companyPreference || "N/A",
+      planName: item.user.bbPlan || "N/A",
+      activationDate: item.user.createdAt ? new Date(item.user.createdAt).toLocaleDateString() : "N/A",
+      expirationDate: "N/A",
+      balanceDue: 0,
+      staticIp: "N/A",
+      macAddress: item.modem?.ontMac || "N/A",
+      status: item.user.workingStatus === "active" ? "active" : "pending",
+      area: item.user.ruralUrban?.toLowerCase() === "urban" ? "urban" : "rural",
+      mode: "online",
+      isActive: item.user.workingStatus === "active",
+      profileImageUrl: null,
+      // Additional fields from API
+      oltId: item.customer?.oltId?.oltId || "N/A",
+      fdbId: item.customer?.fdbId?.fdbId || "N/A",
+      isInstalled: item.customer?.isInstalled || false,
+      modemName: item.modem?.modemName || "N/A",
+      ontType: item.modem?.ontType || "N/A",
+      bbUserId: item.user.bbUserId || "N/A",
+      acquisitionType: item.user.acquisitionType || "N/A",
+      category: item.user.category || "N/A",
+      ftthExchangePlan: item.user.ftthExchangePlan || "N/A",
+      llInstallDate: item.user.llInstallDate ? new Date(item.user.llInstallDate).toLocaleDateString() : "N/A",
+      mtceFranchise: item.user.mtceFranchise || "N/A",
+    })) || [];
+  }, [userManagementData]);
 
   // Image handling functions for user profile
   const handleUserImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,22 +299,19 @@ export default function Users() {
     },
   });
 
-  // Filter users based on search and filter criteria
-  const filteredUsers = users.filter((user: any) => {
-    const matchesSearch = 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || user.status === statusFilter;
-    const matchesProvider = providerFilter === "all" || user.serviceProvider === providerFilter;
-    const matchesArea = areaFilter === "all" || user.area === areaFilter;
+  // Apply local filters only (search is handled by API)
+  const filteredUsers = useMemo(() => {
+    return users.filter((user: any) => {
+      const matchesStatus = statusFilter === "all" || user.status === statusFilter;
+      const matchesProvider = providerFilter === "all" || user.serviceProvider === providerFilter;
+      const matchesArea = areaFilter === "all" || user.area === areaFilter;
 
-    return matchesSearch && matchesStatus && matchesProvider && matchesArea;
-  });
+      return matchesStatus && matchesProvider && matchesArea;
+    });
+  }, [users, statusFilter, providerFilter, areaFilter]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  // Pagination - use API pagination data if available, otherwise calculate locally
+  const totalPages = userManagementData?.data?.pagination?.totalPages || Math.ceil(filteredUsers.length / itemsPerPage);
   const currentUsers = filteredUsers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -369,12 +383,19 @@ export default function Users() {
     );
   };
 
-  const stats = {
-    total: userManagementData?.data?.summary?.totalUsers || 0,
-    active: userManagementData?.data?.summary?.installedUsers || 0,
-    pending: userManagementData?.data?.summary?.pendingInstallation || 0,
-    suspended: 0, // This might need to be calculated based on workingStatus
-  };
+  const stats = useMemo(() => {
+    const total = userManagementData?.data?.summary?.totalUsers || 0;
+    const active = userManagementData?.data?.summary?.installedUsers || 0;
+    const pending = userManagementData?.data?.summary?.pendingInstallation || 0;
+    const suspended = users.filter((u: any) => u.status === 'suspended').length;
+
+    return {
+      total,
+      active,
+      pending,
+      suspended,
+    };
+  }, [userManagementData, users]);
 
   return (
     <MainLayout title="User Management">
@@ -674,11 +695,25 @@ export default function Users() {
                     <div className="relative flex-1 max-w-md">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
-                        placeholder="Search users by name, email, or location..."
+                        placeholder="Search users by name, email, phone, address..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
+                        className="pl-10 pr-10 h-11 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-500"
+                        disabled={isLoadingUserData}
                       />
+                      {isLoadingUserData && searchQuery && (
+                        <RefreshCw className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500 animate-spin" />
+                      )}
+                      {searchQuery && !isLoadingUserData && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <X className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      )}
                     </div>
                     
                     <div className="flex gap-3">
@@ -751,7 +786,7 @@ export default function Users() {
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-2">
                         <Users2 className="w-4 h-4" />
-                        {filteredUsers.length} users found
+                        {debouncedSearchQuery ? `${users.length} users found for "${debouncedSearchQuery}"` : `${users.length} users found`}
                       </span>
                       <span className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500" />
@@ -764,6 +799,17 @@ export default function Users() {
                     </div>
                     <div className="text-xs">
                       Showing page {currentPage} of {totalPages}
+                      {debouncedSearchQuery && (
+                        <span className="ml-2 text-blue-500">
+                          • Search active
+                        </span>
+                      )}
+                      {isLoadingUserData && (
+                        <span className="ml-2 text-blue-500 flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          Loading...
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1085,8 +1131,11 @@ export default function Users() {
                         <Users2 className="w-4 h-4" />
                         <span>
                           Showing <span className="font-semibold text-gray-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                          <span className="font-semibold text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> of{' '}
-                          <span className="font-semibold text-gray-900 dark:text-white">{filteredUsers.length}</span> users
+                          <span className="font-semibold text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, currentUsers.length)}</span> of{' '}
+                          <span className="font-semibold text-gray-900 dark:text-white">{currentUsers.length}</span> users
+                          {debouncedSearchQuery && (
+                            <span className="text-blue-500"> (filtered by search)</span>
+                          )}
                         </span>
                       </div>
                     </div>

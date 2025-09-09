@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Step1Data, Step2Data, Step3Data, AreaType, Mode } from "@/lib/types/users";
 
+// Updated interface to match AddUser.tsx fields
 interface FormStepProps {
   step1Form: any;
   step2Form: any;
@@ -42,6 +43,12 @@ interface FormStepProps {
   onStep3Submit: (data: Step3Data) => void;
   onPreviousStep: () => void;
   isSubmitting: boolean;
+  oltData?: any;
+  isLoadingOlt?: boolean;
+  isSameAsResidential?: boolean;
+  setIsSameAsResidential?: (value: boolean) => void;
+  showCustomCompany?: boolean;
+  setShowCustomCompany?: (value: boolean) => void;
 }
 
 export const FormSteps: React.FC<FormStepProps> = ({
@@ -53,7 +60,13 @@ export const FormSteps: React.FC<FormStepProps> = ({
   onStep2Submit,
   onStep3Submit,
   onPreviousStep,
-  isSubmitting
+  isSubmitting,
+  oltData,
+  isLoadingOlt = false,
+  isSameAsResidential = false,
+  setIsSameAsResidential = () => {},
+  showCustomCompany = false,
+  setShowCustomCompany = () => {},
 }) => {
   const renderStep1 = () => (
     <form onSubmit={step1Form.handleSubmit(onStep1Submit)} className="space-y-6">

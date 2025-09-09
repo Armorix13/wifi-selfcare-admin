@@ -443,11 +443,31 @@ export const api = createApi({
       invalidatesTags: [Tags.USERMANAGEMENT],
     }),
     getUserManagementData: builder.query({
-      query: ({page}) => ({
-        url: `/dashboard/user-management?page=${page}`,
+      query: ({ page, search }) => {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        if (search) {
+          params.append('search', search);
+        }
+        return {
+          url: `/dashboard/user-management?${params.toString()}`,
+          method: "GET"
+        };
+      },
+      providesTags: [Tags.USERMANAGEMENT],
+    }),
+    getUserById: builder.query({
+      query: (id) => ({
+        url: `/dashboard/user/${id}/details-for-update`,
         method: "GET",
       }),
-      providesTags: [Tags.USERMANAGEMENT],
+    }),
+    updateUserByAdmin: builder.mutation({
+      query: (body) => ({
+        url: `/dashboard/update-user`,
+        method: "PUT",
+        body,
+      }),
     }),
   }),
 });
@@ -504,5 +524,7 @@ export const {
   useGetAllSelectNodesQuery,
   useGetFdbsByOltIdQuery,
   useAddUserMutation,
-  useGetUserManagementDataQuery
+  useGetUserManagementDataQuery,
+  useGetUserByIdQuery,
+  useUpdateUserByAdminMutation
 } = api;
