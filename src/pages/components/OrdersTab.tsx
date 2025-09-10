@@ -2,14 +2,34 @@ import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Package } from "lucide-react";
-import { Order } from "@/lib/dummyData";
+import { Package, CheckCircle, Clock, AlertTriangle } from "lucide-react";
+import { OrderData } from "@/lib/types/users";
 
 interface OrdersTabProps {
-  orders: Order[];
+  orders: OrderData[];
 }
 
 const OrdersTab = memo(({ orders }: OrdersTabProps) => {
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Clock },
+      processing: { color: "bg-blue-100 text-blue-800 border-blue-200", icon: Clock },
+      shipped: { color: "bg-purple-100 text-purple-800 border-purple-200", icon: Package },
+      delivered: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
+      cancelled: { color: "bg-red-100 text-red-800 border-red-200", icon: AlertTriangle },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const Icon = config.icon;
+
+    return (
+      <Badge className={`${config.color} border-0`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -23,20 +43,31 @@ const OrdersTab = memo(({ orders }: OrdersTabProps) => {
           <DataTable
             data={orders}
             columns={[
-              { key: "orderNumber", label: "Order #" },
-              { key: "productName", label: "Product" },
-              { key: "quantity", label: "Qty" },
+              { key: "orderId", label: "Order ID" },
+              { 
+                key: "products", 
+                label: "Products",
+                render: (products) => {
+                  const productNames = products.map((p: any) => p.product.title).join(", ");
+                  return productNames.length > 50 ? `${productNames.substring(0, 50)}...` : productNames;
+                }
+              },
               { 
                 key: "totalAmount", 
                 label: "Amount",
                 render: (value) => `₹${value.toLocaleString()}`
               },
               { 
-                key: "status", 
+                key: "orderStatus", 
                 label: "Status",
+                render: (value) => getStatusBadge(value)
+              },
+              { 
+                key: "paymentMethod", 
+                label: "Payment",
                 render: (value) => (
-                  <Badge variant={value === "delivered" ? "default" : "secondary"}>
-                    {value}
+                  <Badge variant="outline">
+                    {value.replace(/_/g, " ").toUpperCase()}
                   </Badge>
                 )
               },
@@ -44,7 +75,8 @@ const OrdersTab = memo(({ orders }: OrdersTabProps) => {
                 key: "createdAt", 
                 label: "Ordered",
                 render: (value) => new Date(value).toLocaleDateString()
-              }
+              },
+              { key: "deliveryAddress", label: "Delivery Address" }
             ]}
           />
         ) : (

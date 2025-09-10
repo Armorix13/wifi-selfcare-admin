@@ -469,6 +469,20 @@ export const api = createApi({
         body,
       }),
     }),
+    getCompleteUserDetailbyId: builder.query({
+      query: (id) => ({
+        url: `/dashboard/client/${id}/full-details`,
+        method: "GET",
+      }),
+    }),
+    importClientFromExcel: builder.mutation({
+      query: (body) => ({
+        url: `/dashboard/upload-users-excel`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [Tags.USERMANAGEMENT],
+    }),
   }),
 });
 
@@ -526,5 +540,7 @@ export const {
   useAddUserMutation,
   useGetUserManagementDataQuery,
   useGetUserByIdQuery,
-  useUpdateUserByAdminMutation
+  useUpdateUserByAdminMutation,
+  useGetCompleteUserDetailbyIdQuery,
+  useImportClientFromExcelMutation
 } = api;

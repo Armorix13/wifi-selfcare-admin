@@ -39,8 +39,19 @@ import {
     PowerOff,
     Loader2
 } from "lucide-react";
-import { generateDummyCustomers, generateDummyComplaints, generateDummyOrders, generateDummyLeads, type Customer, type Complaint, type Order, type Lead } from "@/lib/dummyData";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useGetCompleteUserDetailbyIdQuery } from "@/api";
+import { 
+    ClientData, 
+    ModemDetail, 
+    CustomerDetail, 
+    ComplaintData, 
+    OrderData, 
+    BillRequest, 
+    InstallationRequests, 
+    UserStatistics,
+    UserDetailsResponse 
+} from "@/lib/types/users";
 
 // Lazy load tab components for better performance
 const OverviewTab = lazy(() => import('./components/OverviewTab'));
@@ -80,50 +91,32 @@ const LoadingSpinner = memo(() => (
 export default function UserDetails() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [user, setUser] = useState<Customer | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
     const [showPassword, setShowPassword] = useState(false);
     const [showModemPassword, setShowModemPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    
+    const { data: userDetailData, isLoading: isLoadingUserDetail, error } = useGetCompleteUserDetailbyIdQuery(id!);
 
-    // Memoize dummy data generation to prevent unnecessary re-renders
-    const dummyData = useMemo(() => ({
-        customers: generateDummyCustomers(),
-        complaints: generateDummyComplaints(),
-        orders: generateDummyOrders(),
-        leads: generateDummyLeads(),
-    }), []);
-
-    // Memoize filtered data for this user
+    // Extract data from API response
     const userData = useMemo(() => {
-        if (!user) return { complaints: [], orders: [], leads: [] };
-
+        if (!userDetailData?.data) return null;
+        
+        const { client, modemDetail, customerDetail, complaints, orders, leads, billRequests, installationRequests, statistics } = userDetailData.data;
+        
         return {
-            complaints: dummyData.complaints.filter(complaint => complaint.customerId === user.id),
-            orders: dummyData.orders.filter(order => order.customerId === user.id),
-            leads: dummyData.leads.filter(lead => lead.name === user.name),
+            client,
+            modemDetail,
+            customerDetail,
+            complaints,
+            orders,
+            leads,
+            billRequests,
+            installationRequests,
+            statistics
         };
-    }, [user, dummyData]);
+    }, [userDetailData]);
 
-    useEffect(() => {
-        const loadUser = async () => {
-            setIsLoading(true);
-            // Simulate API call delay
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            if (id) {
-                const foundUser = dummyData.customers.find(customer =>
-                    customer.id === parseInt(id) || customer._id === id
-                );
-                setUser(foundUser || null);
-            }
-            setIsLoading(false);
-        };
-
-        loadUser();
-    }, [id, dummyData.customers]);
-
-    if (isLoading) {
+    if (isLoadingUserDetail) {
         return (
             <MainLayout title="User Details">
                 <LoadingSpinner />
@@ -131,13 +124,13 @@ export default function UserDetails() {
         );
     }
 
-    if (!user) {
+    if (error || !userData) {
         return (
             <MainLayout title="User Details">
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                         <h2 className="text-2xl font-semibold mb-2">User Not Found</h2>
-                        <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist.</p>
+                        <p className="text-muted-foreground mb-4">The user you're looking for doesn't exist or there was an error loading the data.</p>
                         <Button onClick={() => navigate('/users')}>
                             <ChevronLeft className="w-4 h-4 mr-2" />
                             Back to Users
@@ -152,8 +145,10 @@ export default function UserDetails() {
         return <StatusBadge status={status} />;
     };
 
+    const { client, modemDetail, customerDetail, complaints, orders, leads, billRequests, installationRequests, statistics } = userData;
+
     return (
-        <MainLayout title={`User Details - ${user.name}`}>
+        <MainLayout title={`User Details - ${client.fullName}`}>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -169,10 +164,10 @@ export default function UserDetails() {
                             Back to Users
                         </Button>
                         <div className="flex items-center gap-3">
-                            {user.profileImage ? (
+                            {client.profileImage ? (
                                 <img
-                                    src={user.profileImage}
-                                    alt={user.name}
+                                    src={client.profileImage}
+                                    alt={client.fullName}
                                     className="w-12 h-12 rounded-full object-cover border"
                                 />
                             ) : (
@@ -181,16 +176,16 @@ export default function UserDetails() {
                                 </div>
                             )}
                             <div>
-                                <h1 className="text-2xl font-bold">{user.name}</h1>
-                                <p className="text-muted-foreground">{user.email}</p>
+                                <h1 className="text-2xl font-bold">{client.fullName}</h1>
+                                <p className="text-muted-foreground">{client.email}</p>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        {getStatusBadge(user.status)}
-                        <Badge variant={user.mode === "online" ? "default" : "secondary"}>
-                            {user.mode === "online" ? <Power className="w-3 h-3 mr-1" /> : <PowerOff className="w-3 h-3 mr-1" />}
-                            {user.mode}
+                        {getStatusBadge(client.isActive ? "active" : "inactive")}
+                        <Badge variant={client.workingStatus === "active" ? "default" : "secondary"}>
+                            {client.workingStatus === "active" ? <Power className="w-3 h-3 mr-1" /> : <PowerOff className="w-3 h-3 mr-1" />}
+                            {client.workingStatus}
                         </Badge>
                     </div>
                 </div>
@@ -228,27 +223,45 @@ export default function UserDetails() {
                     <Suspense fallback={<LoadingSpinner />}>
                         <ErrorBoundary>
                             <TabsContent value="overview" className="space-y-6">
-                                <OverviewTab user={user} showPassword={showPassword} setShowPassword={setShowPassword} showModemPassword={showModemPassword} setShowModemPassword={setShowModemPassword} />
+                                <OverviewTab 
+                                    client={client} 
+                                    modemDetail={modemDetail}
+                                    customerDetail={customerDetail}
+                                    installationRequests={installationRequests}
+                                    showPassword={showPassword} 
+                                    setShowPassword={setShowPassword} 
+                                    showModemPassword={showModemPassword} 
+                                    setShowModemPassword={setShowModemPassword} 
+                                />
                             </TabsContent>
 
                             <TabsContent value="service" className="space-y-6">
-                                <ServiceTab user={user} />
+                                <ServiceTab 
+                                    client={client}
+                                    modemDetail={modemDetail}
+                                    customerDetail={customerDetail}
+                                />
                             </TabsContent>
 
                             <TabsContent value="complaints" className="space-y-6">
-                                <ComplaintsTab complaints={userData.complaints} />
+                                <ComplaintsTab complaints={complaints} />
                             </TabsContent>
 
                             <TabsContent value="orders" className="space-y-6">
-                                <OrdersTab orders={userData.orders} />
+                                <OrdersTab orders={orders} />
                             </TabsContent>
 
                             <TabsContent value="leads" className="space-y-6">
-                                <LeadsTab leads={userData.leads} />
+                                <LeadsTab leads={leads} />
                             </TabsContent>
 
                             <TabsContent value="billing" className="space-y-6">
-                                <BillingTab user={user} />
+                                <BillingTab 
+                                    client={client}
+                                    customerDetail={customerDetail}
+                                    billRequests={billRequests}
+                                    statistics={statistics}
+                                />
                             </TabsContent>
                         </ErrorBoundary>
                     </Suspense>

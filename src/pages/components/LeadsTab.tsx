@@ -2,11 +2,10 @@ import { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Users } from "lucide-react";
-import { Lead } from "@/lib/dummyData";
+import { Users, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
 interface LeadsTabProps {
-  leads: Lead[];
+  leads: any[];
 }
 
 const LeadsTab = memo(({ leads }: LeadsTabProps) => {
