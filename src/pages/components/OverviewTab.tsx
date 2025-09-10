@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,8 @@ import { BASE_URL } from "@/api";
 
 interface OverviewTabProps {
   client: ClientData;
-  modemDetail: ModemDetail;
-  customerDetail: CustomerDetail;
+  modemDetail: ModemDetail | null;
+  customerDetail: CustomerDetail | null;
   installationRequests: InstallationRequests;
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
@@ -38,9 +38,28 @@ interface OverviewTabProps {
   setShowModemPassword: (show: boolean) => void;
 }
 
-const OverviewTab = memo(({ client, modemDetail, customerDetail, installationRequests, showPassword, setShowPassword, showModemPassword, setShowModemPassword }: OverviewTabProps) => {
+const OverviewTab = ({ client, modemDetail, customerDetail, installationRequests, showPassword, setShowPassword, showModemPassword, setShowModemPassword }: OverviewTabProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageTitle, setImageTitle] = useState<string>("");
+  const [forceRender, setForceRender] = useState(0);
+
+  // Force re-render when key props change
+  console.log('OverviewTab rendering for client:', client._id, 'forceRender:', forceRender);
+
+  // Force re-render when component mounts or key props change
+  useEffect(() => {
+    console.log('OverviewTab mounted/updated for client:', client._id);
+    // Force a re-render by updating state
+    setForceRender(prev => prev + 1);
+  }, [client._id, modemDetail, customerDetail]);
+
+  // Additional effect to ensure content is visible
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('OverviewTab content should be visible now');
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [forceRender]);
 
   const handleDownload = (url: string, filename: string) => {
     const fullUrl = `${BASE_URL}${url}`;
@@ -60,8 +79,21 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
 
   // Get the first wifi installation request for document images
   const wifiRequest = installationRequests?.wifi?.[0];
+  
+  // Ensure content is visible
+  if (!client || !client._id) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading overview...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" key={`overview-content-${client._id}-${forceRender}`}>
       {/* Personal Information */}
       <Card>
         <CardHeader>
@@ -74,26 +106,26 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">First Name</label>
-              <p className="font-medium">{client.firstName}</p>
+              <p className="font-medium">{client?.firstName || 'N/A'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Last Name</label>
-              <p className="font-medium">{client.lastName}</p>
+              <p className="font-medium">{client?.lastName || ''}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Full Name</label>
-              <p className="font-medium">{client.fullName}</p>
+              <p className="font-medium">{client?.fullName || ''}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">User ID</label>
-              <p className="font-medium font-mono">{client._id}</p>
+              <p className="font-medium font-mono">{client?._id || 'N/A'}</p>
             </div>
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">Email</label>
             <p className="font-medium flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              {client.email}
+              {client?.email || 'N/A'}
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -101,12 +133,12 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
               <label className="text-sm font-medium text-muted-foreground">Phone</label>
               <p className="font-medium flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                {client.countryCode} {client.phoneNumber}
+                {client?.countryCode || '+91'} {client?.phoneNumber || 'N/A'}
               </p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">BB User ID</label>
-              <p className="font-medium">{client.bbUserId}</p>
+              <p className="font-medium">{client?.bbUserId || 'N/A'}</p>
             </div>
           </div>
         </CardContent>
@@ -124,29 +156,29 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">BB Plan</label>
-              <p className="font-medium">{client.bbPlan}</p>
+              <p className="font-medium">{client.bbPlan || 'N/A'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">FTTH Plan</label>
-              <p className="font-medium">{client.ftthExchangePlan}</p>
+              <p className="font-medium">{client.ftthExchangePlan || 'N/A'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">MTCE Franchise</label>
-              <p className="font-medium">{client.mtceFranchise}</p>
+              <p className="font-medium">{client.mtceFranchise || 'N/A'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Area Type</label>
-              <p className="font-medium capitalize">{client.ruralUrban}</p>
+              <p className="font-medium capitalize">{client.ruralUrban || 'N/A'}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Working Status</label>
-              <p className="font-medium">{client.workingStatus}</p>
+              <p className="font-medium">{client.workingStatus || 'N/A'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Acquisition Type</label>
-              <p className="font-medium">{client.acquisitionType}</p>
+              <p className="font-medium">{client.acquisitionType || 'N/A'}</p>
             </div>
           </div>
         </CardContent>
@@ -207,47 +239,58 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Modem Name</label>
-            <p className="font-medium">{modemDetail.modemName}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Model Number</label>
-              <p className="font-medium">{modemDetail.modelNumber}</p>
+          {modemDetail ? (
+            <>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Modem Name</label>
+                <p className="font-medium">{modemDetail.modemName || 'N/A'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Model Number</label>
+                  <p className="font-medium">{modemDetail.modelNumber || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Serial Number</label>
+                  <p className="font-medium font-mono">{modemDetail.serialNumber || 'N/A'}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">ONT MAC</label>
+                <p className="font-medium font-mono">{modemDetail.ontMac || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">ONT Type</label>
+                <p className="font-medium">{modemDetail.ontType || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Username</label>
+                <p className="font-medium font-mono">{modemDetail.username || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Password</label>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium font-mono">
+                    {modemDetail.password ? (showModemPassword ? modemDetail.password : "••••••••") : 'N/A'}
+                  </p>
+                  {modemDetail.password && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowModemPassword(!showModemPassword)}
+                    >
+                      {showModemPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <Router className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No modem information available</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Serial Number</label>
-              <p className="font-medium font-mono">{modemDetail.serialNumber}</p>
-            </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">ONT MAC</label>
-            <p className="font-medium font-mono">{modemDetail.ontMac}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">ONT Type</label>
-            <p className="font-medium">{modemDetail.ontType}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Username</label>
-            <p className="font-medium font-mono">{modemDetail.username}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Password</label>
-            <div className="flex items-center gap-2">
-              <p className="font-medium font-mono">
-                {showModemPassword ? modemDetail.password : "••••••••"}
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowModemPassword(!showModemPassword)}
-              >
-                {showModemPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </Button>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -260,29 +303,46 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Installation Date</label>
-            <p className="font-medium">{new Date(customerDetail.installationDate).toLocaleDateString()}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Balance Due</label>
-            <p className="font-medium text-red-600">₹{customerDetail.balanceDue.toLocaleString()}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Installation Status</label>
-            <Badge variant={customerDetail.isInstalled ? "default" : "secondary"}>
-              {customerDetail.isInstalled ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertTriangle className="w-3 h-3 mr-1" />}
-              {customerDetail.isInstalled ? "Installed" : "Pending"}
-            </Badge>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">FDB ID</label>
-            <p className="font-medium">{customerDetail.fdbId.fdbName}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">OLT ID</label>
-            <p className="font-medium">{customerDetail.oltId.name}</p>
-          </div>
+          {customerDetail ? (
+            <>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Installation Date</label>
+                <p className="font-medium">
+                  {customerDetail.installationDate ? new Date(customerDetail.installationDate).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Balance Due</label>
+                <p className="font-medium text-red-600">
+                  ₹{customerDetail.balanceDue ? customerDetail.balanceDue.toLocaleString() : '0'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Installation Status</label>
+                <Badge variant={customerDetail.isInstalled ? "default" : "secondary"}>
+                  {customerDetail.isInstalled ? <CheckCircle className="w-3 h-3 mr-1" /> : <AlertTriangle className="w-3 h-3 mr-1" />}
+                  {customerDetail.isInstalled ? "Installed" : "Pending"}
+                </Badge>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">FDB ID</label>
+                <p className="font-medium">
+                  {customerDetail.fdbId?.fdbName || (typeof customerDetail.fdbId === 'string' ? customerDetail.fdbId : 'N/A')}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">OLT ID</label>
+                <p className="font-medium">
+                  {customerDetail.oltId?.name || (typeof customerDetail.oltId === 'string' ? customerDetail.oltId : 'N/A')}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <Building className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">No installation information available</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -435,8 +495,6 @@ const OverviewTab = memo(({ client, modemDetail, customerDetail, installationReq
       </Dialog>
     </div>
   );
-});
-
-OverviewTab.displayName = "OverviewTab";
+};
 
 export default OverviewTab;

@@ -94,8 +94,23 @@ export default function UserDetails() {
     const [activeTab, setActiveTab] = useState("overview");
     const [showPassword, setShowPassword] = useState(false);
     const [showModemPassword, setShowModemPassword] = useState(false);
+    const [overviewKey, setOverviewKey] = useState(0);
     
     const { data: userDetailData, isLoading: isLoadingUserDetail, error } = useGetCompleteUserDetailbyIdQuery(id!);
+
+    // Handle tab changes and ensure proper rendering
+    useEffect(() => {
+        console.log('Tab changed to:', activeTab);
+        // Force re-render of overview tab when switching back to it
+        if (activeTab === 'overview') {
+            setOverviewKey(prev => prev + 1);
+        }
+        // Force a small delay to ensure DOM is updated
+        const timer = setTimeout(() => {
+            console.log('Tab content should be visible:', activeTab);
+        }, 50);
+        return () => clearTimeout(timer);
+    }, [activeTab]);
 
     // Extract data from API response
     const userData = useMemo(() => {
@@ -103,8 +118,36 @@ export default function UserDetails() {
         
         const { client, modemDetail, customerDetail, complaints, orders, leads, billRequests, installationRequests, statistics } = userDetailData.data;
         
+        // Process client data to handle null/undefined values
+        const processedClient = {
+            ...client,
+            fullName: `${client?.firstName || ''} ${client?.lastName || ''}`.trim() || 'N/A',
+            email: client?.email || 'N/A',
+            phoneNumber: client?.phoneNumber || 'N/A',
+            countryCode: client?.countryCode || '+91',
+            companyPreference: client?.companyPreference || 'N/A',
+            permanentAddress: client?.permanentAddress || 'N/A',
+            residentialAddress: client?.residentialAddress || 'N/A',
+            landlineNumber: client?.landlineNumber || 'N/A',
+            ruralUrban: client?.ruralUrban || 'N/A',
+            acquisitionType: client?.acquisitionType || 'N/A',
+            category: client?.category || 'N/A',
+            ftthExchangePlan: client?.ftthExchangePlan || 'N/A',
+            bbPlan: client?.bbPlan || 'N/A',
+            workingStatus: client?.workingStatus || 'N/A',
+            bbUserId: client?.bbUserId || 'N/A',
+            bbPassword: client?.bbPassword || 'N/A',
+            mtceFranchise: client?.mtceFranchise || 'N/A',
+            oltIp: client?.oltIp || 'N/A',
+            llInstallDate: client?.llInstallDate || 'N/A',
+            assigned: client?.assigned || 'N/A',
+            createdAt: client?.createdAt || 'N/A',
+            updatedAt: client?.updatedAt || 'N/A',
+            isActive: client?.isActive || false,
+        };
+        
         return {
-            client,
+            client: processedClient,
             modemDetail,
             customerDetail,
             complaints,
@@ -146,6 +189,9 @@ export default function UserDetails() {
     };
 
     const { client, modemDetail, customerDetail, complaints, orders, leads, billRequests, installationRequests, statistics } = userData;
+
+    // Debug log for tab changes
+    console.log('UserDetails rendering with activeTab:', activeTab, 'client:', client._id);
 
     return (
         <MainLayout title={`User Details - ${client.fullName}`}>
@@ -222,8 +268,9 @@ export default function UserDetails() {
                     {/* Lazy-loaded Tab Content */}
                     <Suspense fallback={<LoadingSpinner />}>
                         <ErrorBoundary>
-                            <TabsContent value="overview" className="space-y-6">
+                            <TabsContent value="overview" className="space-y-6" key={`overview-${client._id}-${overviewKey}`}>
                                 <OverviewTab 
+                                    key={`overview-tab-${client._id}-${overviewKey}`}
                                     client={client} 
                                     modemDetail={modemDetail}
                                     customerDetail={customerDetail}
@@ -235,28 +282,30 @@ export default function UserDetails() {
                                 />
                             </TabsContent>
 
-                            <TabsContent value="service" className="space-y-6">
+                            <TabsContent value="service" className="space-y-6" key={`service-${client._id}`}>
                                 <ServiceTab 
+                                    key={`service-tab-${client._id}`}
                                     client={client}
                                     modemDetail={modemDetail}
                                     customerDetail={customerDetail}
                                 />
                             </TabsContent>
 
-                            <TabsContent value="complaints" className="space-y-6">
-                                <ComplaintsTab complaints={complaints} />
+                            <TabsContent value="complaints" className="space-y-6" key={`complaints-${client._id}`}>
+                                <ComplaintsTab key={`complaints-tab-${client._id}`} complaints={complaints} />
                             </TabsContent>
 
-                            <TabsContent value="orders" className="space-y-6">
-                                <OrdersTab orders={orders} />
+                            <TabsContent value="orders" className="space-y-6" key={`orders-${client._id}`}>
+                                <OrdersTab key={`orders-tab-${client._id}`} orders={orders} />
                             </TabsContent>
 
-                            <TabsContent value="leads" className="space-y-6">
-                                <LeadsTab leads={leads} />
+                            <TabsContent value="leads" className="space-y-6" key={`leads-${client._id}`}>
+                                <LeadsTab key={`leads-tab-${client._id}`} leads={leads} />
                             </TabsContent>
 
-                            <TabsContent value="billing" className="space-y-6">
+                            <TabsContent value="billing" className="space-y-6" key={`billing-${client._id}`}>
                                 <BillingTab 
+                                    key={`billing-tab-${client._id}`}
                                     client={client}
                                     customerDetail={customerDetail}
                                     billRequests={billRequests}

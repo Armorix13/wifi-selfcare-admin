@@ -38,7 +38,8 @@ import {
   X,
   Users,
   Edit,
-  UserPlus
+  UserPlus,
+  Check
 } from "lucide-react";
 import { Step1Data, Step2Data, Step3Data, UserFormData, AreaType, Mode } from "@/lib/types/users";
 // Remove FormSteps import - we'll render forms directly
@@ -86,39 +87,39 @@ const step3Schema = z.object({
 const mapApiDataToFormData = (apiData: any) => {
   return {
     // Step 1 Data
-    email: apiData.user.email,
-    firstName: apiData.user.firstName,
-    lastName: apiData.user.lastName,
-    phoneNumber: apiData.user.phoneNumber,
-    countryCode: '+91', // Default country code
-    companyPreference: apiData.user.companyPreference,
+    email: apiData.user?.email || '',
+    firstName: apiData.user?.firstName || '',
+    lastName: apiData.user?.lastName || '',
+    phoneNumber: apiData.user?.phoneNumber || '',
+    countryCode: apiData.user?.countryCode || '+91',
+    companyPreference: apiData.user?.companyPreference || '',
     customCompany: '',
-    permanentAddress: apiData.user.permanentAddress || '',
-    residentialAddress: apiData.user.residentialAddress || '',
-    landlineNumber: apiData.user.landlineNumber || '',
+    permanentAddress: apiData.user?.permanentAddress || '',
+    residentialAddress: apiData.user?.residentialAddress || '',
+    landlineNumber: apiData.user?.landlineNumber || '',
     
-    // Step 2 Data
-    modemName: apiData.modemDetails.modemName,
-    ontType: apiData.modemDetails.ontType,
-    modelNumber: apiData.modemDetails.modelNumber,
-    serialNumber: apiData.modemDetails.serialNumber,
-    ontMac: apiData.modemDetails.ontMac,
-    username: apiData.modemDetails.username,
-    password: apiData.modemDetails.password,
+    // Step 2 Data - Handle null modemDetail
+    modemName: apiData.modemDetail?.modemName || '',
+    ontType: apiData.modemDetail?.ontType || '',
+    modelNumber: apiData.modemDetail?.modelNumber || '',
+    serialNumber: apiData.modemDetail?.serialNumber || '',
+    ontMac: apiData.modemDetail?.ontMac || '',
+    username: apiData.modemDetail?.username || '',
+    password: apiData.modemDetail?.password || '',
     
-    // Step 3 Data
-    oltId: apiData.customerDetails.oltId?.oltId || apiData.customerDetails.oltId,
-    fdbId: apiData.customerDetails.fdbId?.fdbId || apiData.customerDetails.fdbId,
-    mtceFranchise: apiData.user.mtceFranchise,
-    bbUserId: apiData.user.bbUserId,
-    bbPassword: apiData.user.bbPassword || '',
-    ruralUrban: apiData.user.ruralUrban,
-    acquisitionType: apiData.user.acquisitionType,
-    category: apiData.user.category || 'Residential',
-    ftthExchangePlan: apiData.user.ftthExchangePlan,
-    llInstallDate: apiData.user.llInstallDate ? new Date(apiData.user.llInstallDate).toISOString().split('T')[0] : '',
-    bbPlan: apiData.user.bbPlan,
-    workingStatus: apiData.user.workingStatus,
+    // Step 3 Data - Handle null customerDetail
+    oltId: apiData.customerDetail?.oltId?.oltId || apiData.customerDetail?.oltId || '',
+    fdbId: apiData.customerDetail?.fdbId?.fdbId || apiData.customerDetail?.fdbId || '',
+    mtceFranchise: apiData.user?.mtceFranchise || '',
+    bbUserId: apiData.user?.bbUserId || '',
+    bbPassword: apiData.user?.bbPassword || '',
+    ruralUrban: apiData.user?.ruralUrban || 'Urban',
+    acquisitionType: apiData.user?.acquisitionType || 'new',
+    category: apiData.user?.category || 'Residential',
+    ftthExchangePlan: apiData.user?.ftthExchangePlan || '',
+    llInstallDate: apiData.user?.llInstallDate ? new Date(apiData.user.llInstallDate).toISOString().split('T')[0] : '',
+    bbPlan: apiData.user?.bbPlan || '',
+    workingStatus: apiData.user?.workingStatus || 'active',
   };
 };
 
@@ -285,12 +286,20 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
 
   const handleStep1Submit = async (data: Step1Data) => {
     setFormData(prev => ({ ...prev, ...data }));
-    setCurrentStep(2);
+    // Don't automatically advance to next step - let user choose
+    toast({
+      title: "Step 1 Saved",
+      description: "Personal information has been saved. You can continue to next step or stay here.",
+    });
   };
 
   const handleStep2Submit = async (data: Step2Data) => {
     setFormData(prev => ({ ...prev, ...data }));
-    setCurrentStep(3);
+    // Don't automatically advance to next step - let user choose
+    toast({
+      title: "Step 2 Saved",
+      description: "Modem information has been saved. You can continue to next step or stay here.",
+    });
   };
 
   const handleStep3Submit = async (data: Step3Data) => {
@@ -329,7 +338,7 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
         llInstallDate: finalData.llInstallDate,
         bbPlan: finalData.bbPlan,
         workingStatus: finalData.workingStatus,
-        isInstalled: userData?.customerDetails?.isInstalled || false,
+        isInstalled: userData?.customerDetail?.isInstalled || false,
       };
       
       console.log("Sending update payload:", updatePayload);
@@ -362,7 +371,8 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
   };
 
   const goToStep = (step: number) => {
-    if (step <= currentStep) {
+    // Allow navigation to any step (1, 2, or 3) without validation
+    if (step >= 1 && step <= 3) {
       setCurrentStep(step);
     }
   };
@@ -558,13 +568,22 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => goToStep(2)}
+          className="px-6 py-3"
+        >
+          Go to Step 2
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
         <Button
           type="submit"
           className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
         >
-          Next Step
-          <ArrowRight className="ml-2 h-5 w-5" />
+          Save Step 1
+          <Check className="ml-2 h-5 w-5" />
         </Button>
       </div>
     </form>
@@ -674,21 +693,32 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
       </div>
 
       <div className="flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={goToPreviousStep}
-          className="border-2 border-gray-300 hover:border-gray-400 px-8 py-3 rounded-xl transition-all duration-300"
-        >
-          <ArrowLeft className="mr-2 h-5 w-5" />
-          Previous
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(1)}
+            className="px-4 py-3"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Step 1
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(3)}
+            className="px-4 py-3"
+          >
+            Step 3
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
         <Button
           type="submit"
           className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
         >
-          Next Step
-          <ArrowRight className="ml-2 h-5 w-5" />
+          Save Step 2
+          <Check className="ml-2 h-5 w-5" />
         </Button>
       </div>
     </form>
@@ -887,15 +917,26 @@ export default function EditUser({ userData: propUserData }: EditUserProps) {
       </div>
 
       <div className="flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={goToPreviousStep}
-          className="border-2 border-gray-300 hover:border-gray-400 px-8 py-3 rounded-xl transition-all duration-300"
-        >
-          <ArrowLeft className="mr-2 h-5 w-5" />
-          Previous
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(1)}
+            className="px-4 py-3"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Step 1
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(2)}
+            className="px-4 py-3"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Step 2
+          </Button>
+        </div>
         <Button
           type="submit"
           disabled={isSubmitting || isUpdatingUser}

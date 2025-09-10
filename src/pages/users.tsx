@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ import { UserPlus, MapPin, Phone, Mail, Calendar, Wifi, Search, Filter, Grid, Li
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { generateDummyCustomers, type Customer } from "@/lib/dummyData";
-import { useGetUserManagementDataQuery } from "@/api";
+import { useGetUserManagementDataQuery, useImportClientFromExcelMutation } from "@/api";
 
 
 // Define user schema for form validation
@@ -76,6 +76,9 @@ export default function Users() {
     ...(debouncedSearchQuery && { search: debouncedSearchQuery })
   });
 
+  // Excel import mutation hook
+  const [importClientFromExcel, { isLoading: isImporting, error: importError }] = useImportClientFromExcelMutation();
+
   // Image handling states for user profile
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -85,42 +88,50 @@ export default function Users() {
   const [importedData, setImportedData] = useState<any[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [isProcessingImport, setIsProcessingImport] = useState(false);
+  const [importSummary, setImportSummary] = useState<{
+    totalRecords: number;
+    validRecords: number;
+    errorRecords: number;
+  } | null>(null);
 
   const { toast } = useToast();
+  
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load user data from API
   const users = useMemo(() => {
     return userManagementData?.data?.users?.map((item: any) => ({
-      id: item.user._id,
-      name: `${item.user.firstName} ${item.user.lastName}`,
-      email: item.user.email,
-      phone: item.user.phoneNumber,
-      address: item.user.residentialAddress || item.user.permanentAddress || "N/A",
-      location: item.user.ruralUrban || "N/A",
-      serviceProvider: item.user.companyPreference || "N/A",
-      planName: item.user.bbPlan || "N/A",
-      activationDate: item.user.createdAt ? new Date(item.user.createdAt).toLocaleDateString() : "N/A",
+      id: item.user?._id || 'N/A',
+      name: `${item.user?.firstName || ''} ${item.user?.lastName || ''}`.trim() || 'N/A',
+      email: item.user?.email || 'N/A',
+      phone: item.user?.phoneNumber || 'N/A',
+      address: item.user?.residentialAddress || item.user?.permanentAddress || "N/A",
+      location: item.user?.ruralUrban || "N/A",
+      serviceProvider: item.user?.companyPreference || "N/A",
+      planName: item.user?.bbPlan || "N/A",
+      activationDate: item.user?.createdAt ? new Date(item.user.createdAt).toLocaleDateString() : "N/A",
       expirationDate: "N/A",
       balanceDue: 0,
       staticIp: "N/A",
       macAddress: item.modem?.ontMac || "N/A",
-      status: item.user.workingStatus === "active" ? "active" : "pending",
-      area: item.user.ruralUrban?.toLowerCase() === "urban" ? "urban" : "rural",
+      status: item.user?.workingStatus === "active" ? "active" : "pending",
+      area: item.user?.ruralUrban?.toLowerCase() === "urban" ? "urban" : "rural",
       mode: "online",
-      isActive: item.user.workingStatus === "active",
+      isActive: item.user?.workingStatus === "active",
       profileImageUrl: null,
-      // Additional fields from API
-      oltId: item.customer?.oltId?.oltId || "N/A",
-      fdbId: item.customer?.fdbId?.fdbId || "N/A",
+      // Additional fields from API - with proper null checks
+      oltId: item.customer?.oltId?.oltId || item.customer?.oltId || "N/A",
+      fdbId: item.customer?.fdbId?.fdbId || item.customer?.fdbId || "N/A",
       isInstalled: item.customer?.isInstalled || false,
       modemName: item.modem?.modemName || "N/A",
       ontType: item.modem?.ontType || "N/A",
-      bbUserId: item.user.bbUserId || "N/A",
-      acquisitionType: item.user.acquisitionType || "N/A",
-      category: item.user.category || "N/A",
-      ftthExchangePlan: item.user.ftthExchangePlan || "N/A",
-      llInstallDate: item.user.llInstallDate ? new Date(item.user.llInstallDate).toLocaleDateString() : "N/A",
-      mtceFranchise: item.user.mtceFranchise || "N/A",
+      bbUserId: item.user?.bbUserId || "N/A",
+      acquisitionType: item.user?.acquisitionType || "N/A",
+      category: item.user?.category || "N/A",
+      ftthExchangePlan: item.user?.ftthExchangePlan || "N/A",
+      llInstallDate: item.user?.llInstallDate ? new Date(item.user.llInstallDate).toLocaleDateString() : "N/A",
+      mtceFranchise: item.user?.mtceFranchise || "N/A",
     })) || [];
   }, [userManagementData]);
 
@@ -143,22 +154,81 @@ export default function Users() {
     form.setValue("profileImageUrl", undefined);
   };
 
-  // Excel import functions (Dummy implementation - will be replaced with API integration)
-  const handleExcelFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Excel import functions with real API integration
+  const handleExcelFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File upload handler called!', event);
     const file = event.target.files?.[0];
-    if (!file) return;
+    console.log('Selected file:', file);
+    
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
-    // Validate file type
-    const validTypes = [
+    // Show immediate feedback that file was selected
+    toast({
+      title: "File Selected",
+      description: `Selected file: ${file.name} (${file.type || 'unknown type'})`,
+    });
+
+    // Reset the input value to allow re-uploading the same file
+    event.target.value = '';
+
+    // Validate file type - check both MIME type and file extension
+    const validMimeTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
       'application/vnd.ms-excel', // .xls
-      'text/csv' // .csv
+      'application/excel', // .xls (alternative MIME type)
+      'application/x-excel', // .xls (alternative MIME type)
+      'application/x-msexcel', // .xls (alternative MIME type)
+      'text/csv', // .csv
+      'text/comma-separated-values', // .csv (alternative MIME type)
+      'application/csv', // .csv (alternative MIME type)
     ];
 
-    if (!validTypes.includes(file.type)) {
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    // Check both MIME type and file extension
+    const isValidMimeType = validMimeTypes.includes(file.type);
+    const isValidExtension = validExtensions.includes(fileExtension);
+    
+    // Some browsers might not set the correct MIME type, so we also check the extension
+    // Also allow empty MIME type (some browsers don't set it) if extension is valid
+    // Additional check: if MIME type is empty but extension is valid, allow it
+    // Also allow if MIME type is generic (application/octet-stream) but extension is valid
+    const hasValidExtension = isValidExtension;
+    const hasValidMimeType = isValidMimeType || 
+                            (file.type === '' && isValidExtension) ||
+                            (file.type === 'application/octet-stream' && isValidExtension);
+    
+    if (!hasValidMimeType && !hasValidExtension) {
       toast({
         title: "Invalid File Type",
-        description: "Please upload an Excel file (.xlsx, .xls) or CSV file",
+        description: `Please upload an Excel file (.xlsx, .xls) or CSV file. Detected: MIME type "${file.type || 'empty'}", extension "${fileExtension}"`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Log file info for debugging
+    console.log('File validation:', {
+      name: file.name,
+      type: file.type,
+      extension: fileExtension,
+      isValidMimeType,
+      isValidExtension,
+      hasValidMimeType,
+      hasValidExtension,
+      size: file.size
+    });
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload a file smaller than 10MB",
         variant: "destructive",
       });
       return;
@@ -167,71 +237,41 @@ export default function Users() {
     setIsProcessingImport(true);
     setImportErrors([]);
 
-    // Simulate file processing delay
-    setTimeout(() => {
-      try {
-        // Dummy data for demonstration - in real implementation, this would come from API
-        const dummyImportedData = [
-          {
-            name: "Alice Johnson",
-            email: "alice.johnson@example.com",
-            phone: "+1234567890",
-            address: "123 Oak Street",
-            location: "New York, NY",
-            serviceProvider: "WiFi Provider",
-            planName: "Premium Plan",
-            status: "active",
-            area: "urban",
-            mode: "online",
-            balanceDue: 0,
-            staticIp: "192.168.1.100",
-            macAddress: "AA:BB:CC:DD:EE:FF",
-            isActive: true,
-          },
-          {
-            name: "Bob Smith",
-            email: "bob.smith@example.com",
-            phone: "+1987654321",
-            address: "456 Pine Avenue",
-            location: "Los Angeles, CA",
-            serviceProvider: "WiFi Provider",
-            planName: "Basic Plan",
-            status: "pending",
-            area: "rural",
-            mode: "offline",
-            balanceDue: 50.00,
-            staticIp: "192.168.1.101",
-            macAddress: "FF:EE:DD:CC:BB:AA",
-            isActive: true,
-          },
-          {
-            name: "Carol Davis",
-            email: "carol.davis@example.com",
-            phone: "+1555123456",
-            address: "789 Maple Drive",
-            location: "Chicago, IL",
-            serviceProvider: "WiFi Provider",
-            planName: "Standard Plan",
-            status: "active",
-            area: "urban",
-            mode: "online",
-            balanceDue: 25.00,
-            staticIp: "192.168.1.102",
-            macAddress: "11:22:33:44:55:66",
-            isActive: true,
-          }
-        ];
+    try {
+      // Create FormData for multipart file upload
+      const formData = new FormData();
+      formData.append("files", file, file.name);
 
-        const dummyErrors = [
-          "Row 5: Name is required",
-          "Row 7: Invalid email format"
-        ];
+      console.log('Uploading file:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        extension: fileExtension
+      });
 
-        setImportedData(dummyImportedData);
-        setImportErrors(dummyErrors);
+      // Call the API to process the Excel file
+      const result = await importClientFromExcel(formData).unwrap();
+      
+      // Handle successful response
+      if (result.success) {
+        const validData = result.data?.validRecords || [];
+        const errors = result.data?.errors || [];
+        const totalRecords = result.data?.totalRecords || validData.length + errors.length;
         
-        if (dummyImportedData.length > 0) {
+        setImportedData(validData);
+        setImportErrors(errors);
+        setImportSummary({
+          totalRecords,
+          validRecords: validData.length,
+          errorRecords: errors.length,
+        });
+        
+        if (validData.length > 0) {
           setIsImportDialogOpen(true);
+          toast({
+            title: "File Processed Successfully",
+            description: `Found ${validData.length} valid records and ${errors.length} errors`,
+          });
         } else {
           toast({
             title: "No Valid Data Found",
@@ -239,17 +279,50 @@ export default function Users() {
             variant: "destructive",
           });
         }
-      } catch (error) {
-        console.error('Error processing file:', error);
+      } else {
         toast({
-          title: "Error Processing File",
-          description: "There was an error processing the file. Please try again.",
+          title: "Import Failed",
+          description: result.message || "Failed to process the Excel file",
           variant: "destructive",
         });
-      } finally {
-        setIsProcessingImport(false);
       }
-    }, 2000); // 2 second delay to simulate processing
+    } catch (error: any) {
+      console.error('Error processing file:', error);
+      
+      // Handle different types of errors
+      let errorMessage = "There was an error processing the file. Please try again.";
+      let errorTitle = "Error Processing File";
+      
+      // Check for network/connection errors
+      if (error?.status === 'FETCH_ERROR' || error?.status === 'TIMEOUT_ERROR' || error?.name === 'TypeError') {
+        errorTitle = "Connection Error";
+        errorMessage = "Unable to connect to the server. Please check your internet connection and try again.";
+      } else if (error?.status === 413) {
+        errorTitle = "File Too Large";
+        errorMessage = "The file is too large for processing. Please try with a smaller file.";
+      } else if (error?.status === 415) {
+        errorTitle = "Unsupported File Type";
+        errorMessage = "The file format is not supported. Please upload an Excel (.xlsx, .xls) or CSV file.";
+      } else if (error?.status === 400) {
+        errorTitle = "Invalid File";
+        errorMessage = "The file appears to be corrupted or invalid. Please try with a different file.";
+      } else if (error?.status === 500) {
+        errorTitle = "Server Error";
+        errorMessage = "There was an error processing the file on the server. Please try again later.";
+      } else if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingImport(false);
+    }
   };
 
   const validateAndProcessExcelData = (data: any[]) => {
@@ -258,26 +331,40 @@ export default function Users() {
     return { validData: [], errors: [] };
   };
 
-  const handleBulkImport = () => {
+  const handleBulkImport = async () => {
     if (importedData.length === 0) return;
 
-    const newUsers: UserData[] = importedData.map((data, index) => ({
-      ...data,
-      id: Math.max(...users.map((u: any) => u.id)) + index + 1,
-      createdAt: new Date().toISOString(),
-    }));
+    try {
+      // The API has already processed the file and returned valid data
+      // We just need to confirm the import
+      toast({
+        title: "Import Successful",
+        description: `Successfully imported ${importedData.length} users from Excel file`,
+      });
 
-    // Note: User import is disabled when using API data
-    // setUsers([...users, ...newUsers]);
-    
-    toast({
-      title: "Import Disabled",
-      description: "User import is not available with API data. Please use the Add User form instead.",
-    });
-
-    setIsImportDialogOpen(false);
-    setImportedData([]);
-    setImportErrors([]);
+      setIsImportDialogOpen(false);
+      setImportedData([]);
+      setImportErrors([]);
+      setImportSummary(null);
+      
+      // The API automatically invalidates the USERMANAGEMENT tag,
+      // so the user list will refresh automatically
+    } catch (error: any) {
+      console.error('Error during bulk import:', error);
+      
+      let errorMessage = "Failed to import users. Please try again.";
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: "Import Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -586,7 +673,7 @@ export default function Users() {
                       </div>
                     </Button>
                     
-                    <Button 
+                    {/* <Button 
                       variant="outline"
                       className="h-20 border-2 border-green-200 hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-900/20"
                     >
@@ -594,23 +681,35 @@ export default function Users() {
                         <Download className="w-6 h-6 mx-auto mb-2 text-green-600" />
                         <span className="text-sm font-medium text-green-600">Export Data</span>
                       </div>
-                    </Button>
+                    </Button> */}
                     
                     <Button 
                       variant="outline"
                       className="h-20 border-2 border-purple-200 hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                      onClick={() => document.getElementById('excel-file-input')?.click()}
-                      disabled={isProcessingImport}
+                      onClick={() => {
+                        console.log('Import button clicked');
+                        if (fileInputRef.current) {
+                          console.log('File input ref found, clicking...');
+                          fileInputRef.current.click();
+                        } else {
+                          console.error('File input ref not found!');
+                        }
+                      }}
+                      disabled={isProcessingImport || isImporting}
                     >
                       <div className="text-center">
-                        <Upload className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+                        {isProcessingImport || isImporting ? (
+                          <RefreshCw className="w-6 h-6 mx-auto mb-2 text-purple-600 animate-spin" />
+                        ) : (
+                          <Upload className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+                        )}
                         <span className="text-sm font-medium text-purple-600">
-                          {isProcessingImport ? 'Processing...' : 'Import Users'}
+                          {isProcessingImport || isImporting ? 'Processing...' : 'Import Users'}
                         </span>
                       </div>
                     </Button>
                     
-                    <Button 
+                    {/* <Button 
                       variant="outline"
                       className="h-20 border-2 border-orange-200 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                     >
@@ -618,7 +717,7 @@ export default function Users() {
                         <Activity className="w-6 h-6 mx-auto mb-2 text-orange-600" />
                         <span className="text-sm font-medium text-orange-600">View Reports</span>
                       </div>
-                    </Button>
+                    </Button> */}
                   </div>
                 </CardContent>
               </Card>
@@ -1469,12 +1568,14 @@ export default function Users() {
 
         {/* Hidden file input for Excel import */}
         <input
+          ref={fileInputRef}
           id="excel-file-input"
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/excel,application/x-excel,application/x-msexcel,text/csv,text/comma-separated-values,application/csv"
           onChange={handleExcelFileUpload}
           style={{ display: 'none' }}
         />
+
 
         {/* Import Preview Dialog */}
         <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
@@ -1485,16 +1586,22 @@ export default function Users() {
                 Import Users Preview
               </DialogTitle>
               <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                <p>Review the data below before importing. Only valid records will be imported.</p>
+                <p>Review the processed data below. The file has been analyzed by the server and only valid records are shown.</p>
                 <p className="mt-1">
                   <strong>Required fields:</strong> Name, Email, Phone, Location
                 </p>
                 <p className="mt-1">
                   <strong>Supported formats:</strong> .xlsx, .xls, .csv
                 </p>
-                <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                  <p className="text-blue-700 dark:text-blue-300 text-xs">
-                    <strong>Note:</strong> This is a demo implementation. In production, file processing will be handled by the API.
+                <p className="mt-1">
+                  <strong>Maximum file size:</strong> 10MB
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  <strong>Note:</strong> If your .xls file is not being accepted, try saving it as .xlsx format
+                </p>
+                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                  <p className="text-green-700 dark:text-green-300 text-xs">
+                    <strong>✓ API Integration:</strong> File processing is handled by the backend API with real-time validation.
                   </p>
                 </div>
               </div>
@@ -1533,7 +1640,9 @@ export default function Users() {
                       <Users2 className="w-5 h-5 text-blue-600" />
                       <div>
                         <p className="text-sm font-medium text-blue-600">Total Records</p>
-                        <p className="text-2xl font-bold text-blue-700">{importedData.length + importErrors.length}</p>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {importSummary?.totalRecords || importedData.length + importErrors.length}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -1585,13 +1694,13 @@ export default function Users() {
                         <tbody>
                           {importedData.slice(0, 10).map((user, index) => (
                             <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="p-2">{user.name}</td>
-                              <td className="p-2">{user.email}</td>
-                              <td className="p-2">{user.phone}</td>
-                              <td className="p-2">{user.location}</td>
+                              <td className="p-2">{user.name || user.firstName + ' ' + user.lastName || 'N/A'}</td>
+                              <td className="p-2">{user.email || 'N/A'}</td>
+                              <td className="p-2">{user.phone || user.phoneNumber || 'N/A'}</td>
+                              <td className="p-2">{user.location || user.ruralUrban || 'N/A'}</td>
                               <td className="p-2">
                                 <Badge className="bg-green-100 text-green-800 border-green-200">
-                                  {user.status}
+                                  {user.status || user.workingStatus || 'active'}
                                 </Badge>
                               </td>
                             </tr>
@@ -1616,17 +1725,22 @@ export default function Users() {
                     setIsImportDialogOpen(false);
                     setImportedData([]);
                     setImportErrors([]);
+                    setImportSummary(null);
                   }}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleBulkImport}
-                  disabled={importedData.length === 0}
+                  disabled={importedData.length === 0 || isImporting}
                   className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Import {importedData.length} Users
+                  {isImporting ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  {isImporting ? 'Importing...' : `Import ${importedData.length} Users`}
                 </Button>
               </div>
             </div>
