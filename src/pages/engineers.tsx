@@ -36,15 +36,21 @@ interface Engineer {
   group?: string;
   zone?: string;
   area?: string;
-  mode?: string;
   permanentAddress?: string;
-  billingAddress?: string;
+  residenceAddress?: string;
   country?: string;
   language?: string;
-  companyPreference?: string;
   userName?: string;
   fatherName?: string;
   profileImage?: any;
+  state?: string;
+  pincode?: string;
+  areaFromPincode?: string;
+  aadhaarNumber?: string;
+  panNumber?: string;
+  aadhaarFront?: any;
+  aadhaarBack?: any;
+  panCard?: any;
   lastLogin: string;
   createdAt: string;
   updatedAt?: string;
@@ -99,6 +105,16 @@ enum Mode {
   OFFLINE = "offline"
 }
 
+// Indian States List
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram",
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+  "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Delhi", "Jammu and Kashmir",
+  "Ladakh", "Chandigarh", "Puducherry", "Andaman and Nicobar Islands", "Dadra and Nagar Haveli and Daman and Diu"
+];
+
 // Form Schema
 const insertEngineerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -110,15 +126,21 @@ const insertEngineerSchema = z.object({
   group: z.string().optional(),
   zone: z.string().optional(),
   area: z.nativeEnum(AreaType).optional(),
-  mode: z.nativeEnum(Mode).optional(),
   permanentAddress: z.string().optional(),
-  billingAddress: z.string().optional(),
+  residenceAddress: z.string().optional(),
   country: z.string().optional(),
   language: z.string().optional(),
-  companyPreference: z.string().optional(),
   userName: z.string().optional(),
   fatherName: z.string().optional(),
   profileImage: z.any().optional(),
+  state: z.string().optional(),
+  pincode: z.string().optional(),
+  areaFromPincode: z.string().optional(),
+  aadhaarNumber: z.string().optional(),
+  panNumber: z.string().optional(),
+  aadhaarFront: z.any().optional(),
+  aadhaarBack: z.any().optional(),
+  panCard: z.any().optional(),
 });
 
 type InsertEngineer = z.infer<typeof insertEngineerSchema>;
@@ -130,19 +152,56 @@ export default function Engineers() {
   const [groupFilter, setGroupFilter] = useState("all");
   const [zoneFilter, setZoneFilter] = useState("all");
   const [areaFilter, setAreaFilter] = useState("all");
-  const [modeFilter, setModeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
+  const [pincodeAreas, setPincodeAreas] = useState<string[]>([]);
+  const [isLoadingPincode, setIsLoadingPincode] = useState(false);
 
   const { data: engineerDashboardData, isLoading, error, refetch } = useGetEngineerDashbaordDataQuery({});
   const [addEngineer, { isLoading: isAddingEngineer }] = useAddEngineerDataMutation();
   const [updateEngineer, { isLoading: isUpdatingEngineer }] = useUpdateEngineerDataMutation();
   const [deleteEngineer, { isLoading: isDeletingEngineer }] = useDeleteEngineerMutation();
   const { toast } = useToast();
+
+  // Function to fetch areas from pincode
+  const fetchAreasFromPincode = async (pincode: string) => {
+    if (!pincode || pincode.length !== 6) {
+      setPincodeAreas([]);
+      return;
+    }
+    
+    setIsLoadingPincode(true);
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+      const data = await response.json();
+      
+      if (data[0]?.Status === "Success" && data[0]?.PostOffice) {
+        const areas = data[0].PostOffice.map((office: any) => office.Name);
+        setPincodeAreas(areas);
+      } else {
+        setPincodeAreas([]);
+        toast({
+          title: "Warning",
+          description: "No areas found for this pincode",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching pincode data:", error);
+      setPincodeAreas([]);
+      toast({
+        title: "Error",
+        description: "Failed to fetch pincode data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingPincode(false);
+    }
+  };
 
   const form = useForm<InsertEngineer>({
     resolver: zodResolver(insertEngineerSchema),
@@ -156,15 +215,21 @@ export default function Engineers() {
       group: "",
       zone: "",
       area: undefined,
-      mode: undefined,
       permanentAddress: "",
-      billingAddress: "",
+      residenceAddress: "",
       country: "",
       language: "",
-      companyPreference: "",
       userName: "",
       fatherName: "",
       profileImage: null,
+      state: "",
+      pincode: "",
+      areaFromPincode: "",
+      aadhaarNumber: "",
+      panNumber: "",
+      aadhaarFront: null,
+      aadhaarBack: null,
+      panCard: null,
     },
   });
 
@@ -192,9 +257,7 @@ export default function Engineers() {
     const matchesGroup = groupFilter === "all" || engineer.group === groupFilter;
     const matchesZone = zoneFilter === "all" || engineer.zone === zoneFilter;
     const matchesArea = areaFilter === "all" || engineer.area === areaFilter;
-    const matchesMode = modeFilter === "all" || engineer.mode === modeFilter;
-
-    return matchesSearch && matchesStatus && matchesGroup && matchesZone && matchesArea && matchesMode;
+    return matchesSearch && matchesStatus && matchesGroup && matchesZone && matchesArea;
   });
 
   const handleCreateEngineer = async (data: InsertEngineer) => {
@@ -214,18 +277,32 @@ export default function Engineers() {
       if (data.group) formData.append('group', data.group);
       if (data.zone) formData.append('zone', data.zone);
       if (data.area) formData.append('area', data.area);
-      if (data.mode) formData.append('mode', data.mode);
       if (data.permanentAddress) formData.append('permanentAddress', data.permanentAddress);
-      if (data.billingAddress) formData.append('billingAddress', data.billingAddress);
+      if (data.residenceAddress) formData.append('residenceAddress', data.residenceAddress);
       if (data.country) formData.append('country', data.country);
       if (data.language) formData.append('language', data.language);
-      if (data.companyPreference) formData.append('companyPreference', data.companyPreference);
       if (data.userName) formData.append('userName', data.userName);
       if (data.fatherName) formData.append('fatherName', data.fatherName);
+      if (data.state) formData.append('state', data.state);
+      if (data.pincode) formData.append('pincode', data.pincode);
+      if (data.areaFromPincode) formData.append('areaFromPincode', data.areaFromPincode);
+      if (data.aadhaarNumber) formData.append('aadhaarNumber', data.aadhaarNumber);
+      if (data.panNumber) formData.append('panNumber', data.panNumber);
       
       // Add profile image if selected
       if (data.profileImage) {
         formData.append('profileImage', data.profileImage);
+      }
+      
+      // Add document images if selected
+      if (data.aadhaarFront) {
+        formData.append('aadhaarFront', data.aadhaarFront);
+      }
+      if (data.aadhaarBack) {
+        formData.append('aadhaarBack', data.aadhaarBack);
+      }
+      if (data.panCard) {
+        formData.append('panCard', data.panCard);
       }
       
       // Call API to create engineer
@@ -268,18 +345,38 @@ export default function Engineers() {
       if (data.group) formData.append('group', data.group);
       if (data.zone) formData.append('zone', data.zone);
       if (data.area) formData.append('area', data.area);
-      if (data.mode) formData.append('mode', data.mode);
       if (data.permanentAddress) formData.append('permanentAddress', data.permanentAddress);
-      if (data.billingAddress) formData.append('billingAddress', data.billingAddress);
+      if (data.residenceAddress) formData.append('residenceAddress', data.residenceAddress);
       if (data.country) formData.append('country', data.country);
       if (data.language) formData.append('language', data.language);
-      if (data.companyPreference) formData.append('companyPreference', data.companyPreference);
       if (data.userName) formData.append('userName', data.userName);
       if (data.fatherName) formData.append('fatherName', data.fatherName);
+      if (data.state) formData.append('state', data.state);
+      if (data.pincode) formData.append('pincode', data.pincode);
+      if (data.areaFromPincode) formData.append('areaFromPincode', data.areaFromPincode);
+      if (data.aadhaarNumber) formData.append('aadhaarNumber', data.aadhaarNumber);
+      if (data.panNumber) formData.append('panNumber', data.panNumber);
       
       // Add profile image if selected
       if (data.profileImage) {
         formData.append('profileImage', data.profileImage);
+      }
+      
+      // Add document images if selected (or explicitly set to null to remove)
+      if (data.aadhaarFront) {
+        formData.append('aadhaarFront', data.aadhaarFront);
+      } else if (data.aadhaarFront === null) {
+        formData.append('aadhaarFront', '');
+      }
+      if (data.aadhaarBack) {
+        formData.append('aadhaarBack', data.aadhaarBack);
+      } else if (data.aadhaarBack === null) {
+        formData.append('aadhaarBack', '');
+      }
+      if (data.panCard) {
+        formData.append('panCard', data.panCard);
+      } else if (data.panCard === null) {
+        formData.append('panCard', '');
       }
       
       // Call API to update engineer
@@ -531,17 +628,6 @@ export default function Engineers() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={modeFilter} onValueChange={setModeFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Modes</SelectItem>
-                    {filters?.availableModes?.map((mode: string) => (
-                      <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -674,12 +760,55 @@ export default function Engineers() {
                         <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">📍 Location & Assignment</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="country" className="text-sm font-medium">Country</Label>
+                            <Label htmlFor="state" className="text-sm font-medium">State</Label>
+                            <Select 
+                              value={form.watch("state") || ""} 
+                              onValueChange={(value) => form.setValue("state", value)}
+                            >
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                {INDIAN_STATES.map((state) => (
+                                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pincode" className="text-sm font-medium">Pincode</Label>
                             <Input 
-                              {...form.register("country")} 
+                              {...form.register("pincode")} 
                               className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                              placeholder="Enter country"
+                              placeholder="Enter 6-digit pincode"
+                              maxLength={6}
+                              onChange={(e) => {
+                                form.setValue("pincode", e.target.value);
+                                if (e.target.value.length === 6) {
+                                  fetchAreasFromPincode(e.target.value);
+                                } else {
+                                  setPincodeAreas([]);
+                                  form.setValue("areaFromPincode", "");
+                                }
+                              }}
                             />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="areaFromPincode" className="text-sm font-medium">Area (from Pincode)</Label>
+                            <Select 
+                              value={form.watch("areaFromPincode") || ""} 
+                              onValueChange={(value) => form.setValue("areaFromPincode", value)}
+                              disabled={pincodeAreas.length === 0 || isLoadingPincode}
+                            >
+                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                                <SelectValue placeholder={isLoadingPincode ? "Loading areas..." : "Select area"} />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                {pincodeAreas.map((area) => (
+                                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="zone" className="text-sm font-medium">Zone</Label>
@@ -690,7 +819,7 @@ export default function Engineers() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="area" className="text-sm font-medium">Area</Label>
+                            <Label htmlFor="area" className="text-sm font-medium">Area Type</Label>
                             <Select 
                               value={form.watch("area") || ""} 
                               onValueChange={(value) => form.setValue("area", value === "" ? undefined : value as AreaType)}
@@ -728,11 +857,11 @@ export default function Engineers() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="billingAddress" className="text-sm font-medium">Billing Address</Label>
+                            <Label htmlFor="residenceAddress" className="text-sm font-medium">Residence Address</Label>
                             <textarea 
-                              {...form.register("billingAddress")} 
+                              {...form.register("residenceAddress")} 
                               className="w-full h-20 px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 resize-none"
-                              placeholder="Enter billing address"
+                              placeholder="Enter residence address"
                             />
                           </div>
                         </div>
@@ -751,29 +880,6 @@ export default function Engineers() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="companyPreference" className="text-sm font-medium">Company Preference</Label>
-                            <Input 
-                              {...form.register("companyPreference")} 
-                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                              placeholder="Enter company preference"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="mode" className="text-sm font-medium">Mode</Label>
-                            <Select 
-                              value={form.watch("mode") || ""} 
-                              onValueChange={(value) => form.setValue("mode", value === "" ? undefined : value as Mode)}
-                            >
-                              <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                                <SelectValue placeholder="Select mode" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="online">🟢 Online</SelectItem>
-                                <SelectItem value="offline">🔴 Offline</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
                             <Label htmlFor="status" className="text-sm font-medium">Status *</Label>
                             <Select 
                               value={form.watch("status")} 
@@ -788,6 +894,181 @@ export default function Engineers() {
                                 <SelectItem value="suspended" className="text-red-600">🔴 Suspended</SelectItem>
                               </SelectContent>
                             </Select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Document Information */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">📄 Document Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="aadhaarNumber" className="text-sm font-medium">Aadhaar Number</Label>
+                            <Input 
+                              {...form.register("aadhaarNumber")} 
+                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                              placeholder="Enter 12-digit Aadhaar number"
+                              maxLength={12}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="panNumber" className="text-sm font-medium">PAN Number</Label>
+                            <Input 
+                              {...form.register("panNumber")} 
+                              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                              placeholder="Enter PAN number"
+                              maxLength={10}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Document Uploads */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">📎 Document Uploads</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Aadhaar Front */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Aadhaar Front</Label>
+                            <div className="relative group">
+                              <div className="w-full h-32 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all duration-200 overflow-hidden">
+                                {form.watch("aadhaarFront") ? (
+                                  <>
+                                    <img 
+                                      src={URL.createObjectURL(form.watch("aadhaarFront"))} 
+                                      alt="Aadhaar Front" 
+                                      className="w-full h-full object-cover rounded-lg"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        form.setValue("aadhaarFront", null);
+                                        // Clear the file input
+                                        const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                                        if (fileInput) {
+                                          fileInput.value = '';
+                                        }
+                                      }}
+                                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="text-center">
+                                    <User className="w-8 h-8 text-blue-500 mx-auto mb-1" />
+                                    <p className="text-xs text-blue-600">Upload Aadhaar Front</p>
+                                  </div>
+                                )}
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) form.setValue("aadhaarFront", file);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Aadhaar Back */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Aadhaar Back</Label>
+                            <div className="relative group">
+                              <div className="w-full h-32 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all duration-200 overflow-hidden">
+                                {form.watch("aadhaarBack") ? (
+                                  <>
+                                    <img 
+                                      src={URL.createObjectURL(form.watch("aadhaarBack"))} 
+                                      alt="Aadhaar Back" 
+                                      className="w-full h-full object-cover rounded-lg"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        form.setValue("aadhaarBack", null);
+                                        // Clear the file input
+                                        const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                                        if (fileInput) {
+                                          fileInput.value = '';
+                                        }
+                                      }}
+                                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="text-center">
+                                    <User className="w-8 h-8 text-blue-500 mx-auto mb-1" />
+                                    <p className="text-xs text-blue-600">Upload Aadhaar Back</p>
+                                  </div>
+                                )}
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) form.setValue("aadhaarBack", file);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
+                          </div>
+
+                          {/* PAN Card */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">PAN Card</Label>
+                            <div className="relative group">
+                              <div className="w-full h-32 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all duration-200 overflow-hidden">
+                                {form.watch("panCard") ? (
+                                  <>
+                                    <img 
+                                      src={URL.createObjectURL(form.watch("panCard"))} 
+                                      alt="PAN Card" 
+                                      className="w-full h-full object-cover rounded-lg"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        form.setValue("panCard", null);
+                                        // Clear the file input
+                                        const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                                        if (fileInput) {
+                                          fileInput.value = '';
+                                        }
+                                      }}
+                                      className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="text-center">
+                                    <User className="w-8 h-8 text-blue-500 mx-auto mb-1" />
+                                    <p className="text-xs text-blue-600">Upload PAN Card</p>
+                                  </div>
+                                )}
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) form.setValue("panCard", file);
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -899,12 +1180,6 @@ export default function Engineers() {
                         Area: {engineer.area === 'rural' ? '🏘️ Rural' : '🏙️ Urban'}
                       </div>
                     )}
-                    {engineer.mode && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Activity className="w-4 h-4 mr-2" />
-                        Mode: {engineer.mode === 'online' ? '🟢 Online' : '🔴 Offline'}
-                      </div>
-                    )}
                     {engineer.country && (
                       <div className="flex items-center text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4 mr-2" />
@@ -915,12 +1190,6 @@ export default function Engineers() {
                       <div className="flex items-center text-sm text-muted-foreground">
                         <User className="w-4 h-4 mr-2" />
                         Language: {engineer.language}
-                      </div>
-                    )}
-                    {engineer.companyPreference && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Company: {engineer.companyPreference}
                       </div>
                     )}
                     {engineer.userName && (
@@ -941,10 +1210,40 @@ export default function Engineers() {
                         Address: {engineer.permanentAddress}
                       </div>
                     )}
-                    {engineer.billingAddress && (
+                    {engineer.residenceAddress && (
                       <div className="flex items-center text-sm text-muted-foreground">
                         <MapPin className="w-4 h-4 mr-2" />
-                        Billing: {engineer.billingAddress}
+                        Residence: {engineer.residenceAddress}
+                      </div>
+                    )}
+                    {engineer.state && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        State: {engineer.state}
+                      </div>
+                    )}
+                    {engineer.pincode && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Pincode: {engineer.pincode}
+                      </div>
+                    )}
+                    {engineer.areaFromPincode && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        Area: {engineer.areaFromPincode}
+                      </div>
+                    )}
+                    {engineer.aadhaarNumber && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <User className="w-4 h-4 mr-2" />
+                        Aadhaar: {engineer.aadhaarNumber}
+                      </div>
+                    )}
+                    {engineer.panNumber && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <User className="w-4 h-4 mr-2" />
+                        PAN: {engineer.panNumber}
                       </div>
                     )}
                   </div>
@@ -983,15 +1282,21 @@ export default function Engineers() {
                           group: engineer.group || "",
                           zone: engineer.zone || "",
                           area: engineer.area as AreaType | undefined,
-                          mode: engineer.mode as Mode | undefined,
                           permanentAddress: engineer.permanentAddress || "",
-                          billingAddress: engineer.billingAddress || "",
-                          country: engineer.country || "",
+                          residenceAddress: engineer.residenceAddress || "",
+                          country: engineer.country || "India",
                           language: engineer.language || "",
-                          companyPreference: engineer.companyPreference || "",
                           userName: engineer.userName || "",
                           fatherName: engineer.fatherName || "",
                           profileImage: engineer.profileImage || null,
+                          state: engineer.state || "",
+                          pincode: engineer.pincode || "",
+                          areaFromPincode: engineer.areaFromPincode || "",
+                          aadhaarNumber: engineer.aadhaarNumber || "",
+                          panNumber: engineer.panNumber || "",
+                          aadhaarFront: engineer.aadhaarFront || null,
+                          aadhaarBack: engineer.aadhaarBack || null,
+                          panCard: engineer.panCard || null,
                         };
                         console.log("Setting edit form data:", formData);
                         editForm.reset(formData);
@@ -1141,15 +1446,21 @@ export default function Engineers() {
                               group: engineer.group || "",
                               zone: engineer.zone || "",
                               area: engineer.area || undefined,
-                              mode: engineer.mode || undefined,
                               permanentAddress: engineer.permanentAddress || "",
-                              billingAddress: engineer.billingAddress || "",
-                              country: engineer.country || "",
+                              residenceAddress: engineer.residenceAddress || "",
+                              country: engineer.country || "India",
                               language: engineer.language || "",
-                              companyPreference: engineer.companyPreference || "",
                               userName: engineer.userName || "",
                               fatherName: engineer.fatherName || "",
                               profileImage: engineer.profileImage || null,
+                              state: engineer.state || "",
+                              pincode: engineer.pincode || "",
+                              areaFromPincode: engineer.areaFromPincode || "",
+                              aadhaarNumber: engineer.aadhaarNumber || "",
+                              panNumber: engineer.panNumber || "",
+                              aadhaarFront: engineer.aadhaarFront || null,
+                              aadhaarBack: engineer.aadhaarBack || null,
+                              panCard: engineer.panCard || null,
                             });
                             setIsEditDialogOpen(true);
                           }}
@@ -1329,8 +1640,10 @@ export default function Engineers() {
                     <Input 
                       id="edit-countryCode"
                       {...editForm.register("countryCode")} 
-                      className="w-20 h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-center"
+                      className="w-20 h-10 border-gray-300 bg-gray-50 text-center text-gray-600"
                       placeholder="+91"
+                      disabled
+                      readOnly
                     />
                     <Input 
                       id="edit-phoneNumber"
@@ -1352,9 +1665,63 @@ export default function Engineers() {
                   <Input 
                     id="edit-country"
                     {...editForm.register("country")} 
-                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter country"
+                    className="h-10 border-gray-300 bg-gray-50 text-gray-600"
+                    placeholder="India"
+                    disabled
+                    readOnly
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-state" className="text-sm font-medium">State</Label>
+                  <Select 
+                    value={editForm.watch("state") || ""} 
+                    onValueChange={(value) => editForm.setValue("state", value)}
+                  >
+                    <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {INDIAN_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-pincode" className="text-sm font-medium">Pincode</Label>
+                  <Input 
+                    id="edit-pincode"
+                    {...editForm.register("pincode")} 
+                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="Enter 6-digit pincode"
+                    maxLength={6}
+                    onChange={(e) => {
+                      editForm.setValue("pincode", e.target.value);
+                      if (e.target.value.length === 6) {
+                        fetchAreasFromPincode(e.target.value);
+                      } else {
+                        setPincodeAreas([]);
+                        editForm.setValue("areaFromPincode", "");
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-areaFromPincode" className="text-sm font-medium">Area (from Pincode)</Label>
+                  <Select 
+                    value={editForm.watch("areaFromPincode") || ""} 
+                    onValueChange={(value) => editForm.setValue("areaFromPincode", value)}
+                    disabled={pincodeAreas.length === 0 || isLoadingPincode}
+                  >
+                    <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                      <SelectValue placeholder={isLoadingPincode ? "Loading areas..." : "Select area"} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {pincodeAreas.map((area) => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-zone" className="text-sm font-medium">Zone</Label>
@@ -1366,7 +1733,7 @@ export default function Engineers() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-area" className="text-sm font-medium">Area</Label>
+                  <Label htmlFor="edit-area" className="text-sm font-medium">Area Type</Label>
                   <Select 
                     value={editForm.watch("area") || ""} 
                     onValueChange={(value) => editForm.setValue("area", value === "" ? undefined : value as AreaType)}
@@ -1406,12 +1773,12 @@ export default function Engineers() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-billingAddress" className="text-sm font-medium">Billing Address</Label>
+                  <Label htmlFor="edit-residenceAddress" className="text-sm font-medium">Residence Address</Label>
                   <textarea 
-                    id="edit-billingAddress"
-                    {...editForm.register("billingAddress")} 
+                    id="edit-residenceAddress"
+                    {...editForm.register("residenceAddress")} 
                     className="w-full h-20 px-3 py-2 border border-gray-200 rounded-md focus:border-blue-500 focus:ring-blue-500 resize-none"
-                    placeholder="Enter billing address"
+                    placeholder="Enter residence address"
                   />
                 </div>
               </div>
@@ -1431,30 +1798,6 @@ export default function Engineers() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-companyPreference" className="text-sm font-medium">Company Preference</Label>
-                  <Input 
-                    id="edit-companyPreference"
-                    {...editForm.register("companyPreference")} 
-                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Enter company preference"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-mode" className="text-sm font-medium">Mode</Label>
-                  <Select 
-                    value={editForm.watch("mode") || ""} 
-                    onValueChange={(value) => editForm.setValue("mode", value === "" ? undefined : value as Mode)}
-                  >
-                    <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Select mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="online">🟢 Online</SelectItem>
-                      <SelectItem value="offline">🔴 Offline</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="edit-status" className="text-sm font-medium">Status *</Label>
                   <Select 
                     value={editForm.watch("status")} 
@@ -1469,6 +1812,288 @@ export default function Engineers() {
                       <SelectItem value="suspended" className="text-red-600">🔴 Suspended</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">📄 Document Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-aadhaarNumber" className="text-sm font-medium">Aadhaar Number</Label>
+                  <Input 
+                    id="edit-aadhaarNumber"
+                    {...editForm.register("aadhaarNumber")} 
+                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="Enter 12-digit Aadhaar number"
+                    maxLength={12}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-panNumber" className="text-sm font-medium">PAN Number</Label>
+                  <Input 
+                    id="edit-panNumber"
+                    {...editForm.register("panNumber")} 
+                    className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                    placeholder="Enter PAN number"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Document Uploads */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">📎 Document Uploads</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Aadhaar Front */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Aadhaar Front</Label>
+                  <div className="relative group">
+                    <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
+                      {editForm.watch("aadhaarFront") ? (
+                        <>
+                          <img 
+                            src={URL.createObjectURL(editForm.watch("aadhaarFront"))} 
+                            alt="Aadhaar Front" 
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("aadhaarFront", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : selectedEngineer?.aadhaarFront ? (
+                        <>
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.aadhaarFront}`} 
+                            alt="Current Aadhaar Front" 
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("aadhaarFront", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : null}
+                      {!editForm.watch("aadhaarFront") && !selectedEngineer?.aadhaarFront && (
+                        <div className="text-center">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update Aadhaar Front</p>
+                        </div>
+                      )}
+                      {!editForm.watch("aadhaarFront") && selectedEngineer?.aadhaarFront && (
+                        <div className="text-center hidden">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update Aadhaar Front</p>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) editForm.setValue("aadhaarFront", file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Aadhaar Back */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Aadhaar Back</Label>
+                  <div className="relative group">
+                    <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
+                      {editForm.watch("aadhaarBack") ? (
+                        <>
+                          <img 
+                            src={URL.createObjectURL(editForm.watch("aadhaarBack"))} 
+                            alt="Aadhaar Back" 
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("aadhaarBack", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : selectedEngineer?.aadhaarBack ? (
+                        <>
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.aadhaarBack}`} 
+                            alt="Current Aadhaar Back" 
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("aadhaarBack", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : null}
+                      {!editForm.watch("aadhaarBack") && !selectedEngineer?.aadhaarBack && (
+                        <div className="text-center">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update Aadhaar Back</p>
+                        </div>
+                      )}
+                      {!editForm.watch("aadhaarBack") && selectedEngineer?.aadhaarBack && (
+                        <div className="text-center hidden">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update Aadhaar Back</p>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) editForm.setValue("aadhaarBack", file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* PAN Card */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">PAN Card</Label>
+                  <div className="relative group">
+                    <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
+                      {editForm.watch("panCard") ? (
+                        <>
+                          <img 
+                            src={URL.createObjectURL(editForm.watch("panCard"))} 
+                            alt="PAN Card" 
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("panCard", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : selectedEngineer?.panCard ? (
+                        <>
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.panCard}`} 
+                            alt="Current PAN Card" 
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              editForm.setValue("panCard", null);
+                              // Clear the file input
+                              const fileInput = e.currentTarget.parentElement?.querySelector('input[type="file"]') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                              }
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : null}
+                      {!editForm.watch("panCard") && !selectedEngineer?.panCard && (
+                        <div className="text-center">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update PAN Card</p>
+                        </div>
+                      )}
+                      {!editForm.watch("panCard") && selectedEngineer?.panCard && (
+                        <div className="text-center hidden">
+                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                          <p className="text-xs text-green-600">Update PAN Card</p>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) editForm.setValue("panCard", file);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1576,7 +2201,7 @@ export default function Engineers() {
               </div>
 
               {/* Additional Information */}
-              {(selectedEngineer.group || selectedEngineer.zone || selectedEngineer.area || selectedEngineer.mode || selectedEngineer.country || selectedEngineer.language || selectedEngineer.companyPreference || selectedEngineer.userName || selectedEngineer.fatherName) && (
+              {(selectedEngineer.group || selectedEngineer.zone || selectedEngineer.area || selectedEngineer.country || selectedEngineer.language || selectedEngineer.userName || selectedEngineer.fatherName || selectedEngineer.state || selectedEngineer.pincode || selectedEngineer.areaFromPincode || selectedEngineer.aadhaarNumber || selectedEngineer.panNumber) && (
                 <div className="space-y-4">
                   <h4 className="font-medium text-muted-foreground">Assignment & Location</h4>
                   <div className="grid grid-cols-2 gap-4">
@@ -1598,10 +2223,22 @@ export default function Engineers() {
                         <span>Area: {selectedEngineer.area === 'rural' ? '🏘️ Rural' : '🏙️ Urban'}</span>
                       </div>
                     )}
-                    {selectedEngineer.mode && (
+                    {selectedEngineer.state && (
                       <div className="flex items-center gap-3">
-                        <Activity className="w-4 h-4 text-muted-foreground" />
-                        <span>Mode: {selectedEngineer.mode === 'online' ? '🟢 Online' : '🔴 Offline'}</span>
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>State: {selectedEngineer.state}</span>
+                      </div>
+                    )}
+                    {selectedEngineer.pincode && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>Pincode: {selectedEngineer.pincode}</span>
+                      </div>
+                    )}
+                    {selectedEngineer.areaFromPincode && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span>Area (from Pincode): {selectedEngineer.areaFromPincode}</span>
                       </div>
                     )}
                     {selectedEngineer.country && (
@@ -1616,12 +2253,6 @@ export default function Engineers() {
                         <span>Language: {selectedEngineer.language}</span>
                       </div>
                     )}
-                    {selectedEngineer.companyPreference && (
-                      <div className="flex items-center gap-3">
-                        <Settings className="w-4 h-4 text-muted-foreground" />
-                        <span>Company: {selectedEngineer.companyPreference}</span>
-                      </div>
-                    )}
                     {selectedEngineer.userName && (
                       <div className="flex items-center gap-3">
                         <User className="w-4 h-4 text-muted-foreground" />
@@ -1634,12 +2265,24 @@ export default function Engineers() {
                         <span>Father: {selectedEngineer.fatherName}</span>
                       </div>
                     )}
+                    {selectedEngineer.aadhaarNumber && (
+                      <div className="flex items-center gap-3">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>Aadhaar: {selectedEngineer.aadhaarNumber}</span>
+                      </div>
+                    )}
+                    {selectedEngineer.panNumber && (
+                      <div className="flex items-center gap-3">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>PAN: {selectedEngineer.panNumber}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Address Information */}
-              {(selectedEngineer.permanentAddress || selectedEngineer.billingAddress) && (
+              {(selectedEngineer.permanentAddress || selectedEngineer.residenceAddress) && (
                 <div className="space-y-4">
                   <h4 className="font-medium text-muted-foreground">Address Information</h4>
                   <div className="grid grid-cols-1 gap-4">
@@ -1652,12 +2295,12 @@ export default function Engineers() {
                         </div>
                       </div>
                     )}
-                    {selectedEngineer.billingAddress && (
+                    {selectedEngineer.residenceAddress && (
                       <div className="flex items-start gap-3">
                         <MapPin className="w-4 h-4 text-muted-foreground mt-1" />
                         <div>
-                          <span className="font-medium">Billing Address:</span>
-                          <p className="text-sm text-muted-foreground">{selectedEngineer.billingAddress}</p>
+                          <span className="font-medium">Residence Address:</span>
+                          <p className="text-sm text-muted-foreground">{selectedEngineer.residenceAddress}</p>
                         </div>
                       </div>
                     )}

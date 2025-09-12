@@ -54,7 +54,7 @@ export default function Users() {
   const [areaFilter, setAreaFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("users");
   const itemsPerPage = 6;
 
   // Debounce search query to avoid excessive API calls
@@ -490,13 +490,13 @@ export default function Users() {
         {/* Enhanced Tabbed Interface */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 lg:w-fit lg:grid-cols-3 gap-2 mb-6">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <BarChart className="h-4 w-4" />
-              <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users2 className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
