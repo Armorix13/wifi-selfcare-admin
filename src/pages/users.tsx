@@ -55,7 +55,6 @@ export default function Users() {
   const [viewMode, setViewMode] = useState<"card" | "table">("table");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
-  const itemsPerPage = 6;
 
   // Debounce search query to avoid excessive API calls
   useEffect(() => {
@@ -397,12 +396,10 @@ export default function Users() {
     });
   }, [users, statusFilter, providerFilter, areaFilter]);
 
-  // Pagination - use API pagination data if available, otherwise calculate locally
-  const totalPages = userManagementData?.data?.pagination?.totalPages || Math.ceil(filteredUsers.length / itemsPerPage);
-  const currentUsers = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // Pagination - use API pagination data directly
+  const totalPages = userManagementData?.data?.pagination?.totalPages || 1;
+  const apiCurrentPage = userManagementData?.data?.pagination?.currentPage || 1;
+  const currentUsers = filteredUsers; // API already returns paginated data
 
   const handleCreateUser = (data: UserData) => {
     const newUser: UserData = {
@@ -897,7 +894,7 @@ export default function Users() {
                       </span>
                     </div>
                     <div className="text-xs">
-                      Showing page {currentPage} of {totalPages}
+                      Showing page {apiCurrentPage} of {totalPages}
                       {debouncedSearchQuery && (
                         <span className="ml-2 text-blue-500">
                           • Search active
@@ -1229,9 +1226,9 @@ export default function Users() {
                       <div className="flex items-center gap-2">
                         <Users2 className="w-4 h-4" />
                         <span>
-                          Showing <span className="font-semibold text-gray-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                          <span className="font-semibold text-gray-900 dark:text-white">{Math.min(currentPage * itemsPerPage, currentUsers.length)}</span> of{' '}
-                          <span className="font-semibold text-gray-900 dark:text-white">{currentUsers.length}</span> users
+                          Showing <span className="font-semibold text-gray-900 dark:text-white">{(apiCurrentPage - 1) * 10 + 1}</span> to{' '}
+                          <span className="font-semibold text-gray-900 dark:text-white">{Math.min(apiCurrentPage * 10, userManagementData?.data?.pagination?.totalUsers || 0)}</span> of{' '}
+                          <span className="font-semibold text-gray-900 dark:text-white">{userManagementData?.data?.pagination?.totalUsers || 0}</span> users
                           {debouncedSearchQuery && (
                             <span className="text-blue-500"> (filtered by search)</span>
                           )}
@@ -1243,8 +1240,8 @@ export default function Users() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(apiCurrentPage - 1)}
+                    disabled={apiCurrentPage === 1}
                         className="h-9 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
                   >
                         <ChevronLeft className="h-4 w-4 mr-1" />
@@ -1254,7 +1251,7 @@ export default function Users() {
                       <div className="flex items-center gap-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                           const pageNumber = i + 1;
-                          const isCurrentPage = currentPage === pageNumber;
+                          const isCurrentPage = apiCurrentPage === pageNumber;
                           return (
                             <Button
                               key={pageNumber}
@@ -1274,7 +1271,7 @@ export default function Users() {
                               variant="outline"
                               size="sm"
                               onClick={() => setCurrentPage(totalPages)}
-                              className={`w-9 h-9 ${currentPage === totalPages ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                              className={`w-9 h-9 ${apiCurrentPage === totalPages ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                             >
                               {totalPages}
                             </Button>
@@ -1285,8 +1282,8 @@ export default function Users() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(apiCurrentPage + 1)}
+                    disabled={apiCurrentPage === totalPages}
                         className="h-9 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
                   >
                     Next
