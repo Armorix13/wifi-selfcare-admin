@@ -483,7 +483,13 @@ export const api = createApi({
       }),
       invalidatesTags: [Tags.USERMANAGEMENT],
     }),
-  }),
+    getFullEngineerDetails: builder.query<any, string>({
+      query: (id:any) => ({
+        url: `/dashboard/engineers/${id}/full-details`,
+        method: "GET",
+      })
+    })
+  })
 });
 
 export const {
@@ -542,5 +548,6 @@ export const {
   useGetUserByIdQuery,
   useUpdateUserByAdminMutation,
   useGetCompleteUserDetailbyIdQuery,
-  useImportClientFromExcelMutation
+  useImportClientFromExcelMutation,
+  useGetFullEngineerDetailsQuery
 } = api;

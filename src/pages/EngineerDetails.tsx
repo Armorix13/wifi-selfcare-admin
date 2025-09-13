@@ -42,179 +42,121 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useGetFullEngineerDetailsQuery, BASE_URL } from '@/api';
 
-// Mock data - Replace with actual API calls
-const mockEngineerData = {
-  _id: "68aad97ed681a3f5e4c17646",
-  firstName: "Sarah",
-  lastName: "Johnson",
-  fullName: "Sarah Johnson",
-  email: "sarah.johnson@wificare.com",
-  phoneNumber: "+1-555-0123",
-  countryCode: "+1",
-  status: "active",
-  group: "Network Operations",
-  zone: "North Zone",
-  area: "urban",
-  mode: "full-time",
-  permanentAddress: "123 Main Street, Tech City, TC 12345",
-  billingAddress: "123 Main Street, Tech City, TC 12345",
-  country: "United States",
-  language: "English",
-  companyPreference: "WiFi Care",
-  userName: "sarah.j",
-  fatherName: "John Johnson",
-  profileImage: null,
-  lastLogin: "2025-01-27T10:30:00.000Z",
-  createdAt: "2023-01-15T00:00:00.000Z",
-  updatedAt: "2025-01-27T10:30:00.000Z",
-  isActive: true,
-  employeeId: "EMP001",
-  department: "Network Operations",
-  joiningDate: "2023-01-15T00:00:00.000Z",
-  emergencyContact: {
-    name: "John Johnson",
-    relationship: "Spouse",
-    phone: "+1-555-0126"
-  },
-  performance: {
-    rating: 4.5,
-    completedJobs: 156,
-    activeJobs: 8,
-    successRate: 94.2,
-    avgResponseTime: "2.3 hours",
-    customerSatisfaction: 4.7
-  }
-};
+// Type definitions
+interface Complaint {
+  _id: string;
+  title: string;
+  issueDescription: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+  attachments?: string[];
+  resolutionAttachments?: string[];
+  user?: {
+    firstName: string;
+    lastName: string;
+    countryCode: string;
+    phoneNumber: string;
+  };
+}
 
-const mockAssignedComplaints = [
-  {
-    _id: "complaint1",
-    title: "WiFi Connection Issue",
-    description: "Customer experiencing intermittent WiFi disconnections",
-    status: "in-progress",
-    priority: "high",
-    customerName: "John Doe",
-    location: "Tech City, TC 12345",
-    createdAt: "2025-01-25T09:00:00.000Z",
-    assignedAt: "2025-01-25T10:00:00.000Z",
-    estimatedCompletion: "2025-01-28T18:00:00.000Z"
-  },
-  {
-    _id: "complaint2",
-    title: "Router Configuration Problem",
-    description: "Need help setting up new router configuration",
-    status: "assigned",
-    priority: "medium",
-    customerName: "Jane Smith",
-    location: "Digital District, DD 67890",
-    createdAt: "2025-01-26T14:00:00.000Z",
-    assignedAt: "2025-01-26T15:00:00.000Z",
-    estimatedCompletion: "2025-01-29T16:00:00.000Z"
-  },
-  {
-    _id: "complaint3",
-    title: "Network Speed Issue",
-    description: "Slow internet speed during peak hours",
-    status: "resolved",
-    priority: "low",
-    customerName: "Mike Wilson",
-    location: "Innovation Valley, IV 11111",
-    createdAt: "2025-01-20T11:00:00.000Z",
-    assignedAt: "2025-01-20T12:00:00.000Z",
-    completedAt: "2025-01-22T16:00:00.000Z"
-  }
-];
+interface LeaveRequest {
+  _id: string;
+  leaveType: string;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  description: string;
+  totalDays: number;
+  status: string;
+  createdAt: string;
+}
 
-const mockLeaveRequests = [
-  {
-    _id: "leave1",
-    leaveType: "full_day",
-    fromDate: "2025-02-15T00:00:00.000Z",
-    toDate: "2025-02-15T00:00:00.000Z",
-    reason: "personal",
-    description: "Doctor appointment",
-    totalDays: 1,
-    status: "approved",
-    createdAt: "2025-01-20T10:00:00.000Z",
-    approvedBy: "Manager",
-    approvedAt: "2025-01-21T14:00:00.000Z"
-  },
-  {
-    _id: "leave2",
-    leaveType: "full_day",
-    fromDate: "2025-03-10T00:00:00.000Z",
-    toDate: "2025-03-12T00:00:00.000Z",
-    reason: "vacation",
-    description: "Family vacation",
-    totalDays: 3,
-    status: "pending",
-    createdAt: "2025-01-25T16:00:00.000Z",
-    approvedBy: null,
-    approvedAt: null
-  }
-];
+interface Attendance {
+  _id: string;
+  date: string;
+  status: string;
+  checkInTime: string;
+}
 
-const mockAttendance = [
-  { date: "2025-01-01", status: "present", checkIn: "09:00", checkOut: "18:00" },
-  { date: "2025-01-02", status: "present", checkIn: "08:45", checkOut: "17:30" },
-  { date: "2025-01-03", status: "present", checkIn: "09:15", checkOut: "18:15" },
-  { date: "2025-01-04", status: "present", checkIn: "08:30", checkOut: "17:45" },
-  { date: "2025-01-05", status: "present", checkIn: "09:00", checkOut: "18:00" },
-  { date: "2025-01-06", status: "weekend", checkIn: "-", checkOut: "-" },
-  { date: "2025-01-07", status: "weekend", checkIn: "-", checkOut: "-" },
-  { date: "2025-01-08", status: "present", checkIn: "08:45", checkOut: "18:00" },
-  { date: "2025-01-09", status: "present", checkIn: "09:00", checkOut: "17:30" },
-  { date: "2025-01-10", status: "present", checkIn: "08:30", checkOut: "18:15" }
-];
-
-const mockLeads = [
-  {
-    _id: "lead1",
-    customerName: "ABC Company",
-    contactPerson: "Robert Johnson",
-    email: "robert@abc.com",
-    phone: "+1-555-0200",
-    company: "ABC Corporation",
-    status: "contacted",
-    source: "referral",
-    createdAt: "2025-01-15T10:00:00.000Z",
-    estimatedValue: "$5000"
-  },
-  {
-    _id: "lead2",
-    customerName: "XYZ Industries",
-    contactPerson: "Lisa Chen",
-    email: "lisa@xyz.com",
-    phone: "+1-555-0201",
-    company: "XYZ Industries Ltd",
-    status: "qualified",
-    source: "cold-call",
-    createdAt: "2025-01-20T14:00:00.000Z",
-    estimatedValue: "$8000"
-  }
-];
+interface Installation {
+  _id: string;
+  name: string;
+  email: string;
+  countryCode: string;
+  phoneNumber: string;
+  alternateCountryCode: string;
+  alternatePhoneNumber: string;
+  status: string;
+  approvedDate?: string;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+  aadhaarFrontUrl?: string;
+  aadhaarBackUrl?: string;
+  passportPhotoUrl?: string;
+}
 
 export default function EngineerDetails() {
   const params = useParams();
   const navigate = useNavigate();
-  const engineerId = params?.id;
+  const engineerId = params?.id as string;
+
+  const { data: engineerDetails, isLoading: isLoadingEngineerDetails, error: engineerDetailsError } = useGetFullEngineerDetailsQuery(engineerId || '');
   
+  console.log("engineerDetails",engineerDetails);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Mock data - Replace with actual API calls using engineerId
-  const engineer = mockEngineerData;
-  const assignedComplaints = mockAssignedComplaints;
-  const leaveRequests = mockLeaveRequests;
-  const attendance = mockAttendance;
-  const leads = mockLeads;
+  // Extract data from API response
+  const engineer = engineerDetails?.data?.engineer;
+  const analytics = engineerDetails?.data?.analytics;
+  const records = engineerDetails?.data?.records;
+  
+  const assignedComplaints = records?.complaints || [];
+  const leaveRequests = records?.leaveRequests || [];
+  const attendance = records?.attendance || [];
+  const installations = records?.installations || [];
 
+  // Loading state
+  if (isLoadingEngineerDetails) {
+    return (
+      <MainLayout title="Loading Engineer Details">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Loading Engineer Details...</h3>
+          <p className="text-gray-600 dark:text-gray-400">Please wait while we fetch the engineer information.</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Error state
+  if (engineerDetailsError) {
+    return (
+      <MainLayout title="Error Loading Engineer">
+        <div className="p-8 text-center">
+          <AlertCircle className="h-16 w-16 mx-auto mb-4 text-red-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Error Loading Engineer</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">There was an error loading the engineer details.</p>
+          <Button onClick={() => navigate('/engineers')} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Engineers
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Not found state
   if (!engineer) {
     return (
       <MainLayout title="Engineer Not Found">
@@ -289,17 +231,17 @@ export default function EngineerDetails() {
     }
   };
 
-  const filteredComplaints = assignedComplaints.filter(complaint => {
+  const filteredComplaints = assignedComplaints.filter((complaint: Complaint) => {
     const matchesSearch = complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         complaint.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+                         (complaint.user?.firstName + ' ' + complaint.user?.lastName).toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || complaint.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const completionRate = (engineer.performance.completedJobs / (engineer.performance.completedJobs + engineer.performance.activeJobs)) * 100;
+  const completionRate = (analytics?.complaints?.total || 0) > 0 ? (analytics.complaints.resolved / analytics.complaints.total) * 100 : 0;
 
   return (
-    <MainLayout title={`${engineer.fullName} - Engineer Details`}>
+    <MainLayout title={`${engineer.firstName} ${engineer.lastName} - Engineer Details`}>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -314,8 +256,8 @@ export default function EngineerDetails() {
               Back to Engineers
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{engineer.fullName}</h1>
-              <p className="text-gray-600 dark:text-gray-400">{engineer.department} • {engineer.employeeId}</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{engineer.firstName} {engineer.lastName}</h1>
+              <p className="text-gray-600 dark:text-gray-400">{engineer.group} • {engineer.userName}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -339,7 +281,7 @@ export default function EngineerDetails() {
                 <div className="mx-auto w-24 h-24 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-4">
                   {engineer.profileImage ? (
                     <Avatar className="w-24 h-24">
-                      <AvatarImage src={engineer.profileImage} alt={engineer.fullName} />
+                      <AvatarImage src={`${BASE_URL}${engineer.profileImage}`} alt={`${engineer.firstName} ${engineer.lastName}`} />
                       <AvatarFallback className="text-3xl">
                         {engineer.firstName.charAt(0)}{engineer.lastName.charAt(0)}
                       </AvatarFallback>
@@ -348,8 +290,8 @@ export default function EngineerDetails() {
                     engineer.firstName.charAt(0) + engineer.lastName.charAt(0)
                   )}
                 </div>
-                <CardTitle className="text-xl">{engineer.fullName}</CardTitle>
-                <p className="text-gray-600 dark:text-gray-400">{engineer.department}</p>
+                <CardTitle className="text-xl">{engineer.firstName} {engineer.lastName}</CardTitle>
+                <p className="text-gray-600 dark:text-gray-400">{engineer.group}</p>
                 <div className="flex justify-center">
                   <Badge className={cn(
                     "capitalize",
@@ -374,13 +316,13 @@ export default function EngineerDetails() {
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <MapPin className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600 dark:text-gray-400">Location:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Address:</span>
                   <span className="font-medium">{engineer.permanentAddress}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="h-4 w-4 text-gray-400" />
                   <span className="text-gray-600 dark:text-gray-400">Joined:</span>
-                  <span className="font-medium">{new Date(engineer.joiningDate).toLocaleDateString()}</span>
+                  <span className="font-medium">{new Date(engineer.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <Building className="h-4 w-4 text-gray-400" />
@@ -392,6 +334,108 @@ export default function EngineerDetails() {
                   <span className="text-gray-600 dark:text-gray-400">Zone:</span>
                   <span className="font-medium">{engineer.zone}</span>
                 </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600 dark:text-gray-400">State:</span>
+                  <span className="font-medium">{engineer.state}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600 dark:text-gray-400">Area:</span>
+                  <span className="font-medium">{engineer.areaFromPincode}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Document Attachments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Document Attachments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Aadhaar Front */}
+                {engineer.aadhaarFront && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Aadhaar Front</Label>
+                    <div className="relative">
+                      <img 
+                        src={`${BASE_URL}${engineer.aadhaarFront}`} 
+                        alt="Aadhaar Front" 
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="w-full h-32 flex items-center justify-center hidden bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="text-center">
+                          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500">Image not available</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Aadhaar Back */}
+                {engineer.aadhaarBack && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Aadhaar Back</Label>
+                    <div className="relative">
+                      <img 
+                        src={`${BASE_URL}${engineer.aadhaarBack}`} 
+                        alt="Aadhaar Back" 
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="w-full h-32 flex items-center justify-center hidden bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="text-center">
+                          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500">Image not available</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* PAN Card */}
+                {engineer.panCard && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">PAN Card</Label>
+                    <div className="relative">
+                      <img 
+                        src={`${BASE_URL}${engineer.panCard}`} 
+                        alt="PAN Card" 
+                        className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                      <div className="w-full h-32 flex items-center justify-center hidden bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="text-center">
+                          <FileText className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500">Image not available</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Show message if no documents */}
+                {!engineer.aadhaarFront && !engineer.aadhaarBack && !engineer.panCard && (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Documents</h3>
+                    <p className="text-gray-600 dark:text-gray-400">No document attachments available.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -404,58 +448,59 @@ export default function EngineerDetails() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Rating */}
+                {/* Complaints Resolution Rate */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Rating</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-500" />
-                      <span className="font-bold text-yellow-600 dark:text-yellow-400">
-                        {engineer.performance.rating}/5
-                      </span>
-                    </div>
-                  </div>
-                  <Progress value={(engineer.performance.rating / 5) * 100} className="h-2" />
-                </div>
-
-                {/* Completion Rate */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Success Rate</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Resolution Rate</span>
                     <span className="font-bold text-green-600 dark:text-green-400">
-                      {engineer.performance.successRate}%
+                      {analytics?.complaints?.total > 0 ? Math.round((analytics.complaints.resolved / analytics.complaints.total) * 100) : 0}%
                     </span>
                   </div>
-                  <Progress value={engineer.performance.successRate} className="h-2" />
+                  <Progress value={analytics?.complaints?.total > 0 ? (analytics.complaints.resolved / analytics.complaints.total) * 100 : 0} className="h-2" />
                 </div>
 
-                {/* Jobs Stats */}
+                {/* Installation Approval Rate */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Installation Approval Rate</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {analytics?.installations?.approvalRate || 0}%
+                    </span>
+                  </div>
+                  <Progress value={analytics?.installations?.approvalRate || 0} className="h-2" />
+                </div>
+
+                {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-center">
                     <div className="flex items-center justify-center w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-lg mx-auto mb-2">
                       <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{engineer.performance.completedJobs}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics?.complaints?.resolved || 0}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Resolved</p>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg mx-auto mb-2">
                       <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{engineer.performance.activeJobs}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Active</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{analytics?.complaints?.inProgress || 0}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">In Progress</p>
                   </div>
                 </div>
 
                 {/* Additional Metrics */}
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Avg Response Time:</span>
-                    <span className="font-medium">{engineer.performance.avgResponseTime}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Total Complaints:</span>
+                    <span className="font-medium">{analytics?.complaints?.total || 0}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Customer Satisfaction:</span>
-                    <span className="font-medium">{engineer.performance.customerSatisfaction}/5</span>
+                    <span className="text-gray-600 dark:text-gray-400">Total Installations:</span>
+                    <span className="font-medium">{analytics?.installations?.total || 0}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Attendance Rate:</span>
+                    <span className="font-medium">{analytics?.attendance?.attendancePercentage || 0}%</span>
                   </div>
                 </div>
               </CardContent>
@@ -465,12 +510,12 @@ export default function EngineerDetails() {
           {/* Right Column - Content Tabs */}
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="complaints">Complaints</TabsTrigger>
                 <TabsTrigger value="leaves">Leave Requests</TabsTrigger>
                 <TabsTrigger value="attendance">Attendance</TabsTrigger>
-                <TabsTrigger value="leads">Leads</TabsTrigger>
+                <TabsTrigger value="installations">Installations</TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
@@ -484,7 +529,7 @@ export default function EngineerDetails() {
                           <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-bold">{assignedComplaints.length}</p>
+                          <p className="text-2xl font-bold">{analytics?.complaints?.total || 0}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">Total Complaints</p>
                         </div>
                       </div>
@@ -498,7 +543,7 @@ export default function EngineerDetails() {
                           <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-bold">{assignedComplaints.filter(c => c.status === 'resolved').length}</p>
+                          <p className="text-2xl font-bold">{analytics?.complaints?.resolved || 0}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">Resolved</p>
                         </div>
                       </div>
@@ -512,7 +557,7 @@ export default function EngineerDetails() {
                           <FileText className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-bold">{leaveRequests.length}</p>
+                          <p className="text-2xl font-bold">{analytics?.leaveRequests?.total || 0}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">Leave Requests</p>
                         </div>
                       </div>
@@ -526,8 +571,8 @@ export default function EngineerDetails() {
                           <Target className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
                         <div>
-                          <p className="text-2xl font-bold">{leads.length}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Leads Generated</p>
+                          <p className="text-2xl font-bold">{analytics?.installations?.total || 0}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Installations</p>
                         </div>
                       </div>
                     </CardContent>
@@ -544,13 +589,13 @@ export default function EngineerDetails() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {assignedComplaints.slice(0, 3).map((complaint) => (
+                      {assignedComplaints.slice(0, 3).map((complaint: Complaint) => (
                         <div key={complaint._id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           <div className="flex-1">
                             <p className="text-sm font-medium">{complaint.title}</p>
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {complaint.customerName} • {new Date(complaint.createdAt).toLocaleDateString()}
+                              {complaint.user?.firstName} {complaint.user?.lastName} • {new Date(complaint.createdAt).toLocaleDateString()}
                             </p>
                           </div>
                           <Badge className={cn("text-xs", getStatusColor(complaint.status))}>
@@ -570,7 +615,7 @@ export default function EngineerDetails() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="flex items-center gap-2">
                         <AlertCircle className="h-5 w-5" />
-                        Assigned Complaints ({assignedComplaints.length})
+                        Assigned Complaints ({analytics?.complaints?.total || 0})
                       </CardTitle>
                       <div className="flex items-center gap-2">
                         <Input
@@ -596,7 +641,7 @@ export default function EngineerDetails() {
                   <CardContent>
                     {filteredComplaints.length > 0 ? (
                       <div className="space-y-4">
-                        {filteredComplaints.map((complaint) => (
+                        {filteredComplaints.map((complaint: Complaint) => (
                           <div
                             key={complaint._id}
                             className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
@@ -614,15 +659,59 @@ export default function EngineerDetails() {
                               </div>
                             </div>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                              {complaint.description}
+                              {complaint.issueDescription}
                             </p>
                             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                               <div className="flex items-center gap-4">
-                                <span>Customer: {complaint.customerName}</span>
-                                <span>Location: {complaint.location}</span>
+                                <span>Customer: {complaint.user?.firstName} {complaint.user?.lastName}</span>
+                                <span>Phone: {complaint.user?.countryCode} {complaint.user?.phoneNumber}</span>
                               </div>
                               <span>Created: {new Date(complaint.createdAt).toLocaleDateString()}</span>
                             </div>
+                            
+                            {/* Complaint Attachments */}
+                            {(complaint.attachments && complaint.attachments.length > 0) && (
+                              <div className="mt-3">
+                                <Label className="text-xs font-medium text-gray-600 dark:text-gray-400">Attachments:</Label>
+                                <div className="flex gap-2 mt-1">
+                                  {complaint.attachments.map((attachment, index) => (
+                                    <div key={index} className="relative">
+                                      <img 
+                                        src={`${BASE_URL}${attachment}`} 
+                                        alt={`Attachment ${index + 1}`} 
+                                        className="w-16 h-16 object-cover rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(`${BASE_URL}${attachment}`, '_blank')}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Resolution Attachments */}
+                            {(complaint.resolutionAttachments && complaint.resolutionAttachments.length > 0) && (
+                              <div className="mt-3">
+                                <Label className="text-xs font-medium text-gray-600 dark:text-gray-400">Resolution Attachments:</Label>
+                                <div className="flex gap-2 mt-1">
+                                  {complaint.resolutionAttachments.map((attachment, index) => (
+                                    <div key={index} className="relative">
+                                      <img 
+                                        src={`${BASE_URL}${attachment}`} 
+                                        alt={`Resolution ${index + 1}`} 
+                                        className="w-16 h-16 object-cover rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(`${BASE_URL}${attachment}`, '_blank')}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -643,13 +732,13 @@ export default function EngineerDetails() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5" />
-                      Leave Requests ({leaveRequests.length})
+                      Leave Requests ({analytics?.leaveRequests?.total || 0})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {leaveRequests.length > 0 ? (
                       <div className="space-y-4">
-                        {leaveRequests.map((leave) => (
+                        {leaveRequests.map((leave: LeaveRequest) => (
                           <div key={leave._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div>
@@ -718,8 +807,8 @@ export default function EngineerDetails() {
                       ))}
                       
                       {/* Calendar Days */}
-                      {attendance.map((day) => (
-                        <div key={day.date} className="text-center p-2">
+                      {attendance.map((day: Attendance) => (
+                        <div key={day._id} className="text-center p-2">
                           <div className={cn(
                             "w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-medium",
                             day.status === 'present' && "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
@@ -731,7 +820,7 @@ export default function EngineerDetails() {
                           </div>
                           {day.status !== 'weekend' && (
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              {day.checkIn} - {day.checkOut}
+                              {new Date(day.checkInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </div>
                           )}
                         </div>
@@ -742,25 +831,25 @@ export default function EngineerDetails() {
                     <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {attendance.filter(d => d.status === 'present').length}
+                          {analytics?.attendance?.present || 0}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Present Days</div>
                       </div>
                       <div className="text-center p-3 bg-red-50 dark:bg-red-900/10 rounded-lg">
                         <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                          {attendance.filter(d => d.status === 'absent').length}
+                          {analytics?.attendance?.absent || 0}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Absent Days</div>
                       </div>
                       <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-lg">
                         <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                          {attendance.filter(d => d.status === 'late').length}
+                          {analytics?.attendance?.late || 0}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Late Days</div>
                       </div>
                       <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg">
                         <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                          {Math.round((attendance.filter(d => d.status === 'present').length / attendance.length) * 100)}%
+                          {analytics?.attendance?.attendancePercentage || 0}%
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">Attendance Rate</div>
                       </div>
@@ -769,64 +858,122 @@ export default function EngineerDetails() {
                 </Card>
               </TabsContent>
 
-              {/* Leads Tab */}
-              <TabsContent value="leads" className="space-y-6">
+              {/* Installations Tab */}
+              <TabsContent value="installations" className="space-y-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Target className="h-5 w-5" />
-                      Leads Generated ({leads.length})
+                      Installations ({analytics?.installations?.total || 0})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {leads.length > 0 ? (
+                    {installations.length > 0 ? (
                       <div className="space-y-4">
-                        {leads.map((lead) => (
-                          <div key={lead._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        {installations.map((installation: Installation) => (
+                          <div key={installation._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div>
-                                <h4 className="font-medium text-gray-900 dark:text-white">{lead.customerName}</h4>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{lead.company}</p>
+                                <h4 className="font-medium text-gray-900 dark:text-white">{installation.name}</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{installation.email}</p>
                               </div>
                               <Badge className={cn(
                                 "text-xs",
-                                lead.status === 'qualified' ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
-                                lead.status === 'contacted' ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300" :
+                                installation.status === 'approved' ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300" :
+                                installation.status === 'in_review' ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300" :
+                                installation.status === 'rejected' ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300" :
                                 "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300"
                               )}>
-                                {lead.status}
+                                {installation.status}
                               </Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Contact:</span>
-                                <p className="font-medium">{lead.contactPerson}</p>
-                              </div>
-                              <div>
-                                <span className="text-gray-600 dark:text-gray-400">Email:</span>
-                                <p className="font-medium">{lead.email}</p>
-                              </div>
-                              <div>
                                 <span className="text-gray-600 dark:text-gray-400">Phone:</span>
-                                <p className="font-medium">{lead.phone}</p>
+                                <p className="font-medium">{installation.countryCode} {installation.phoneNumber}</p>
                               </div>
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Value:</span>
-                                <p className="font-medium">{lead.estimatedValue}</p>
+                                <span className="text-gray-600 dark:text-gray-400">Alt Phone:</span>
+                                <p className="font-medium">{installation.alternateCountryCode} {installation.alternatePhoneNumber}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                                <p className="font-medium capitalize">{installation.status}</p>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 dark:text-gray-400">Approved Date:</span>
+                                <p className="font-medium">{installation.approvedDate ? new Date(installation.approvedDate).toLocaleDateString() : 'N/A'}</p>
                               </div>
                             </div>
-                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                              <span>Source: {lead.source}</span>
-                              <span>Created: {new Date(lead.createdAt).toLocaleDateString()}</span>
+                            {installation.remarks && (
+                              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Remarks:</span>
+                                <p className="text-sm font-medium mt-1">{installation.remarks}</p>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-3">
+                              <span>Created: {new Date(installation.createdAt).toLocaleDateString()}</span>
+                              <span>Updated: {new Date(installation.updatedAt).toLocaleDateString()}</span>
                             </div>
+
+                            {/* Installation Document Attachments */}
+                            {(installation.aadhaarFrontUrl || installation.aadhaarBackUrl || installation.passportPhotoUrl) && (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Document Attachments:</Label>
+                                <div className="grid grid-cols-3 gap-3">
+                                  {installation.aadhaarFrontUrl && (
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-gray-500">Aadhaar Front</Label>
+                                      <img 
+                                        src={`${BASE_URL}${installation.aadhaarFrontUrl}`} 
+                                        alt="Aadhaar Front" 
+                                        className="w-full h-20 object-cover rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(`${BASE_URL}${installation.aadhaarFrontUrl}`, '_blank')}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                  {installation.aadhaarBackUrl && (
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-gray-500">Aadhaar Back</Label>
+                                      <img 
+                                        src={`${BASE_URL}${installation.aadhaarBackUrl}`} 
+                                        alt="Aadhaar Back" 
+                                        className="w-full h-20 object-cover rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(`${BASE_URL}${installation.aadhaarBackUrl}`, '_blank')}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                  {installation.passportPhotoUrl && (
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-gray-500">Passport Photo</Label>
+                                      <img 
+                                        src={`${BASE_URL}${installation.passportPhotoUrl}`} 
+                                        alt="Passport Photo" 
+                                        className="w-full h-20 object-cover rounded border border-gray-200 dark:border-gray-700 cursor-pointer hover:opacity-80"
+                                        onClick={() => window.open(`${BASE_URL}${installation.passportPhotoUrl}`, '_blank')}
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
                         <Target className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Leads Generated</h3>
-                        <p className="text-gray-600 dark:text-gray-400">This engineer has not generated any leads yet.</p>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Installations</h3>
+                        <p className="text-gray-600 dark:text-gray-400">This engineer has no installations yet.</p>
                       </div>
                     )}
                   </CardContent>

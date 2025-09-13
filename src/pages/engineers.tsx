@@ -38,6 +38,7 @@ interface Engineer {
   area?: string;
   permanentAddress?: string;
   residenceAddress?: string;
+  billingAddress?: string; // Keep for backward compatibility
   country?: string;
   language?: string;
   userName?: string;
@@ -51,7 +52,10 @@ interface Engineer {
   aadhaarFront?: any;
   aadhaarBack?: any;
   panCard?: any;
-  lastLogin: string;
+  companyPreference?: string; // Keep for backward compatibility
+  mode?: string; // Keep for backward compatibility
+  lastLogin?: string; // Make optional as some records don't have it
+  balanceDue?: number; // Balance due amount
   createdAt: string;
   updatedAt?: string;
   isActive: boolean;
@@ -99,11 +103,6 @@ enum AreaType {
   URBAN = "urban"
 }
 
-// Mode Enum
-enum Mode {
-  ONLINE = "online",
-  OFFLINE = "offline"
-}
 
 // Indian States List
 const INDIAN_STATES = [
@@ -166,6 +165,30 @@ export default function Engineers() {
   const [updateEngineer, { isLoading: isUpdatingEngineer }] = useUpdateEngineerDataMutation();
   const [deleteEngineer, { isLoading: isDeletingEngineer }] = useDeleteEngineerMutation();
   const { toast } = useToast();
+
+  // Helper function to safely create object URLs
+  const createSafeObjectURL = (file: any): string | null => {
+    try {
+      if (file && file instanceof File) {
+        return URL.createObjectURL(file);
+      }
+      return null;
+    } catch (error) {
+      console.error("Error creating object URL:", error);
+      return null;
+    }
+  };
+
+  // Helper function to safely revoke object URLs
+  const revokeSafeObjectURL = (url: string | null) => {
+    try {
+      if (url && url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error("Error revoking object URL:", error);
+    }
+  };
 
   // Function to fetch areas from pincode
   const fetchAreasFromPincode = async (pincode: string) => {
@@ -237,27 +260,37 @@ export default function Engineers() {
     resolver: zodResolver(insertEngineerSchema),
   });
 
-  // Extract data from API response
+  // Extract data from API response with error handling
   const engineers = engineerDashboardData?.data?.engineers || [];
   const summary = engineerDashboardData?.data?.summary;
   const pagination = engineerDashboardData?.data?.pagination;
   const filters = engineerDashboardData?.data?.filters;
 
-  // Filter engineers based on search and filter criteria
+  // Debug logging
+  console.log("Engineer Dashboard Data:", engineerDashboardData);
+  console.log("Engineers:", engineers);
+
+  // Filter engineers based on search and filter criteria with error handling
   const filteredEngineers = engineers.filter((engineer: Engineer) => {
+    try {
     const matchesSearch = 
-      engineer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      engineer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      engineer.phoneNumber.includes(searchQuery);
+        engineer?.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        engineer?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        engineer?.phoneNumber?.includes(searchQuery);
     
     const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "active" && engineer.isActive) ||
-      (statusFilter === "inactive" && !engineer.isActive);
-    
-    const matchesGroup = groupFilter === "all" || engineer.group === groupFilter;
-    const matchesZone = zoneFilter === "all" || engineer.zone === zoneFilter;
-    const matchesArea = areaFilter === "all" || engineer.area === areaFilter;
-    return matchesSearch && matchesStatus && matchesGroup && matchesZone && matchesArea;
+        (statusFilter === "active" && engineer?.isActive) ||
+        (statusFilter === "inactive" && !engineer?.isActive);
+      
+      const matchesGroup = groupFilter === "all" || engineer?.group === groupFilter;
+      const matchesZone = zoneFilter === "all" || engineer?.zone === zoneFilter;
+      const matchesArea = areaFilter === "all" || engineer?.area === areaFilter;
+      
+      return matchesSearch && matchesStatus && matchesGroup && matchesZone && matchesArea;
+    } catch (error) {
+      console.error("Error filtering engineer:", engineer, error);
+      return false;
+    }
   });
 
   const handleCreateEngineer = async (data: InsertEngineer) => {
@@ -520,6 +553,8 @@ export default function Engineers() {
     );
   }
 
+  // Add error boundary for the component
+  try {
   return (
     <MainLayout title="Engineer Management">
       <div className="space-y-6">
@@ -659,7 +694,7 @@ export default function Engineers() {
                           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 border-2 border-dashed border-blue-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-all duration-200 overflow-hidden">
                             {form.watch("profileImage") ? (
                               <img 
-                                src={URL.createObjectURL(form.watch("profileImage"))} 
+                                src={createSafeObjectURL(form.watch("profileImage")) || ''} 
                                 alt="Profile" 
                                 className="w-full h-full rounded-full object-cover"
                               />
@@ -935,7 +970,7 @@ export default function Engineers() {
                                 {form.watch("aadhaarFront") ? (
                                   <>
                                     <img 
-                                      src={URL.createObjectURL(form.watch("aadhaarFront"))} 
+                                      src={createSafeObjectURL(form.watch("aadhaarFront")) || ''} 
                                       alt="Aadhaar Front" 
                                       className="w-full h-full object-cover rounded-lg"
                                     />
@@ -983,7 +1018,7 @@ export default function Engineers() {
                                 {form.watch("aadhaarBack") ? (
                                   <>
                                     <img 
-                                      src={URL.createObjectURL(form.watch("aadhaarBack"))} 
+                                      src={createSafeObjectURL(form.watch("aadhaarBack")) || ''} 
                                       alt="Aadhaar Back" 
                                       className="w-full h-full object-cover rounded-lg"
                                     />
@@ -1031,7 +1066,7 @@ export default function Engineers() {
                                 {form.watch("panCard") ? (
                                   <>
                                     <img 
-                                      src={URL.createObjectURL(form.watch("panCard"))} 
+                                      src={createSafeObjectURL(form.watch("panCard")) || ''} 
                                       alt="PAN Card" 
                                       className="w-full h-full object-cover rounded-lg"
                                     />
@@ -1109,7 +1144,7 @@ export default function Engineers() {
         {/* Engineers Display */}
         {viewMode === "card" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEngineers.map((engineer: Engineer) => (
+            {filteredEngineers?.map((engineer: Engineer) => (
               <Card key={engineer._id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -1154,7 +1189,7 @@ export default function Engineers() {
                     </div>
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Clock className="w-4 h-4 mr-2" />
-                      Last Login: {formatDateTime(engineer.lastLogin)}
+                      Last Login: {engineer.lastLogin ? formatDateTime(engineer.lastLogin) : "Not logged in yet"}
                     </div>
                     {engineer.updatedAt && (
                       <div className="flex items-center text-sm text-muted-foreground">
@@ -1246,7 +1281,79 @@ export default function Engineers() {
                         PAN: {engineer.panNumber}
                       </div>
                     )}
+                    {engineer.balanceDue !== undefined && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <User className="w-4 h-4 mr-2" />
+                        Balance Due: ₹{engineer.balanceDue}
+                      </div>
+                    )}
                   </div>
+
+                  {/* Document Attachments */}
+                  {(engineer.aadhaarFront || engineer.aadhaarBack || engineer.panCard) && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">📎 Document Attachments</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        {engineer.aadhaarFront && (
+                          <div className="text-center">
+                            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                              <img 
+                                src={`${BASE_URL}${engineer.aadhaarFront}`} 
+                                alt="Aadhaar Front" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="w-full h-full flex items-center justify-center hidden">
+                                <User className="w-6 h-6 text-gray-400" />
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">Aadhaar Front</p>
+                          </div>
+                        )}
+                        {engineer.aadhaarBack && (
+                          <div className="text-center">
+                            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                              <img 
+                                src={`${BASE_URL}${engineer.aadhaarBack}`} 
+                                alt="Aadhaar Back" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="w-full h-full flex items-center justify-center hidden">
+                                <User className="w-6 h-6 text-gray-400" />
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">Aadhaar Back</p>
+                          </div>
+                        )}
+                        {engineer.panCard && (
+                          <div className="text-center">
+                            <div className="w-16 h-16 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                              <img 
+                                src={`${BASE_URL}${engineer.panCard}`} 
+                                alt="PAN Card" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="w-full h-full flex items-center justify-center hidden">
+                                <User className="w-6 h-6 text-gray-400" />
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">PAN Card</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="flex gap-2">
                     <Button 
@@ -1272,35 +1379,50 @@ export default function Engineers() {
                       size="sm"
                       onClick={() => {
                         setSelectedEngineer(engineer);
+                        try {
                         const formData: InsertEngineer = {
-                          firstName: engineer.firstName,
-                          lastName: engineer.lastName,
-                          email: engineer.email,
-                          phoneNumber: engineer.phoneNumber,
-                          countryCode: engineer.countryCode,
+                            firstName: engineer.firstName || "",
+                            lastName: engineer.lastName || "",
+                            email: engineer.email || "",
+                            phoneNumber: engineer.phoneNumber || "",
+                            countryCode: engineer.countryCode || "+91",
                           status: (engineer.status || (engineer.isActive ? "active" : "inactive")) as "active" | "inactive" | "suspended",
                           group: engineer.group || "",
                           zone: engineer.zone || "",
                           area: engineer.area as AreaType | undefined,
                           permanentAddress: engineer.permanentAddress || "",
-                          residenceAddress: engineer.residenceAddress || "",
-                          country: engineer.country || "India",
+                            residenceAddress: engineer.residenceAddress || "",
+                            country: engineer.country || "India",
                           language: engineer.language || "",
                           userName: engineer.userName || "",
                           fatherName: engineer.fatherName || "",
                           profileImage: engineer.profileImage || null,
-                          state: engineer.state || "",
-                          pincode: engineer.pincode || "",
-                          areaFromPincode: engineer.areaFromPincode || "",
-                          aadhaarNumber: engineer.aadhaarNumber || "",
-                          panNumber: engineer.panNumber || "",
-                          aadhaarFront: engineer.aadhaarFront || null,
-                          aadhaarBack: engineer.aadhaarBack || null,
-                          panCard: engineer.panCard || null,
+                            state: engineer.state || "",
+                            pincode: engineer.pincode || "",
+                            areaFromPincode: engineer.areaFromPincode || "",
+                            aadhaarNumber: engineer.aadhaarNumber || "",
+                            panNumber: engineer.panNumber || "",
+                            aadhaarFront: engineer.aadhaarFront || null,
+                            aadhaarBack: engineer.aadhaarBack || null,
+                            panCard: engineer.panCard || null,
                         };
                         console.log("Setting edit form data:", formData);
                         editForm.reset(formData);
+                          // Reset pincode areas for the edit form and add existing area if available
+                          if (engineer.areaFromPincode) {
+                            setPincodeAreas([engineer.areaFromPincode]);
+                          } else {
+                            setPincodeAreas([]);
+                          }
                         setIsEditDialogOpen(true);
+                        } catch (error) {
+                          console.error("Error setting edit form data:", error);
+                          toast({
+                            title: "Error",
+                            description: "Failed to load engineer data for editing",
+                            variant: "destructive",
+                          });
+                        }
                       }}
                     >
                       <Edit className="w-4 h-4" />
@@ -1324,7 +1446,7 @@ export default function Engineers() {
           <Card>
             <CardContent className="p-0">
               <DataTable
-                data={filteredEngineers}
+                data={filteredEngineers || []}
                 columns={[
                   { 
                     key: "profileImage", 
@@ -1401,12 +1523,71 @@ export default function Engineers() {
                   {
                     key: "lastLogin",
                     label: "Last Login",
-                    render: (value) => formatDateTime(value)
+                    render: (value) => value ? formatDateTime(value) : "Not logged in yet"
                   },
                   {
                     key: "updatedAt",
                     label: "Last Updated",
                     render: (value) => value ? formatDate(value) : "-"
+                  },
+                  {
+                    key: "documents",
+                    label: "Documents",
+                    render: (_, engineer) => (
+                      <div className="flex gap-1">
+                        {engineer.aadhaarFront && (
+                          <div className="w-8 h-8 rounded border overflow-hidden bg-gray-100" title="Aadhaar Front">
+                            <img 
+                              src={`${BASE_URL}${engineer.aadhaarFront}`} 
+                              alt="Aadhaar Front" 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                            <div className="w-full h-full flex items-center justify-center hidden">
+                              <User className="w-4 h-4 text-gray-400" />
+                            </div>
+                          </div>
+                        )}
+                        {engineer.aadhaarBack && (
+                          <div className="w-8 h-8 rounded border overflow-hidden bg-gray-100" title="Aadhaar Back">
+                            <img 
+                              src={`${BASE_URL}${engineer.aadhaarBack}`} 
+                              alt="Aadhaar Back" 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                            <div className="w-full h-full flex items-center justify-center hidden">
+                              <User className="w-4 h-4 text-gray-400" />
+                            </div>
+                          </div>
+                        )}
+                        {engineer.panCard && (
+                          <div className="w-8 h-8 rounded border overflow-hidden bg-gray-100" title="PAN Card">
+                            <img 
+                              src={`${BASE_URL}${engineer.panCard}`} 
+                              alt="PAN Card" 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                            <div className="w-full h-full flex items-center justify-center hidden">
+                              <User className="w-4 h-4 text-gray-400" />
+                            </div>
+                          </div>
+                        )}
+                        {!engineer.aadhaarFront && !engineer.aadhaarBack && !engineer.panCard && (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </div>
+                    )
                   },
                   {
                     key: "actions",
@@ -1436,33 +1617,48 @@ export default function Engineers() {
                           size="sm"
                           onClick={() => {
                             setSelectedEngineer(engineer);
+                            try {
                             editForm.reset({
-                              firstName: engineer.firstName,
-                              lastName: engineer.lastName,
-                              email: engineer.email,
-                              phoneNumber: engineer.phoneNumber,
-                              countryCode: engineer.countryCode,
+                                firstName: engineer.firstName || "",
+                                lastName: engineer.lastName || "",
+                                email: engineer.email || "",
+                                phoneNumber: engineer.phoneNumber || "",
+                                countryCode: engineer.countryCode || "+91",
                               status: engineer.status || (engineer.isActive ? "active" : "inactive"),
                               group: engineer.group || "",
                               zone: engineer.zone || "",
                               area: engineer.area || undefined,
                               permanentAddress: engineer.permanentAddress || "",
-                              residenceAddress: engineer.residenceAddress || "",
-                              country: engineer.country || "India",
+                                residenceAddress: engineer.residenceAddress || "",
+                                country: engineer.country || "India",
                               language: engineer.language || "",
                               userName: engineer.userName || "",
                               fatherName: engineer.fatherName || "",
                               profileImage: engineer.profileImage || null,
-                              state: engineer.state || "",
-                              pincode: engineer.pincode || "",
-                              areaFromPincode: engineer.areaFromPincode || "",
-                              aadhaarNumber: engineer.aadhaarNumber || "",
-                              panNumber: engineer.panNumber || "",
-                              aadhaarFront: engineer.aadhaarFront || null,
-                              aadhaarBack: engineer.aadhaarBack || null,
-                              panCard: engineer.panCard || null,
-                            });
+                                state: engineer.state || "",
+                                pincode: engineer.pincode || "",
+                                areaFromPincode: engineer.areaFromPincode || "",
+                                aadhaarNumber: engineer.aadhaarNumber || "",
+                                panNumber: engineer.panNumber || "",
+                                aadhaarFront: engineer.aadhaarFront || null,
+                                aadhaarBack: engineer.aadhaarBack || null,
+                                panCard: engineer.panCard || null,
+                              });
+                              // Reset pincode areas for the edit form and add existing area if available
+                              if (engineer.areaFromPincode) {
+                                setPincodeAreas([engineer.areaFromPincode]);
+                              } else {
+                                setPincodeAreas([]);
+                              }
                             setIsEditDialogOpen(true);
+                            } catch (error) {
+                              console.error("Error setting edit form data:", error);
+                              toast({
+                                title: "Error",
+                                description: "Failed to load engineer data for editing",
+                                variant: "destructive",
+                              });
+                            }
                           }}
                         >
                           <Edit className="w-4 h-4" />
@@ -1532,15 +1728,16 @@ export default function Engineers() {
             <div className="flex justify-center">
               <div className="relative group">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
-                  {editForm.watch("profileImage") ? (
+                  {editForm.watch("profileImage") && editForm.watch("profileImage") instanceof File ? (
                     <img 
-                      src={URL.createObjectURL(editForm.watch("profileImage"))} 
+                      src={createSafeObjectURL(editForm.watch("profileImage")) || ''} 
                       alt="Profile" 
                       className="w-full h-full rounded-full object-cover"
                     />
-                  ) : selectedEngineer?.profileImage ? (
+                  ) : (editForm.watch("profileImage") || selectedEngineer?.profileImage) ? (
+                    <>
                     <img 
-                      src={`${BASE_URL}${selectedEngineer.profileImage}`} 
+                        src={`${BASE_URL}${editForm.watch("profileImage") || selectedEngineer?.profileImage}`} 
                       alt="Current Profile" 
                       className="w-full h-full rounded-full object-cover"
                       onError={(e) => {
@@ -1548,15 +1745,15 @@ export default function Engineers() {
                         e.currentTarget.nextElementSibling?.classList.remove('hidden');
                       }}
                     />
-                  ) : null}
-                  {!editForm.watch("profileImage") && !selectedEngineer?.profileImage && (
+                      <div className="w-full h-full flex items-center justify-center hidden">
                     <div className="text-center">
                       <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
-                      <p className="text-xs text-green-600">Update Photo</p>
+                          <p className="text-xs text-green-600">Image not available</p>
                     </div>
-                  )}
-                  {!editForm.watch("profileImage") && selectedEngineer?.profileImage && (
-                    <div className="text-center hidden">
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center">
                       <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
                       <p className="text-xs text-green-600">Update Photo</p>
                     </div>
@@ -1714,7 +1911,7 @@ export default function Engineers() {
                     disabled={pincodeAreas.length === 0 || isLoadingPincode}
                   >
                     <SelectTrigger className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder={isLoadingPincode ? "Loading areas..." : "Select area"} />
+                      <SelectValue placeholder={isLoadingPincode ? "Loading areas..." : editForm.watch("areaFromPincode") ? editForm.watch("areaFromPincode") : "Select area"} />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       {pincodeAreas.map((area) => (
@@ -1722,6 +1919,11 @@ export default function Engineers() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {editForm.watch("areaFromPincode") && pincodeAreas.length === 1 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current area: {editForm.watch("areaFromPincode")}. Update pincode above to see more areas.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-zone" className="text-sm font-medium">Zone</Label>
@@ -1852,10 +2054,10 @@ export default function Engineers() {
                   <Label className="text-sm font-medium">Aadhaar Front</Label>
                   <div className="relative group">
                     <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
-                      {editForm.watch("aadhaarFront") ? (
+                      {editForm.watch("aadhaarFront") && editForm.watch("aadhaarFront") instanceof File ? (
                         <>
                           <img 
-                            src={URL.createObjectURL(editForm.watch("aadhaarFront"))} 
+                            src={createSafeObjectURL(editForm.watch("aadhaarFront")) || ''} 
                             alt="Aadhaar Front" 
                             className="w-full h-full object-cover rounded-lg"
                           />
@@ -1876,17 +2078,28 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : selectedEngineer?.aadhaarFront ? (
+                      ) : (editForm.watch("aadhaarFront") || selectedEngineer?.aadhaarFront) ? (
                         <>
-                          <img 
-                            src={`${BASE_URL}${selectedEngineer.aadhaarFront}`} 
-                            alt="Current Aadhaar Front" 
-                            className="w-full h-full object-cover rounded-lg"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
+                          {(() => {
+                            const imagePath = editForm.watch("aadhaarFront") || (selectedEngineer?.aadhaarFront ?? '');
+                            return (
+                              <img 
+                                src={`${BASE_URL}${imagePath}`} 
+                                alt="Current Aadhaar Front" 
+                                className="w-full h-full object-cover rounded-lg"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            );
+                          })()}
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <div className="text-center">
+                              <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                              <p className="text-xs text-green-600">Image not available</p>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1904,15 +2117,8 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : null}
-                      {!editForm.watch("aadhaarFront") && !selectedEngineer?.aadhaarFront && (
+                      ) : (
                         <div className="text-center">
-                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
-                          <p className="text-xs text-green-600">Update Aadhaar Front</p>
-                        </div>
-                      )}
-                      {!editForm.watch("aadhaarFront") && selectedEngineer?.aadhaarFront && (
-                        <div className="text-center hidden">
                           <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
                           <p className="text-xs text-green-600">Update Aadhaar Front</p>
                         </div>
@@ -1935,10 +2141,10 @@ export default function Engineers() {
                   <Label className="text-sm font-medium">Aadhaar Back</Label>
                   <div className="relative group">
                     <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
-                      {editForm.watch("aadhaarBack") ? (
+                      {editForm.watch("aadhaarBack") && editForm.watch("aadhaarBack") instanceof File ? (
                         <>
                           <img 
-                            src={URL.createObjectURL(editForm.watch("aadhaarBack"))} 
+                            src={createSafeObjectURL(editForm.watch("aadhaarBack")) || ''} 
                             alt="Aadhaar Back" 
                             className="w-full h-full object-cover rounded-lg"
                           />
@@ -1959,10 +2165,10 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : selectedEngineer?.aadhaarBack ? (
+                      ) : (editForm.watch("aadhaarBack") || selectedEngineer?.aadhaarBack) ? (
                         <>
                           <img 
-                            src={`${BASE_URL}${selectedEngineer.aadhaarBack}`} 
+                            src={`${BASE_URL}${editForm.watch("aadhaarBack") || selectedEngineer?.aadhaarBack}`} 
                             alt="Current Aadhaar Back" 
                             className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
@@ -1970,6 +2176,12 @@ export default function Engineers() {
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <div className="text-center">
+                              <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                              <p className="text-xs text-green-600">Image not available</p>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1987,15 +2199,8 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : null}
-                      {!editForm.watch("aadhaarBack") && !selectedEngineer?.aadhaarBack && (
+                      ) : (
                         <div className="text-center">
-                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
-                          <p className="text-xs text-green-600">Update Aadhaar Back</p>
-                        </div>
-                      )}
-                      {!editForm.watch("aadhaarBack") && selectedEngineer?.aadhaarBack && (
-                        <div className="text-center hidden">
                           <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
                           <p className="text-xs text-green-600">Update Aadhaar Back</p>
                         </div>
@@ -2018,10 +2223,10 @@ export default function Engineers() {
                   <Label className="text-sm font-medium">PAN Card</Label>
                   <div className="relative group">
                     <div className="w-full h-32 rounded-lg bg-gradient-to-br from-green-100 to-blue-100 border-2 border-dashed border-green-300 flex items-center justify-center cursor-pointer hover:border-green-400 transition-all duration-200 overflow-hidden">
-                      {editForm.watch("panCard") ? (
+                      {editForm.watch("panCard") && editForm.watch("panCard") instanceof File ? (
                         <>
                           <img 
-                            src={URL.createObjectURL(editForm.watch("panCard"))} 
+                            src={createSafeObjectURL(editForm.watch("panCard")) || ''} 
                             alt="PAN Card" 
                             className="w-full h-full object-cover rounded-lg"
                           />
@@ -2042,10 +2247,10 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : selectedEngineer?.panCard ? (
+                      ) : (editForm.watch("panCard") || selectedEngineer?.panCard) ? (
                         <>
                           <img 
-                            src={`${BASE_URL}${selectedEngineer.panCard}`} 
+                            src={`${BASE_URL}${editForm.watch("panCard") || selectedEngineer?.panCard}`} 
                             alt="Current PAN Card" 
                             className="w-full h-full object-cover rounded-lg"
                             onError={(e) => {
@@ -2053,6 +2258,12 @@ export default function Engineers() {
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <div className="text-center">
+                              <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
+                              <p className="text-xs text-green-600">Image not available</p>
+                            </div>
+                          </div>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -2070,15 +2281,8 @@ export default function Engineers() {
                             <X className="w-3 h-3" />
                           </button>
                         </>
-                      ) : null}
-                      {!editForm.watch("panCard") && !selectedEngineer?.panCard && (
+                      ) : (
                         <div className="text-center">
-                          <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
-                          <p className="text-xs text-green-600">Update PAN Card</p>
-                        </div>
-                      )}
-                      {!editForm.watch("panCard") && selectedEngineer?.panCard && (
-                        <div className="text-center hidden">
                           <User className="w-8 h-8 text-green-500 mx-auto mb-1" />
                           <p className="text-xs text-green-600">Update PAN Card</p>
                         </div>
@@ -2184,7 +2388,7 @@ export default function Engineers() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-muted-foreground" />
-                      <span>Last Login: {formatDateTime(selectedEngineer.lastLogin)}</span>
+                      <span>Last Login: {selectedEngineer.lastLogin ? formatDateTime(selectedEngineer.lastLogin) : "Not logged in yet"}</span>
                     </div>
                     {selectedEngineer.updatedAt && (
                       <div className="flex items-center gap-3">
@@ -2308,6 +2512,72 @@ export default function Engineers() {
                 </div>
               )}
 
+              {/* Document Attachments */}
+              {(selectedEngineer.aadhaarFront || selectedEngineer.aadhaarBack || selectedEngineer.panCard) && (
+                <div className="space-y-4">
+                  <h4 className="font-medium text-muted-foreground">📎 Document Attachments</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    {selectedEngineer.aadhaarFront && (
+                      <div className="text-center">
+                        <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.aadhaarFront}`} 
+                            alt="Aadhaar Front" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <User className="w-8 h-8 text-gray-400" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">Aadhaar Front</p>
+                      </div>
+                    )}
+                    {selectedEngineer.aadhaarBack && (
+                      <div className="text-center">
+                        <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.aadhaarBack}`} 
+                            alt="Aadhaar Back" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <User className="w-8 h-8 text-gray-400" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">Aadhaar Back</p>
+                      </div>
+                    )}
+                    {selectedEngineer.panCard && (
+                      <div className="text-center">
+                        <div className="w-24 h-24 mx-auto rounded-lg overflow-hidden bg-gray-100 border">
+                          <img 
+                            src={`${BASE_URL}${selectedEngineer.panCard}`} 
+                            alt="PAN Card" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-full h-full flex items-center justify-center hidden">
+                            <User className="w-8 h-8 text-gray-400" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">PAN Card</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <h4 className="font-medium text-muted-foreground">Account Status</h4>
                 <div className="flex gap-2">
@@ -2412,4 +2682,18 @@ export default function Engineers() {
       </Dialog>
     </MainLayout>
   );
+  } catch (error) {
+    console.error("Error in Engineers component:", error);
+    return (
+      <MainLayout title="Engineer Management">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading engineers component</p>
+            <p className="text-sm text-gray-600 mb-4">{error instanceof Error ? error.message : 'Unknown error'}</p>
+            <Button onClick={() => window.location.reload()}>Reload Page</Button>
+          </div>
+        </div>
+    </MainLayout>
+  );
+  }
 }
