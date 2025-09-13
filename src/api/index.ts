@@ -488,7 +488,13 @@ export const api = createApi({
         url: `/dashboard/engineers/${id}/full-details`,
         method: "GET",
       })
-    })
+    }),
+    getAllUserForComplaints: builder.query({
+      query: () => ({
+        url: `/dashboard/users-for-complaint-assign`,
+        method: "GET",
+      }),
+    }),
   })
 });
 
@@ -549,5 +555,6 @@ export const {
   useUpdateUserByAdminMutation,
   useGetCompleteUserDetailbyIdQuery,
   useImportClientFromExcelMutation,
-  useGetFullEngineerDetailsQuery
+  useGetFullEngineerDetailsQuery,
+  useGetAllUserForComplaintsQuery
 } = api;
