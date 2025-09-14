@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MainLayout } from "@/components/layout/main-layout";
@@ -89,17 +89,19 @@ import {
   Area,
   AreaChart,
 } from "recharts";
-import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetEngineersQuery, BASE_URL, useGetAllComplaintDasboardQuery } from "@/api";
+import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetEngineersQuery, BASE_URL, useGetAllComplaintDasboardQuery, useGetAllUserForComplaintsQuery, useGetAllIssueTypeQuery, useAddComplaintByAdminMutation } from "@/api";
 
 // Schema for creating complaints
 const insertComplaintSchema = z.object({
-  customerName: z.string().min(1, "Customer name is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().min(10, "Valid phone number is required"),
-  location: z.string().min(1, "Location is required"),
+  type: z.enum(["WIFI", "CCTV"], { required_error: "Type is required" }),
+  title: z.string().min(1, "Title is required"),
+  issueType: z.string().min(1, "Issue type is required"),
+  phoneNumber: z.string().min(10, "Valid phone number is required"),
+  attachments: z.array(z.string()).max(4, "Maximum 4 attachments allowed").optional(),
+  userId: z.string().min(1, "User selection is required"),
+  engineerId: z.string().optional(),
+  issueDescription: z.string().min(10, "Description must be at least 10 characters"),
   priority: z.enum(["low", "medium", "high", "urgent"]),
-  description: z.string().min(10, "Description must be at least 10 characters"),
-  category: z.string().min(1, "Category is required"),
 });
 
 type InsertComplaint = z.infer<typeof insertComplaintSchema>;
@@ -119,6 +121,9 @@ export default function Complaints() {
   const [selectedEngineerId, setSelectedEngineerId] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [engineerSearchQuery, setEngineerSearchQuery] = useState<string>("");
+  const [userSearchQuery, setUserSearchQuery] = useState<string>("");
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([]);
   const itemsPerPage = 6;
   const { data: complaintDashboardData, isLoading: complaintDashboardLoading } = useGetAllComplaintDasboardQuery({});
 
@@ -139,43 +144,81 @@ export default function Complaints() {
 
   const { data: complaintData, isLoading, error } = useGetAllComplaintsQuery(queryParams);
   const { data: engineersData, isLoading: engineersLoading } = useGetEngineersQuery({});
+  const { data: usersData, isLoading: usersLoading } = useGetAllUserForComplaintsQuery({});
+  const { data: issueTypesResponse, isLoading: issueTypesLoading } = useGetAllIssueTypeQuery({});
   const [assignEngineerToComplaint, { isLoading: isAssigning }] = useAssignEngineerToComplaintMutation();
+  const [addComplaintByAdmin, { isLoading: isCreatingComplaint }] = useAddComplaintByAdminMutation();
 
   // Use real data from API
   const complaints = complaintData?.data?.complaints || [];
   const pagination = complaintData?.data?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
   const engineers = engineersData?.data?.engineers || [];
-  const customers = generateDummyCustomers();
+  const users = usersData?.data || [];
+  const issueTypesData = issueTypesResponse?.data || {};
+  const wifiIssueTypes = issueTypesData?.wifi || [];
+  const cctvIssueTypes = issueTypesData?.cctv || [];
 
   console.log("complaint", complaintData);
   console.log("engineers", engineersData);
   console.log("engineers array", engineers);
+  console.log("users", users);
+  console.log("issueTypesData", issueTypesData);
+  console.log("wifiIssueTypes", wifiIssueTypes);
+  console.log("cctvIssueTypes", cctvIssueTypes);
 
   const form = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
     defaultValues: {
-      customerName: "",
-      email: "",
-      phone: "",
-      description: "",
+      type: "WIFI",
+      title: "",
+      issueType: "",
+      phoneNumber: "",
+      attachments: [],
+      userId: "",
+      engineerId: "",
+      issueDescription: "",
       priority: "medium",
-      location: "",
-      category: "technical",
     },
   });
+
+  // Reset issueType when type changes
+  useEffect(() => {
+    form.setValue("issueType", "");
+  }, [form.watch("type")]);
+
+  // Auto-populate title when issueType changes
+  useEffect(() => {
+    const selectedIssueType = form.watch("issueType");
+    if (selectedIssueType) {
+      const selectedType = form.watch("type");
+      const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
+      const selectedIssueTypeObj = currentIssueTypes.find((issueType: any) => issueType.name === selectedIssueType);
+
+      if (selectedIssueTypeObj) {
+        // Only auto-populate if title is empty or same as previous issue type
+        const currentTitle = form.getValues("title");
+        if (!currentTitle || currentTitle === form.getValues("issueType")) {
+          form.setValue("title", selectedIssueTypeObj.name);
+        }
+      }
+    }
+  }, [form.watch("issueType"), wifiIssueTypes, cctvIssueTypes]);
 
   const editForm = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
     defaultValues: {
-      customerName: "",
-      email: "",
-      phone: "",
-      description: "",
+      type: "WIFI",
+      title: "",
+      issueType: "",
+      phoneNumber: "",
+      attachments: [],
+      userId: "",
+      engineerId: "",
+      issueDescription: "",
       priority: "medium",
-      location: "",
-      category: "technical",
     },
   });
+
 
   // Helper functions
   const getCustomerName = (complaint: any) => {
@@ -286,7 +329,7 @@ export default function Complaints() {
   // Helper function to format status history
   const formatStatusHistory = (statusHistory: any[]) => {
     if (!statusHistory || statusHistory.length === 0) return [];
-    
+
     return statusHistory.map((history: any) => ({
       ...history,
       formattedDate: new Date(history.updatedAt).toLocaleString('en-US', {
@@ -297,8 +340,8 @@ export default function Complaints() {
         minute: '2-digit'
       }),
       statusDisplay: history.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-      updatedByDisplay: history.updatedBy ? 
-        `${history.updatedBy.firstName} ${history.updatedBy.lastName}` : 
+      updatedByDisplay: history.updatedBy ?
+        `${history.updatedBy.firstName} ${history.updatedBy.lastName}` :
         'System'
     }));
   };
@@ -321,14 +364,111 @@ export default function Complaints() {
     }
   };
 
-  // CRUD operations
-  const onSubmit = (data: InsertComplaint) => {
-    toast({
-      title: "Success",
-      description: "Complaint created successfully",
-    });
-    setIsAddDialogOpen(false);
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length + selectedFiles.length > 4) {
+      toast({
+        title: "Error",
+        description: "Maximum 4 files allowed",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newFiles = [...selectedFiles, ...files];
+    setSelectedFiles(newFiles);
+
+    // Create preview URLs
+    const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+    setFilePreviewUrls(prev => [...prev, ...newPreviewUrls]);
+
+    // Update form with file names
+    const fileNames = newFiles.map(file => file.name);
+    form.setValue("attachments", fileNames);
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newPreviewUrls = filePreviewUrls.filter((_, i) => i !== index);
+
+    setSelectedFiles(newFiles);
+    setFilePreviewUrls(newPreviewUrls);
+
+    const fileNames = newFiles.map(file => file.name);
+    form.setValue("attachments", fileNames);
+  };
+
+  const resetForm = () => {
     form.reset();
+    setSelectedFiles([]);
+    setFilePreviewUrls([]);
+    setUserSearchQuery("");
+    setEngineerSearchQuery("");
+  };
+
+  // CRUD operations
+  const onSubmit = async (data: InsertComplaint) => {
+    try {
+      console.log("Form data:", data);
+      console.log("Selected files:", selectedFiles);
+
+      // Get the selected issue type object to get its _id
+      const selectedType = data.type;
+      const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
+      const selectedIssueTypeObj = currentIssueTypes.find((issueType: any) => issueType.name === data.issueType);
+
+      if (!selectedIssueTypeObj) {
+        toast({
+          title: "Error",
+          description: "Selected issue type not found",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare FormData for file uploads
+      const formData = new FormData();
+
+      // Add basic fields
+      formData.append('type', data.type);
+      formData.append('title', data.title || selectedIssueTypeObj.name); // Use title if provided, otherwise use issue type name
+      formData.append('issueType', selectedIssueTypeObj._id); // Send the _id
+      formData.append('phoneNumber', data.phoneNumber);
+      formData.append('user', data.userId); // Changed from userId to user
+      if (data.engineerId) {
+        formData.append('engineer', data.engineerId); // Changed from engineerId to engineer
+      }
+      formData.append('issueDescription', data.issueDescription);
+      formData.append('priority', data.priority);
+
+      // Add attachments as binary files
+      selectedFiles.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      // Debug: Log FormData contents
+      console.log("FormData contents:");
+      Array.from(formData.entries()).forEach(([key, value]) => {
+        console.log(`${key}:`, value);
+      });
+
+      await addComplaintByAdmin(formData).unwrap();
+
+      toast({
+        title: "Success",
+        description: "Complaint created successfully",
+      });
+      setIsAddDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error creating complaint:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create complaint. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = (complaint: any) => {
@@ -537,8 +677,8 @@ export default function Complaints() {
           <Star
             key={star}
             className={`h-3 w-3 ${star <= rating
-                ? "text-yellow-400 fill-current"
-                : "text-gray-300"
+              ? "text-yellow-400 fill-current"
+              : "text-gray-300"
               }`}
           />
         ))}
@@ -559,70 +699,414 @@ export default function Complaints() {
           <div className="flex items-center gap-3">
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                {/* <Button className="dashboard-primary-button">
+                <Button className="dashboard-primary-button">
                   <Plus className="h-4 w-4 mr-2" />
                   New Complaint
-                </Button> */}
+                </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl dashboard-dialog">
-                <DialogHeader>
-                  <DialogTitle className="dashboard-dialog-title">Create New Complaint</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+              <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto dashboard-dialog">
+                <DialogHeader className="sticky top-0 bg-background pb-6 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Plus className="h-5 w-5 text-white" />
+                    </div>
                     <div>
-                      <Label htmlFor="customerName" className="dashboard-label">Customer Name</Label>
-                      <Input
-                        {...form.register("customerName")}
-                        placeholder="Enter customer name"
-                        className="dashboard-input"
-                      />
-                      {form.formState.errors.customerName && (
-                        <p className="text-sm text-red-500">{form.formState.errors.customerName.message}</p>
+                      <DialogTitle className="dashboard-dialog-title text-xl sm:text-2xl">Create New Complaint</DialogTitle>
+                      <p className="text-sm text-muted-foreground mt-1">Fill in the details to create a new complaint</p>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 p-6">
+                  {/* Basic Information Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                        <Activity className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold dashboard-text">Basic Information</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="type" className="dashboard-label">Type *</Label>
+                      <Select
+                        value={form.watch("type")}
+                        onValueChange={(value: "WIFI" | "CCTV") => form.setValue("type", value)}
+                      >
+                        <SelectTrigger className="dashboard-select">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent className="dashboard-select-content">
+                          <SelectItem value="WIFI">WIFI</SelectItem>
+                          <SelectItem value="CCTV">CCTV</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.type && (
+                        <p className="text-sm text-red-500">{form.formState.errors.type.message}</p>
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="email" className="dashboard-label">Email</Label>
+                      <Label htmlFor="title" className="dashboard-label">Title *</Label>
                       <Input
-                        {...form.register("email")}
-                        type="email"
-                        placeholder="customer@email.com"
+                        {...form.register("title")}
+                        placeholder="Enter complaint title"
                         className="dashboard-input"
                       />
-                      {form.formState.errors.email && (
-                        <p className="text-sm text-red-500">{form.formState.errors.email.message}</p>
+                      {form.formState.errors.title && (
+                        <p className="text-sm text-red-500">{form.formState.errors.title.message}</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="phone" className="dashboard-label">Phone</Label>
+                      <Label htmlFor="issueType" className="dashboard-label">Issue Type *</Label>
+                      <Select
+                        value={form.watch("issueType")}
+                        onValueChange={(value: string) => form.setValue("issueType", value)}
+                      >
+                        <SelectTrigger className="dashboard-select">
+                          <SelectValue placeholder="Select issue type" />
+                        </SelectTrigger>
+                        <SelectContent className="dashboard-select-content">
+                          {issueTypesLoading ? (
+                            <SelectItem value="" disabled>Loading issue types...</SelectItem>
+                          ) : (() => {
+                            const selectedType = form.watch("type");
+                            const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
+
+                            if (currentIssueTypes.length === 0) {
+                              return <SelectItem value="" disabled>No issue types available for {selectedType}</SelectItem>;
+                            }
+
+                            return currentIssueTypes.map((issueType: any) => (
+                              <SelectItem key={issueType._id} value={issueType.name}>
+                                {issueType.name}
+                              </SelectItem>
+                            ));
+                          })()}
+                        </SelectContent>
+                      </Select>
+                      {form.formState.errors.issueType && (
+                        <p className="text-sm text-red-500">{form.formState.errors.issueType.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="phoneNumber" className="dashboard-label">Phone Number *</Label>
                       <Input
-                        {...form.register("phone")}
+                        {...form.register("phoneNumber")}
                         placeholder="Enter phone number"
                         className="dashboard-input"
                       />
-                      {form.formState.errors.phone && (
-                        <p className="text-sm text-red-500">{form.formState.errors.phone.message}</p>
+                      {form.formState.errors.phoneNumber && (
+                        <p className="text-sm text-red-500">{form.formState.errors.phoneNumber.message}</p>
                       )}
                     </div>
-                    <div>
-                      <Label htmlFor="location" className="dashboard-label">Location</Label>
-                      <Input
-                        {...form.register("location")}
-                        placeholder="Enter location"
-                        className="dashboard-input"
-                      />
-                      {form.formState.errors.location && (
-                        <p className="text-sm text-red-500">{form.formState.errors.location.message}</p>
+                    </div>
+                  {/* </div> */}
+
+                  {/* Assignment Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <div className="w-6 h-6 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
+                        <User className="h-3 w-3 text-green-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold dashboard-text">Assignment</h3>
+                    </div>
+
+                  {/* User Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <Label className="dashboard-label">Select User *</Label>
+                      {form.watch("userId") && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => form.setValue("userId", "")}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Unselect
+                        </Button>
                       )}
                     </div>
+                    
+                    {/* Selected User Display */}
+                    {form.watch("userId") && (
+                      <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-green-800 dark:text-green-200">
+                                {(() => {
+                                  const selectedUser = users.find((u: any) => u._id === form.watch("userId"));
+                                  return selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : 'Selected User';
+                                })()}
+                              </div>
+                              <div className="text-sm text-green-600 dark:text-green-400">
+                                {(() => {
+                                  const selectedUser = users.find((u: any) => u._id === form.watch("userId"));
+                                  return selectedUser ? selectedUser.email : '';
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search users..."
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                          className="pl-10 dashboard-input"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2">
+                      {usersLoading ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                          <p>Loading users...</p>
+                        </div>
+                      ) : users.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>No users available</p>
+                        </div>
+                      ) : (
+                        users
+                          .filter((user: any) => {
+                            if (!userSearchQuery) return true;
+                            const searchTerm = userSearchQuery.toLowerCase();
+                            return (
+                              user.firstName?.toLowerCase().includes(searchTerm) ||
+                              user.lastName?.toLowerCase().includes(searchTerm) ||
+                              user.email?.toLowerCase().includes(searchTerm) ||
+                              user.phoneNumber?.toLowerCase().includes(searchTerm) ||
+                              `${user.countryCode} ${user.phoneNumber}`.toLowerCase().includes(searchTerm)
+                            );
+                          })
+                          .map((user: any) => (
+                            <div
+                              key={user._id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
+                                form.watch("userId") === user._id 
+                                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                              onClick={() => form.setValue("userId", user._id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                    <User className="h-4 w-4 text-white" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium dashboard-text">
+                                      {user.firstName} {user.lastName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {user.email}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium dashboard-text">
+                                    Customer
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {user.countryCode} {user.phoneNumber}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                      {users.filter((user: any) => {
+                        if (!userSearchQuery) return false;
+                        const searchTerm = userSearchQuery.toLowerCase();
+                        return (
+                          user.firstName?.toLowerCase().includes(searchTerm) ||
+                          user.lastName?.toLowerCase().includes(searchTerm) ||
+                          user.email?.toLowerCase().includes(searchTerm) ||
+                          user.phoneNumber?.toLowerCase().includes(searchTerm) ||
+                          `${user.countryCode} ${user.phoneNumber}`.toLowerCase().includes(searchTerm)
+                        );
+                      }).length === 0 && userSearchQuery && !usersLoading && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>No users found matching "{userSearchQuery}"</p>
+                          </div>
+                        )}
+                    </div>
+                    {form.formState.errors.userId && (
+                      <p className="text-sm text-red-500">{form.formState.errors.userId.message}</p>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Engineer Selection */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <Label className="dashboard-label">Select Engineer (Optional)</Label>
+                      {form.watch("engineerId") && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => form.setValue("engineerId", "")}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Unselect
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Selected Engineer Display */}
+                    {form.watch("engineerId") && (
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-blue-800 dark:text-blue-200">
+                                {(() => {
+                                  const selectedEngineer = engineers.find((e: any) => e._id === form.watch("engineerId"));
+                                  return selectedEngineer ? `${selectedEngineer.firstName} ${selectedEngineer.lastName}` : 'Selected Engineer';
+                                })()}
+                              </div>
+                              <div className="text-sm text-blue-600 dark:text-blue-400">
+                                {(() => {
+                                  const selectedEngineer = engineers.find((e: any) => e._id === form.watch("engineerId"));
+                                  return selectedEngineer ? selectedEngineer.email : '';
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                          <CheckCircle className="h-5 w-5 text-blue-600" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search engineers..."
+                          value={engineerSearchQuery}
+                          onChange={(e) => setEngineerSearchQuery(e.target.value)}
+                          className="pl-10 dashboard-input"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2">
+                      {engineersLoading ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                          <p>Loading engineers...</p>
+                        </div>
+                      ) : engineers.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <User className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>No engineers available</p>
+                        </div>
+                      ) : (
+                        engineers
+                          .filter((engineer: any) => {
+                            if (!engineerSearchQuery) return true;
+                            const searchTerm = engineerSearchQuery.toLowerCase();
+                            return (
+                              engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                              engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                              engineer.email?.toLowerCase().includes(searchTerm) ||
+                              engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                            );
+                          })
+                          .map((engineer: any) => (
+                            <div
+                              key={engineer._id}
+                              className={`p-3 border rounded-lg cursor-pointer transition-all hover:bg-muted/50 ${
+                                form.watch("engineerId") === engineer._id 
+                                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                              onClick={() => form.setValue("engineerId", engineer._id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
+                                    <User className="h-4 w-4 text-white" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium dashboard-text">
+                                      {engineer.firstName} {engineer.lastName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {engineer.email}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-medium dashboard-text">
+                                    Engineer
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {engineer.countryCode} {engineer.phoneNumber}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Role: {engineer.role}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                      {engineers.filter((engineer: any) => {
+                        if (!engineerSearchQuery) return false;
+                        const searchTerm = engineerSearchQuery.toLowerCase();
+                        return (
+                          engineer.firstName?.toLowerCase().includes(searchTerm) ||
+                          engineer.lastName?.toLowerCase().includes(searchTerm) ||
+                          engineer.email?.toLowerCase().includes(searchTerm) ||
+                          engineer.phoneNumber?.toLowerCase().includes(searchTerm)
+                        );
+                      }).length === 0 && engineerSearchQuery && !engineersLoading && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p>No engineers found matching "{engineerSearchQuery}"</p>
+                          </div>
+                        )}
+                    </div>
+                    {form.formState.errors.engineerId && (
+                      <p className="text-sm text-red-500">{form.formState.errors.engineerId.message}</p>
+                    )}
+                  </div>
+                  </div>
+
+                  {/* Details Section */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
+                        <FileText className="h-3 w-3 text-purple-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold dashboard-text">Details & Attachments</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="priority" className="dashboard-label">Priority</Label>
+                      <Label htmlFor="priority" className="dashboard-label">Priority *</Label>
                       <Select
                         value={form.watch("priority")}
                         onValueChange={(value: "low" | "medium" | "high" | "urgent") =>
@@ -630,7 +1114,7 @@ export default function Complaints() {
                         }
                       >
                         <SelectTrigger className="dashboard-select">
-                          <SelectValue />
+                          <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent className="dashboard-select-content">
                           <SelectItem value="low">Low</SelectItem>
@@ -639,45 +1123,114 @@ export default function Complaints() {
                           <SelectItem value="urgent">Urgent</SelectItem>
                         </SelectContent>
                       </Select>
+                      {form.formState.errors.priority && (
+                        <p className="text-sm text-red-500">{form.formState.errors.priority.message}</p>
+                      )}
                     </div>
                     <div>
-                      <Label htmlFor="category" className="dashboard-label">Category</Label>
-                      <Select
-                        value={form.watch("category")}
-                        onValueChange={(value: string) => form.setValue("category", value)}
-                      >
-                        <SelectTrigger className="dashboard-select">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="dashboard-select-content">
-                          <SelectItem value="technical">Technical</SelectItem>
-                          <SelectItem value="billing">Billing</SelectItem>
-                          <SelectItem value="service">Service</SelectItem>
-                          <SelectItem value="installation">Installation</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="issueDescription" className="dashboard-label">Description *</Label>
+                      <Textarea
+                        {...form.register("issueDescription")}
+                        placeholder="Describe the issue in detail..."
+                        rows={4}
+                        className="dashboard-textarea"
+                      />
+                      {form.formState.errors.issueDescription && (
+                        <p className="text-sm text-red-500">{form.formState.errors.issueDescription.message}</p>
+                      )}
+                    </div>
                     </div>
                   </div>
 
+                  {/* File Attachments */}
                   <div>
-                    <Label htmlFor="description" className="dashboard-label">Description</Label>
-                    <Textarea
-                      {...form.register("description")}
-                      placeholder="Describe the issue..."
-                      rows={4}
-                      className="dashboard-textarea"
-                    />
-                    {form.formState.errors.description && (
-                      <p className="text-sm text-red-500">{form.formState.errors.description.message}</p>
+                    <Label className="dashboard-label">Attachments (Optional - Max 4 files)</Label>
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="text-center">
+                          <Image className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Click to upload images or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            PNG, JPG, GIF up to 4 files
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* File Previews */}
+                    {selectedFiles.length > 0 && (
+                      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {selectedFiles.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                              <img
+                                src={filePreviewUrls[index]}
+                                alt={`Preview ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeFile(index)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <p className="text-xs text-center mt-1 truncate">{file.name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {form.formState.errors.attachments && (
+                      <p className="text-sm text-red-500">{form.formState.errors.attachments.message}</p>
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-3">
-                    <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  {/* Form Actions */}
+                  <div className="flex justify-end gap-3 pt-6 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddDialogOpen(false);
+                        resetForm();
+                      }}
+                      className="px-6"
+                    >
                       Cancel
                     </Button>
-                    <Button type="submit" className="dashboard-primary-button">
-                      Create Complaint
+                    <Button 
+                      type="submit" 
+                      className="dashboard-primary-button px-6" 
+                      disabled={isCreatingComplaint}
+                    >
+                      {isCreatingComplaint ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Complaint
+                        </>
+                      )}
                     </Button>
                   </div>
                 </form>
@@ -1269,7 +1822,7 @@ export default function Complaints() {
                         </div>
                       )}
 
-                                            {complaint.attachments && complaint.attachments.length > 0 && (
+                      {complaint.attachments && complaint.attachments.length > 0 && (
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center text-blue-600 dark:text-blue-400">
                             <FileText className="h-3 w-3 mr-1" />
@@ -1277,7 +1830,7 @@ export default function Complaints() {
                           </div>
                         </div>
                       )}
-                      
+
                       {complaint.otpVerified !== undefined && (
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center">
@@ -1292,7 +1845,7 @@ export default function Complaints() {
                           </div>
                         </div>
                       )}
-                      
+
                       {complaint.statusHistoryCount && complaint.statusHistoryCount > 0 && (
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center text-purple-600 dark:text-purple-400">
@@ -1301,7 +1854,7 @@ export default function Complaints() {
                           </div>
                         </div>
                       )}
-                      
+
                       {complaint.latestStatusChange && (
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center">
@@ -1494,7 +2047,7 @@ export default function Complaints() {
                                     </span>
                                   </div>
                                 )}
-                                
+
                                 {complaint.statusHistoryCount && complaint.statusHistoryCount > 0 && (
                                   <div className="flex items-center mt-1 text-xs text-purple-600 dark:text-purple-400">
                                     <Activity className="h-3 w-3 mr-1" />
@@ -1728,7 +2281,7 @@ export default function Complaints() {
                   <div>
                     <Label className="dashboard-label text-sm sm:text-base mb-2 block">Status Color</Label>
                     <div className="flex items-center gap-2">
-                      <div 
+                      <div
                         className="w-4 h-4 rounded-full border border-border"
                         style={{ backgroundColor: selectedComplaint.statusColor || '#6b7280' }}
                       />
@@ -2024,11 +2577,11 @@ export default function Complaints() {
                             </div>
                             <span className="text-xs text-muted-foreground">{history.formattedDate}</span>
                           </div>
-                          
+
                           {history.remarks && (
                             <p className="text-sm dashboard-text mb-2">{history.remarks}</p>
                           )}
-                          
+
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>Updated by: {history.updatedByDisplay}</span>
                             {history.previousStatus && (

@@ -495,6 +495,22 @@ export const api = createApi({
         method: "GET",
       }),
     }),
+    getAllIssueType: builder.query({
+      query: () => ({
+        url: `/issue-types`,
+        method: "GET",
+      }),
+    }),
+    addComplaintByAdmin: builder.mutation({
+      query: (body) => ({
+        url: `/complaints/admin`,
+        method: "POST",
+        body,
+        // Don't set Content-Type header for FormData - let the browser set it with boundary
+        headers: body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
+      }),
+      invalidatesTags: [Tags.COMPLAINTS,Tags.WIFI],
+    }),
   })
 });
 
@@ -556,5 +572,7 @@ export const {
   useGetCompleteUserDetailbyIdQuery,
   useImportClientFromExcelMutation,
   useGetFullEngineerDetailsQuery,
-  useGetAllUserForComplaintsQuery
+  useGetAllUserForComplaintsQuery,
+  useGetAllIssueTypeQuery,
+  useAddComplaintByAdminMutation
 } = api;
