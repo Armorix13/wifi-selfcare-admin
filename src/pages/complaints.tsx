@@ -1881,6 +1881,17 @@ export default function Complaints() {
                         </div>
                       )}
 
+                      <div className="flex items-center justify-between text-xs dashboard-text-muted">
+                        <div className="flex items-center">
+                          <span className="mr-1">😊</span>
+                          Happy Code: {complaint.otp ? (
+                            <span className="font-mono font-medium">{complaint.otp}</span>
+                          ) : (
+                            <span className="text-muted-foreground">N/A</span>
+                          )}
+                        </div>
+                      </div>
+
                       {complaint.attachments && complaint.attachments.length > 0 && (
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center text-blue-600 dark:text-blue-400">
@@ -2052,6 +2063,7 @@ export default function Complaints() {
                           <th className="text-left p-4 dashboard-table-header-text">Priority</th>
                           <th className="text-left p-4 dashboard-table-header-text">Status</th>
                           <th className="text-left p-4 dashboard-table-header-text">Engineer</th>
+                          <th className="text-left p-4 dashboard-table-header-text">Happy Code</th>
                           <th className="text-left p-4 dashboard-table-header-text">Created</th>
                           <th className="text-left p-4 dashboard-table-header-text">Actions</th>
                         </tr>
@@ -2179,6 +2191,18 @@ export default function Complaints() {
                                   <Badge variant="outline" className="dashboard-text-muted">
                                     Unassigned
                                   </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="text-sm font-medium dashboard-text flex items-center">
+                                {complaint.otp ? (
+                                  <span className="flex items-center gap-1">
+                                    <span>😊</span>
+                                    <span className="font-mono">{complaint.otp}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">N/A</span>
                                 )}
                               </div>
                             </td>
@@ -2381,6 +2405,21 @@ export default function Complaints() {
                       <Phone className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
                       <span className="break-all">{selectedComplaint.phoneNumber}</span>
                     </p>
+                  </div>
+                  <div>
+                    <Label className="dashboard-label text-sm sm:text-base mb-2 block">Happy Code 😊</Label>
+                    <div className="flex items-center gap-2">
+                      {selectedComplaint.otp ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">😊</span>
+                          <span className="font-mono dashboard-text text-lg font-bold bg-yellow-50 dark:bg-yellow-950/20 px-3 py-1 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                            {selectedComplaint.otp}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">N/A</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
