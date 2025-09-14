@@ -93,10 +93,9 @@ import { useAssignEngineerToComplaintMutation, useGetAllComplaintsQuery, useGetE
 
 // Schema for creating complaints
 const insertComplaintSchema = z.object({
-  type: z.enum(["WIFI", "CCTV"], { required_error: "Type is required" }),
+  type: z.enum(["WIFI", "CCTV"]).optional(),
   title: z.string().min(1, "Title is required"),
   issueType: z.string().min(1, "Issue type is required"),
-  phoneNumber: z.string().min(10, "Valid phone number is required"),
   attachments: z.array(z.string()).max(4, "Maximum 4 attachments allowed").optional(),
   userId: z.string().min(1, "User selection is required"),
   engineerId: z.string().optional(),
@@ -172,7 +171,6 @@ export default function Complaints() {
       type: "WIFI",
       title: "",
       issueType: "",
-      phoneNumber: "",
       attachments: [],
       userId: "",
       engineerId: "",
@@ -181,18 +179,11 @@ export default function Complaints() {
     },
   });
 
-  // Reset issueType when type changes
-  useEffect(() => {
-    form.setValue("issueType", "");
-  }, [form.watch("type")]);
-
   // Auto-populate title when issueType changes
   useEffect(() => {
     const selectedIssueType = form.watch("issueType");
     if (selectedIssueType) {
-      const selectedType = form.watch("type");
-      const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
-      const selectedIssueTypeObj = currentIssueTypes.find((issueType: any) => issueType.name === selectedIssueType);
+      const selectedIssueTypeObj = wifiIssueTypes.find((issueType: any) => issueType.name === selectedIssueType);
 
       if (selectedIssueTypeObj) {
         // Only auto-populate if title is empty or same as previous issue type
@@ -202,7 +193,7 @@ export default function Complaints() {
         }
       }
     }
-  }, [form.watch("issueType"), wifiIssueTypes, cctvIssueTypes]);
+  }, [form.watch("issueType"), wifiIssueTypes]);
 
   const editForm = useForm<InsertComplaint>({
     resolver: zodResolver(insertComplaintSchema),
@@ -210,7 +201,6 @@ export default function Complaints() {
       type: "WIFI",
       title: "",
       issueType: "",
-      phoneNumber: "",
       attachments: [],
       userId: "",
       engineerId: "",
@@ -222,7 +212,25 @@ export default function Complaints() {
 
   // Helper functions
   const getCustomerName = (complaint: any) => {
-    return complaint.user?.firstName + " " + complaint.user?.lastName || "Unknown Customer";
+    if (!complaint.user) return "Unknown Customer";
+    
+    const firstName = complaint.user.firstName || "";
+    const lastName = complaint.user.lastName || "";
+    
+    // If firstName exists and lastName doesn't exist or is empty, just return firstName
+    if (firstName && !lastName) {
+      return firstName;
+    }
+    // If both exist, return both
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    }
+    // If only lastName exists, return lastName
+    if (lastName) {
+      return lastName;
+    }
+    // If neither exists, return default
+    return "Unknown Customer";
   };
 
   const formatComplaintId = (complaint: any) => {
@@ -341,7 +349,20 @@ export default function Complaints() {
       }),
       statusDisplay: history.status.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
       updatedByDisplay: history.updatedBy ?
-        `${history.updatedBy.firstName} ${history.updatedBy.lastName}` :
+        (() => {
+          const firstName = history.updatedBy.firstName || "";
+          const lastName = history.updatedBy.lastName || "";
+          
+          if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+          } else if (firstName) {
+            return firstName;
+          } else if (lastName) {
+            return lastName;
+          } else {
+            return 'Unknown User';
+          }
+        })() :
         'System'
     }));
   };
@@ -413,10 +434,19 @@ export default function Complaints() {
       console.log("Form data:", data);
       console.log("Selected files:", selectedFiles);
 
+      // Get the selected user to get their phone number
+      const selectedUser = users.find((u: any) => u._id === data.userId);
+      if (!selectedUser) {
+        toast({
+          title: "Error",
+          description: "Selected user not found",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Get the selected issue type object to get its _id
-      const selectedType = data.type;
-      const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
-      const selectedIssueTypeObj = currentIssueTypes.find((issueType: any) => issueType.name === data.issueType);
+      const selectedIssueTypeObj = wifiIssueTypes.find((issueType: any) => issueType.name === data.issueType);
 
       if (!selectedIssueTypeObj) {
         toast({
@@ -431,10 +461,10 @@ export default function Complaints() {
       const formData = new FormData();
 
       // Add basic fields
-      formData.append('type', data.type);
+      formData.append('type', 'WIFI'); // Hardcoded to WIFI
       formData.append('title', data.title || selectedIssueTypeObj.name); // Use title if provided, otherwise use issue type name
       formData.append('issueType', selectedIssueTypeObj._id); // Send the _id
-      formData.append('phoneNumber', data.phoneNumber);
+      formData.append('phoneNumber', selectedUser.phoneNumber); // Use selected user's phone number
       formData.append('user', data.userId); // Changed from userId to user
       if (data.engineerId) {
         formData.append('engineer', data.engineerId); // Changed from engineerId to engineer
@@ -534,7 +564,7 @@ export default function Complaints() {
 
   // Filtering for search (client-side filtering)
   const filteredComplaints = complaints.filter((complaint: any) => {
-    const customerName = complaint.user?.firstName + " " + complaint.user?.lastName;
+    const customerName = getCustomerName(complaint);
     const matchesSearch =
       !searchQuery ||
       complaint.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -727,21 +757,25 @@ export default function Complaints() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="type" className="dashboard-label">Type *</Label>
+                      <Label htmlFor="priority" className="dashboard-label">Priority *</Label>
                       <Select
-                        value={form.watch("type")}
-                        onValueChange={(value: "WIFI" | "CCTV") => form.setValue("type", value)}
+                        value={form.watch("priority")}
+                        onValueChange={(value: "low" | "medium" | "high" | "urgent") =>
+                          form.setValue("priority", value)
+                        }
                       >
                         <SelectTrigger className="dashboard-select">
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent className="dashboard-select-content">
-                          <SelectItem value="WIFI">WIFI</SelectItem>
-                          <SelectItem value="CCTV">CCTV</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
                         </SelectContent>
                       </Select>
-                      {form.formState.errors.type && (
-                        <p className="text-sm text-red-500">{form.formState.errors.type.message}</p>
+                      {form.formState.errors.priority && (
+                        <p className="text-sm text-red-500">{form.formState.errors.priority.message}</p>
                       )}
                     </div>
                     <div>
@@ -771,20 +805,15 @@ export default function Complaints() {
                         <SelectContent className="dashboard-select-content">
                           {issueTypesLoading ? (
                             <SelectItem value="" disabled>Loading issue types...</SelectItem>
-                          ) : (() => {
-                            const selectedType = form.watch("type");
-                            const currentIssueTypes = selectedType === "WIFI" ? wifiIssueTypes : cctvIssueTypes;
-
-                            if (currentIssueTypes.length === 0) {
-                              return <SelectItem value="" disabled>No issue types available for {selectedType}</SelectItem>;
-                            }
-
-                            return currentIssueTypes.map((issueType: any) => (
+                          ) : wifiIssueTypes.length === 0 ? (
+                            <SelectItem value="" disabled>No issue types available</SelectItem>
+                          ) : (
+                            wifiIssueTypes.map((issueType: any) => (
                               <SelectItem key={issueType._id} value={issueType.name}>
                                 {issueType.name}
                               </SelectItem>
-                            ));
-                          })()}
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       {form.formState.errors.issueType && (
@@ -792,14 +821,15 @@ export default function Complaints() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="phoneNumber" className="dashboard-label">Phone Number *</Label>
-                      <Input
-                        {...form.register("phoneNumber")}
-                        placeholder="Enter phone number"
-                        className="dashboard-input"
+                      <Label htmlFor="issueDescription" className="dashboard-label">Description *</Label>
+                      <Textarea
+                        {...form.register("issueDescription")}
+                        placeholder="Describe the issue in detail..."
+                        rows={3}
+                        className="dashboard-textarea"
                       />
-                      {form.formState.errors.phoneNumber && (
-                        <p className="text-sm text-red-500">{form.formState.errors.phoneNumber.message}</p>
+                      {form.formState.errors.issueDescription && (
+                        <p className="text-sm text-red-500">{form.formState.errors.issueDescription.message}</p>
                       )}
                     </div>
                     </div>
@@ -844,7 +874,20 @@ export default function Complaints() {
                               <div className="font-medium text-green-800 dark:text-green-200">
                                 {(() => {
                                   const selectedUser = users.find((u: any) => u._id === form.watch("userId"));
-                                  return selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : 'Selected User';
+                                  if (!selectedUser) return 'Selected User';
+                                  
+                                  const firstName = selectedUser.firstName || "";
+                                  const lastName = selectedUser.lastName || "";
+                                  
+                                  if (firstName && lastName) {
+                                    return `${firstName} ${lastName}`;
+                                  } else if (firstName) {
+                                    return firstName;
+                                  } else if (lastName) {
+                                    return lastName;
+                                  } else {
+                                    return 'Selected User';
+                                  }
                                 })()}
                               </div>
                               <div className="text-sm text-green-600 dark:text-green-400">
@@ -913,7 +956,20 @@ export default function Complaints() {
                                   </div>
                                   <div>
                                     <div className="font-medium dashboard-text">
-                                      {user.firstName} {user.lastName}
+                                      {(() => {
+                                        const firstName = user.firstName || "";
+                                        const lastName = user.lastName || "";
+                                        
+                                        if (firstName && lastName) {
+                                          return `${firstName} ${lastName}`;
+                                        } else if (firstName) {
+                                          return firstName;
+                                        } else if (lastName) {
+                                          return lastName;
+                                        } else {
+                                          return 'Unknown User';
+                                        }
+                                      })()}
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                       {user.email}
@@ -984,7 +1040,20 @@ export default function Complaints() {
                               <div className="font-medium text-blue-800 dark:text-blue-200">
                                 {(() => {
                                   const selectedEngineer = engineers.find((e: any) => e._id === form.watch("engineerId"));
-                                  return selectedEngineer ? `${selectedEngineer.firstName} ${selectedEngineer.lastName}` : 'Selected Engineer';
+                                  if (!selectedEngineer) return 'Selected Engineer';
+                                  
+                                  const firstName = selectedEngineer.firstName || "";
+                                  const lastName = selectedEngineer.lastName || "";
+                                  
+                                  if (firstName && lastName) {
+                                    return `${firstName} ${lastName}`;
+                                  } else if (firstName) {
+                                    return firstName;
+                                  } else if (lastName) {
+                                    return lastName;
+                                  } else {
+                                    return 'Selected Engineer';
+                                  }
                                 })()}
                               </div>
                               <div className="text-sm text-blue-600 dark:text-blue-400">
@@ -1052,7 +1121,20 @@ export default function Complaints() {
                                   </div>
                                   <div>
                                     <div className="font-medium dashboard-text">
-                                      {engineer.firstName} {engineer.lastName}
+                                      {(() => {
+                                        const firstName = engineer.firstName || "";
+                                        const lastName = engineer.lastName || "";
+                                        
+                                        if (firstName && lastName) {
+                                          return `${firstName} ${lastName}`;
+                                        } else if (firstName) {
+                                          return firstName;
+                                        } else if (lastName) {
+                                          return lastName;
+                                        } else {
+                                          return 'Unknown Engineer';
+                                        }
+                                      })()}
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                       {engineer.email}
@@ -1103,42 +1185,6 @@ export default function Complaints() {
                         <FileText className="h-3 w-3 text-purple-600" />
                       </div>
                       <h3 className="text-lg font-semibold dashboard-text">Details & Attachments</h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="priority" className="dashboard-label">Priority *</Label>
-                      <Select
-                        value={form.watch("priority")}
-                        onValueChange={(value: "low" | "medium" | "high" | "urgent") =>
-                          form.setValue("priority", value)
-                        }
-                      >
-                        <SelectTrigger className="dashboard-select">
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                        <SelectContent className="dashboard-select-content">
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form.formState.errors.priority && (
-                        <p className="text-sm text-red-500">{form.formState.errors.priority.message}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="issueDescription" className="dashboard-label">Description *</Label>
-                      <Textarea
-                        {...form.register("issueDescription")}
-                        placeholder="Describe the issue in detail..."
-                        rows={4}
-                        className="dashboard-textarea"
-                      />
-                      {form.formState.errors.issueDescription && (
-                        <p className="text-sm text-red-500">{form.formState.errors.issueDescription.message}</p>
-                      )}
-                    </div>
                     </div>
                   </div>
 
@@ -1811,7 +1857,20 @@ export default function Complaints() {
                         <div className="flex items-center justify-between text-xs dashboard-text-muted">
                           <div className="flex items-center">
                             <UserCheck className="h-3 w-3 mr-1" />
-                            Engineer: {complaint.engineer.firstName} {complaint.engineer.lastName}
+                            Engineer: {(() => {
+                              const firstName = complaint.engineer.firstName || "";
+                              const lastName = complaint.engineer.lastName || "";
+                              
+                              if (firstName && lastName) {
+                                return `${firstName} ${lastName}`;
+                              } else if (firstName) {
+                                return firstName;
+                              } else if (lastName) {
+                                return lastName;
+                              } else {
+                                return 'Unknown Engineer';
+                              }
+                            })()}
                           </div>
                           {complaint.resolutionTimeInHours && (
                             <div className="flex items-center">
@@ -2072,12 +2131,38 @@ export default function Complaints() {
                                   <>
                                     <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center">
                                       <span className="text-xs font-medium text-white">
-                                        {complaint.engineer.firstName[0]}{complaint.engineer.lastName[0]}
+                                        {(() => {
+                                          const firstName = complaint.engineer.firstName || "";
+                                          const lastName = complaint.engineer.lastName || "";
+                                          
+                                          if (firstName && lastName) {
+                                            return `${firstName[0]}${lastName[0]}`;
+                                          } else if (firstName) {
+                                            return firstName[0];
+                                          } else if (lastName) {
+                                            return lastName[0];
+                                          } else {
+                                            return "E";
+                                          }
+                                        })()}
                                       </span>
                                     </div>
                                     <div>
                                       <span className="text-sm font-medium dashboard-text">
-                                        {complaint.engineer.firstName} {complaint.engineer.lastName}
+                                        {(() => {
+                                          const firstName = complaint.engineer.firstName || "";
+                                          const lastName = complaint.engineer.lastName || "";
+                                          
+                                          if (firstName && lastName) {
+                                            return `${firstName} ${lastName}`;
+                                          } else if (firstName) {
+                                            return firstName;
+                                          } else if (lastName) {
+                                            return lastName;
+                                          } else {
+                                            return 'Unknown Engineer';
+                                          }
+                                        })()}
                                       </span>
                                       <div className="text-xs text-muted-foreground">
                                         {complaint.engineer.email}
@@ -2330,7 +2415,20 @@ export default function Complaints() {
                       <div>
                         <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Engineer Name</Label>
                         <p className="dashboard-text text-sm sm:text-base break-words">
-                          {selectedComplaint.engineer.firstName} {selectedComplaint.engineer.lastName}
+                          {(() => {
+                            const firstName = selectedComplaint.engineer.firstName || "";
+                            const lastName = selectedComplaint.engineer.lastName || "";
+                            
+                            if (firstName && lastName) {
+                              return `${firstName} ${lastName}`;
+                            } else if (firstName) {
+                              return firstName;
+                            } else if (lastName) {
+                              return lastName;
+                            } else {
+                              return 'Unknown Engineer';
+                            }
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -2344,7 +2442,22 @@ export default function Complaints() {
                       <div>
                         <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Assigned By</Label>
                         <p className="dashboard-text text-sm sm:text-base break-words">
-                          {selectedComplaint.assignedBy?.firstName} {selectedComplaint.assignedBy?.lastName}
+                          {(() => {
+                            if (!selectedComplaint.assignedBy) return 'Not specified';
+                            
+                            const firstName = selectedComplaint.assignedBy.firstName || "";
+                            const lastName = selectedComplaint.assignedBy.lastName || "";
+                            
+                            if (firstName && lastName) {
+                              return `${firstName} ${lastName}`;
+                            } else if (firstName) {
+                              return firstName;
+                            } else if (lastName) {
+                              return lastName;
+                            } else {
+                              return 'Unknown User';
+                            }
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -2837,7 +2950,25 @@ export default function Complaints() {
                         <div className="sm:col-span-2">
                           <Label className="dashboard-label text-xs sm:text-sm mb-2 block">Updated By</Label>
                           <p className="dashboard-text text-sm sm:text-base">
-                            {selectedComplaint.latestStatusChange.updatedBy.firstName} {selectedComplaint.latestStatusChange.updatedBy.lastName} ({selectedComplaint.latestStatusChange.updatedBy.email})
+                            {(() => {
+                              if (!selectedComplaint.latestStatusChange.updatedBy) return 'Unknown User';
+                              
+                              const firstName = selectedComplaint.latestStatusChange.updatedBy.firstName || "";
+                              const lastName = selectedComplaint.latestStatusChange.updatedBy.lastName || "";
+                              
+                              let name = '';
+                              if (firstName && lastName) {
+                                name = `${firstName} ${lastName}`;
+                              } else if (firstName) {
+                                name = firstName;
+                              } else if (lastName) {
+                                name = lastName;
+                              } else {
+                                name = 'Unknown User';
+                              }
+                              
+                              return `${name} (${selectedComplaint.latestStatusChange.updatedBy.email})`;
+                            })()}
                           </p>
                         </div>
                       )}
@@ -2912,7 +3043,20 @@ export default function Complaints() {
                         <div>
                           <span className="text-muted-foreground">Current Engineer:</span>
                           <span className="ml-2">
-                            {selectedComplaint.engineer.firstName} {selectedComplaint.engineer.lastName}
+                            {(() => {
+                              const firstName = selectedComplaint.engineer.firstName || "";
+                              const lastName = selectedComplaint.engineer.lastName || "";
+                              
+                              if (firstName && lastName) {
+                                return `${firstName} ${lastName}`;
+                              } else if (firstName) {
+                                return firstName;
+                              } else if (lastName) {
+                                return lastName;
+                              } else {
+                                return 'Unknown Engineer';
+                              }
+                            })()}
                           </span>
                         </div>
                         <div>
@@ -2965,7 +3109,20 @@ export default function Complaints() {
                             </div>
                             <div>
                               <div className="font-medium dashboard-text">
-                                {engineer.firstName} {engineer.lastName}
+                                {(() => {
+                                  const firstName = engineer.firstName || "";
+                                  const lastName = engineer.lastName || "";
+                                  
+                                  if (firstName && lastName) {
+                                    return `${firstName} ${lastName}`;
+                                  } else if (firstName) {
+                                    return firstName;
+                                  } else if (lastName) {
+                                    return lastName;
+                                  } else {
+                                    return 'Unknown Engineer';
+                                  }
+                                })()}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {engineer.email}
@@ -3128,7 +3285,20 @@ export default function Complaints() {
                               </div>
                               <div>
                                 <div className="font-medium dashboard-text">
-                                  {engineer.firstName} {engineer.lastName}
+                                  {(() => {
+                                    const firstName = engineer.firstName || "";
+                                    const lastName = engineer.lastName || "";
+                                    
+                                    if (firstName && lastName) {
+                                      return `${firstName} ${lastName}`;
+                                    } else if (firstName) {
+                                      return firstName;
+                                    } else if (lastName) {
+                                      return lastName;
+                                    } else {
+                                      return 'Unknown Engineer';
+                                    }
+                                  })()}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
                                   {engineer.email}
