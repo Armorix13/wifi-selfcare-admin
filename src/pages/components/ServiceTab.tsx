@@ -144,7 +144,7 @@ const ServiceTab = memo(({ client, modemDetail, customerDetail }: ServiceTabProp
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">FDB Power</label>
-              <p className="font-medium">{customerDetail.fdbId.fdbPower}W</p>
+              <p className="font-medium">{customerDetail.fdbId.fdbPower} Port</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -224,7 +224,7 @@ const ServiceTab = memo(({ client, modemDetail, customerDetail }: ServiceTabProp
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground">OLT Power</label>
-            <p className="font-medium">{customerDetail.oltId.oltPower}W</p>
+            <p className="font-medium">{customerDetail.oltId.oltPower} Port</p>
           </div>
         </CardContent>
       </Card>

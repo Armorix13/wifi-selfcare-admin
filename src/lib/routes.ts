@@ -116,6 +116,12 @@ export const ROUTES: RouteConfig[] = [
     roles: [Role.ADMIN],
     title: 'OLT Management',
     icon: 'olt'
+  },
+  {
+    path: '/map',
+    roles: [Role.ADMIN],
+    title: 'OLT Map',
+    icon: 'map'
   }
 ];
 

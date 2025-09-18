@@ -1,8 +1,6 @@
-/// <reference types="google.maps" />
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Edit, Trash2, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Server, MapPin, Globe, Zap, Image as ImageIcon, Maximize2, Minimize2, Hash } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, Eye, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Server, MapPin, Globe, Zap, Image as ImageIcon, Hash, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,9 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
 import { BASE_URL, useGetOltDataQuery } from '@/api';
-
-// Google Maps API Key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCf_6aGwNfuYI0Ylc0aI2F0H-75qepzIco';
 
 
 // OLT Interface
@@ -129,52 +124,19 @@ export default function OLTManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedOLTName, setSelectedOLTName] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-  const [addresses, setAddresses] = useState<Record<string, string>>({});
-  const mapRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const { data: oltData, isLoading: oltLoading } = useGetOltDataQuery({});
-
-  // Get address from coordinates using Google Geocoding API
-  const getAddressFromCoordinates = async (lat: number, lng: number, oltId: string) => {
-    if (addresses[oltId]) return addresses[oltId];
-    
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
-      );
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const address = data.results[0].formatted_address;
-        setAddresses(prev => ({ ...prev, [oltId]: address }));
-        return address;
-      }
-      return 'Address not available';
-    } catch (error) {
-      console.error('Error fetching address:', error);
-      return 'Address not available';
-    }
-  };
 
   // Update olts when API data is received
   useEffect(() => {
     if (oltData?.data) {
       setOlts(oltData.data);
       setFilteredOlts(oltData.data);
-      
-      // Fetch addresses for all OLTs
-      oltData.data.forEach((olt:any) => {
-        getAddressFromCoordinates(olt.latitude, olt.longitude, olt._id);
-      });
     }
   }, [oltData]);
 
@@ -194,131 +156,6 @@ export default function OLTManagement() {
   });
 
   const [editForm, setEditForm] = useState<any>({});
-
-  // Load Google Maps
-  useEffect(() => {
-    if (window.google && window.google.maps) {
-      setMapLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setMapLoaded(true);
-    document.head.appendChild(script);
-  }, []);
-
-  // Initialize map
-  useEffect(() => {
-    if (!mapLoaded || !mapRef.current) return;
-
-    const center = { lat: 30.84, lng: 76.19 };
-    const newMap = new google.maps.Map(mapRef.current, {
-      center,
-      zoom: 8,
-      mapTypeId: google.maps.MapTypeId.ROADMAP,
-      styles: [
-        { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] }
-      ],
-      zoomControl: true,
-      mapTypeControl: false,
-      scaleControl: true,
-      streetViewControl: false,
-      rotateControl: false,
-      fullscreenControl: false
-    });
-
-    setMap(newMap);
-  }, [mapLoaded]);
-
-  // Add markers
-  useEffect(() => {
-    if (!map || !filteredOlts.length) return;
-
-    markers.forEach(marker => marker.setMap(null));
-    const newMarkers: google.maps.Marker[] = [];
-
-    filteredOlts.forEach((olt) => {
-      const marker = new google.maps.Marker({
-        position: { lat: olt.latitude, lng: olt.longitude },
-        map,
-        title: olt.name,
-        icon: {
-          url: getMarkerIcon(olt.status),
-          scaledSize: new google.maps.Size(32, 32)
-        }
-      });
-
-      const infoWindow = new google.maps.InfoWindow({
-        content: createInfoWindowContent(olt)
-      });
-
-      marker.addListener('click', () => {
-        infoWindow.open(map, marker);
-      });
-
-      newMarkers.push(marker);
-    });
-
-    setMarkers(newMarkers);
-
-    if (newMarkers.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      newMarkers.forEach(marker => {
-        bounds.extend(marker.getPosition()!);
-      });
-      map.fitBounds(bounds);
-    }
-  }, [map, filteredOlts]);
-
-  const getMarkerIcon = (status: string) => {
-    const baseUrl = 'https://maps.google.com/mapfiles/ms/icons/';
-    switch (status) {
-      case 'active': return baseUrl + 'green-dot.png';
-      case 'inactive': return baseUrl + 'red-dot.png';
-      case 'maintenance': return baseUrl + 'yellow-dot.png';
-      case 'error': return baseUrl + 'red-dot.png';
-      default: return baseUrl + 'blue-dot.png';
-    }
-  };
-
-  const createInfoWindowContent = (olt: OLT) => {
-    return `
-      <div style="padding: 12px; min-width: 200px;">
-        <h3 style="margin: 0 0 8px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
-          ${olt.name}
-        </h3>
-        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; font-family: monospace;">
-          ${olt.oltId}
-        </p>
-        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px;">
-          <strong>IP:</strong> ${olt.oltIp}
-        </p>
-        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px;">
-          <strong>Status:</strong> <span style="color: ${getStatusColor(olt.status)}; font-weight: 600;">${olt.status}</span>
-        </p>
-        <div style="margin-top: 8px;">
-          <button onclick="window.open('/admin/olt-management/${olt._id}', '_blank')" 
-                  style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-            View Details
-          </button>
-        </div>
-      </div>
-    `;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return '#059669';
-      case 'inactive': return '#dc2626';
-      case 'maintenance': return '#d97706';
-      case 'error': return '#dc2626';
-      default: return '#6b7280';
-    }
-  };
 
   useEffect(() => {
     filterOLTs();
@@ -467,18 +304,13 @@ export default function OLTManagement() {
   };
 
   const openViewDialog = (olt: OLT) => {
-    navigate(`/olt-management/${olt._id}`);
+    navigate(`/olt-management/${olt._id}`, {
+      state: { oltData: olt }
+    });
   };
 
-  const toggleMapFullscreen = () => {
-    setIsMapFullscreen(!isMapFullscreen);
-  };
-
-  const centerMapOnOLT = (olt: OLT) => {
-    if (map) {
-      map.setCenter({ lat: olt.latitude, lng: olt.longitude });
-      map.setZoom(12);
-    }
+  const openMapView = (olt: OLT) => {
+    navigate(`/map?oltId=${olt._id}`);
   };
 
   const handleImageClick = (attachment: string, oltName: string) => {
@@ -492,50 +324,27 @@ export default function OLTManagement() {
     setIsImageModalOpen(true);
   };
 
-  // Add timeout for image loading
-  useEffect(() => {
-    const timeouts: NodeJS.Timeout[] = [];
-    
-    filteredOlts.forEach((olt, oltIndex) => {
-      olt.attachments.slice(0, 3).forEach((attachment, imgIndex) => {
-        const timeout = setTimeout(() => {
-          const loadingSpinner = document.getElementById(`loading-${olt._id}-${imgIndex}`);
-          if (loadingSpinner) {
-            loadingSpinner.style.display = 'none';
-            console.log(`Timeout: Hiding loading spinner for ${olt.name} image ${imgIndex + 1}`);
-          }
-        }, 10000); // 10 second timeout
-        
-        timeouts.push(timeout);
-      });
-    });
-
-    return () => {
-      timeouts.forEach(timeout => clearTimeout(timeout));
-    };
-  }, [filteredOlts]);
-
   return (
     <MainLayout title="OLT Management">
-      <div className={`h-screen flex flex-col ${isMapFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
-                {/* Header */}
+      <div className="h-[calc(100vh-4rem)] flex flex-col">
+        {/* Header */}
         <div className="flex-shrink-0 bg-white border-b border-gray-200 p-3 lg:p-6">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 mb-4 lg:mb-6">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">OLT Management</h1>
-            <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage Optical Line Terminals and monitor network infrastructure</p>
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0 mb-4 lg:mb-6">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">OLT Management</h1>
+              <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage Optical Line Terminals and monitor network infrastructure</p>
+            </div>
+            <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto">
+              <Button onClick={() => navigate('/map')} className="flex items-center gap-2 text-xs lg:text-sm">
+                <MapPin className="h-4 w-4" />
+                <span className="hidden sm:inline">View on Map</span>
+              </Button>
+              {/* <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2 text-xs lg:text-sm" title="Coming Soon">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add OLT</span>
+              </Button> */}
+            </div>
           </div>
-          <div className="flex items-center gap-2 lg:gap-3 w-full lg:w-auto">
-            <Button variant="outline" onClick={toggleMapFullscreen} className="flex items-center gap-2 text-xs lg:text-sm">
-              {isMapFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-              <span className="hidden sm:inline">{isMapFullscreen ? 'Exit Fullscreen' : 'Fullscreen Map'}</span>
-            </Button>
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2 text-xs lg:text-sm" title="Coming Soon">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add OLT</span>
-            </Button>
-          </div>
-        </div>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-2 lg:gap-4">
@@ -585,11 +394,11 @@ export default function OLTManagement() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Side - OLT Cards */}
-        <div className={`${isMapFullscreen ? 'hidden' : 'w-full lg:w-1/2'} border-r border-gray-200 overflow-y-auto p-3 lg:p-6 bg-gray-50`}>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* OLT Cards */}
+        <div className="flex-1 overflow-y-auto p-3 lg:p-6 bg-gray-50 min-h-0">
           {oltLoading ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Loading OLTs</h3>
@@ -605,12 +414,16 @@ export default function OLTManagement() {
                 </div>
               </div>
               
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredOlts.map((olt) => (
-                  <Card key={olt._id} className="group hover:shadow-md transition-all duration-300 cursor-pointer bg-white border-gray-200">
-                    <CardContent className="p-3">
+                  <Card 
+                    key={olt._id} 
+                    className="group hover:shadow-lg hover:scale-[1.02] transition-all duration-300 cursor-pointer bg-white border-gray-200 hover:border-blue-300"
+                    onClick={() => openViewDialog(olt)}
+                  >
+                    <CardContent className="p-4">
                       {/* Header with Name and Status */}
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <div className="space-y-1">
                           <CardTitle className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                             {olt.name}
@@ -622,11 +435,14 @@ export default function OLTManagement() {
                         <div className="flex items-center gap-1">
                           {getStatusIcon(olt.status)}
                           {getStatusBadge(olt.status)}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" title="Click anywhere on card to view details">
+                            <Info className="h-3 w-3 text-blue-500" />
+                          </div>
                         </div>
                       </div>
 
                       {/* Key Information Grid */}
-                      <div className="grid grid-cols-2 gap-2 mb-2">
+                      <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-xs text-gray-500">
                             <Server className="h-3 w-3" />
@@ -660,38 +476,32 @@ export default function OLTManagement() {
                         </div>
                       </div>
 
-                      {/* Power and Location in same row */}
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Zap className="h-3 w-3" />
-                            <span>Power</span>
-                          </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            olt.powerStatus === 'on' 
-                              ? 'bg-green-100 text-green-800 border border-green-200' 
-                              : 'bg-red-100 text-red-800 border border-red-200'
-                          }`}>
-                            {olt.powerStatus === 'on' ? 'ON' : 'OFF'}
-                          </span>
-                          <span className="text-xs text-gray-600">({olt.oltPower})</span>
-                        </div>
-                        
+                      {/* Power Status */}
+                      <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <MapPin className="h-3 w-3" />
-                          <span className="text-xs text-gray-700 max-w-[120px] truncate">
-                            {addresses[olt._id] || 'Loading...'}
-                          </span>
+                          <Zap className="h-3 w-3" />
+                          <span>Power</span>
                         </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          olt.powerStatus === 'on' 
+                            ? 'bg-green-100 text-green-800 border border-green-200' 
+                            : 'bg-red-100 text-red-800 border border-red-200'
+                        }`}>
+                          {olt.powerStatus === 'on' ? 'ON' : 'OFF'}
+                        </span>
+                        <span className="text-xs text-gray-600">({olt.oltPower} Port)</span>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-1 pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => centerMapOnOLT(olt)}
-                          className="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all duration-300 text-xs h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openMapView(olt);
+                          }}
+                          className="flex-1 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all duration-300 text-xs h-8"
                         >
                           <MapPin className="h-3 w-3 mr-1" />
                           Map
@@ -699,16 +509,22 @@ export default function OLTManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openViewDialog(olt)}
-                          className="bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 transition-all duration-300 text-xs h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openViewDialog(olt);
+                          }}
+                          className="bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 transition-all duration-300 text-xs h-8"
                         >
                           <Eye className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openEditDialog(olt)}
-                          className="bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 transition-all duration-300 text-xs h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(olt);
+                          }}
+                          className="bg-orange-50 text-orange-700 hover:bg-orange-100 hover:text-orange-800 transition-all duration-300 text-xs h-8"
                           title="Coming Soon"
                         >
                           <Edit className="h-3 w-3" />
@@ -716,8 +532,11 @@ export default function OLTManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openDeleteDialog(olt)}
-                          className="bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 transition-all duration-300 text-xs h-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteDialog(olt);
+                          }}
+                          className="bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 transition-all duration-300 text-xs h-8"
                           title="Coming Soon"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -728,59 +547,6 @@ export default function OLTManagement() {
                 ))}
               </div>
             </>
-          )}
-        </div>
-
-        {/* Right Side - Google Map */}
-        <div className={`${isMapFullscreen ? 'w-full' : 'hidden lg:block lg:w-1/2'} bg-gray-100 relative`}>
-          {!mapLoaded ? (
-            <div className="absolute inset-0 bg-white flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Google Maps</h3>
-                <p className="text-gray-500">Please wait while we initialize the map</p>
-              </div>
-            </div>
-          ) : (
-            <div ref={mapRef} className="w-full h-full" />
-          )}
-          
-          {/* Map Controls */}
-          {mapLoaded && (
-            <div className="absolute top-4 right-4 flex flex-col gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-white/95 backdrop-blur-sm border-gray-200 hover:bg-white hover:border-gray-300"
-                onClick={() => {
-                  if (map) {
-                    const center = { lat: 30.84, lng: 76.19 };
-                    map.setCenter(center);
-                    map.setZoom(8);
-                  }
-                }}
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reset View
-              </Button>
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-sm border border-gray-200">
-                <div className="text-xs font-medium text-gray-700 mb-2">Map Legend</div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600">Active</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600">Inactive</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600">Maintenance</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           )}
         </div>
       </div>

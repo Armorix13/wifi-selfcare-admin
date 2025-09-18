@@ -39,6 +39,7 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const LeaveRequests = lazy(() => import("@/pages/leave-requests"));
 const OLTManagement = lazy(() => import("@/pages/olt-management"));
 const OLTDetail = lazy(() => import("@/pages/olt-detail"));
+const MapPage = lazy(() => import("@/pages/map"));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -185,6 +186,12 @@ function Router() {
         <Route path="/olt-management" element={
           <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
             <OLTManagement />
+          </RoleProtectedRoute>
+        } />
+
+        <Route path="/map" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <MapPage />
           </RoleProtectedRoute>
         } />
 
