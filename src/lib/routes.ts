@@ -151,6 +151,26 @@ export const DETAIL_ROUTES: RouteConfig[] = [
     path: '/olt-management/:id',
     roles: [Role.ADMIN],
     title: 'OLT Detail'
+  },
+  {
+    path: '/ms/:id',
+    roles: [Role.ADMIN],
+    title: 'MS Device Detail'
+  },
+  {
+    path: '/subms/:id',
+    roles: [Role.ADMIN],
+    title: 'SUBMS Device Detail'
+  },
+  {
+    path: '/fdb/:id',
+    roles: [Role.ADMIN],
+    title: 'FDB Device Detail'
+  },
+  {
+    path: '/x2/:id',
+    roles: [Role.ADMIN],
+    title: 'X2 Device Detail'
   }
 ];
 

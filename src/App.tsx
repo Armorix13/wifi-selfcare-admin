@@ -40,6 +40,10 @@ const LeaveRequests = lazy(() => import("@/pages/leave-requests"));
 const OLTManagement = lazy(() => import("@/pages/olt-management"));
 const OLTDetail = lazy(() => import("@/pages/olt-detail"));
 const MapPage = lazy(() => import("@/pages/map"));
+const MSDetail = lazy(() => import("@/pages/ms-detail"));
+const SubMSDetail = lazy(() => import("@/pages/subms-detail"));
+const FDBDetail = lazy(() => import("@/pages/fdb-detail"));
+const X2Detail = lazy(() => import("@/pages/x2-detail"));
 
 // Loading component for Suspense fallback
 const LoadingSpinner = () => (
@@ -224,6 +228,31 @@ function Router() {
         <Route path="/plans/:id" element={
           <RoleProtectedRoute allowedRoles={[Role.SUPERADMIN, Role.ADMIN]}>
             <PlanDetail />
+          </RoleProtectedRoute>
+        } />
+
+        {/* Device Detail Routes */}
+        <Route path="/ms/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <MSDetail />
+          </RoleProtectedRoute>
+        } />
+
+        <Route path="/subms/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <SubMSDetail />
+          </RoleProtectedRoute>
+        } />
+
+        <Route path="/fdb/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <FDBDetail />
+          </RoleProtectedRoute>
+        } />
+
+        <Route path="/x2/:id" element={
+          <RoleProtectedRoute allowedRoles={[Role.ADMIN]}>
+            <X2Detail />
           </RoleProtectedRoute>
         } />
 
