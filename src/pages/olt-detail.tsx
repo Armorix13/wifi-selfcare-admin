@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, MapPin, Globe, Server, Zap, Hash, Calendar, User, Image as ImageIcon, Download, ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Users, Network, Router, Wifi, Plus } from 'lucide-react';
+import { ArrowLeft, MapPin, Globe, Server, Zap, Hash, Calendar, User, Image as ImageIcon, Download, ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Users, Network, Router, Wifi, Plus, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -140,6 +140,8 @@ interface DeviceTreeNodeProps {
   getDeviceTypeBadge: (deviceType: string) => JSX.Element;
   findConnectedDevices: (parentId: string, parentType: string) => any[];
   calculateDevicePorts: (device: any, deviceType: string) => { total: number; active: number; available: number };
+  setSelectedParentDevice: (device: any) => void;
+  setIsAddMSModalOpen: (open: boolean) => void;
 }
 
 const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
@@ -155,6 +157,8 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
   getDeviceTypeBadge,
   findConnectedDevices,
   calculateDevicePorts,
+  setSelectedParentDevice,
+  setIsAddMSModalOpen,
 }) => {
   const deviceId = device[`${device.deviceType}_id`];
   const deviceName = device[`${device.deviceType}_name`];
@@ -231,8 +235,12 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
               e.stopPropagation();
               if (availableDeviceTypes.length === 1) {
                 handleAddDevice(device, availableDeviceTypes[0] as 'ms' | 'subms' | 'fdb' | 'x2');
+              } else if (device.deviceType === 'ms') {
+                // For MS devices, show Add Connection modal
+                setSelectedParentDevice(device);
+                setIsAddMSModalOpen(true);
               } else {
-                // Show modal to select device type
+                // Show modal to select device type for other devices
                 handleDeviceClick(device, device.deviceType);
               }
             }}
@@ -260,6 +268,8 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
               getDeviceTypeBadge={getDeviceTypeBadge}
               findConnectedDevices={findConnectedDevices}
               calculateDevicePorts={calculateDevicePorts}
+              setSelectedParentDevice={setSelectedParentDevice}
+              setIsAddMSModalOpen={setIsAddMSModalOpen}
             />
           ))}
         </div>
@@ -306,6 +316,9 @@ export default function OLTDetail() {
 
   // State for Add Device Modals
   const [isAddMSModalOpen, setIsAddMSModalOpen] = useState(false);
+  const [isAddMSDeviceModalOpen, setIsAddMSDeviceModalOpen] = useState(false);
+  const [isAddSubMSModalOpen, setIsAddSubMSModalOpen] = useState(false);
+  const [isAddFDBModalOpen, setIsAddFDBModalOpen] = useState(false);
   const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
   const [selectedParentDevice, setSelectedParentDevice] = useState<any>(null);
   const [addDeviceForm, setAddDeviceForm] = useState({
@@ -501,7 +514,7 @@ export default function OLTDetail() {
       longitude: olt?.longitude || 0,
       deviceType: 'ms'
     });
-    setIsAddMSModalOpen(true);
+    setIsAddMSDeviceModalOpen(true);
   };
 
   const handleDeviceNavigation = (device: any, deviceType: string) => {
@@ -905,6 +918,8 @@ export default function OLTDetail() {
                       getDeviceTypeBadge={getDeviceTypeBadge}
                       findConnectedDevices={findConnectedDevices}
                       calculateDevicePorts={calculateDevicePorts}
+                      setSelectedParentDevice={setSelectedParentDevice}
+                      setIsAddMSModalOpen={setIsAddMSModalOpen}
                     />
                   ))}
 
@@ -1388,70 +1403,319 @@ export default function OLTDetail() {
           </DialogContent>
         </Dialog>
 
-        {/* Add MS Modal */}
+        {/* Add Connection Modal - Mobile App Style */}
         <Dialog open={isAddMSModalOpen} onOpenChange={setIsAddMSModalOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add MS Device</DialogTitle>
-              <DialogDescription>
-                Add a new MS device connected to {olt?.name}
+          <DialogContent className="sm:max-w-[400px] rounded-2xl">
+            <DialogHeader className="text-center pb-2">
+              <DialogTitle className="text-blue-600 text-xl font-semibold">Add Connection</DialogTitle>
+              <DialogDescription className="text-gray-600 text-sm">
+                Select the type of device you want to add.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="py-4">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Add SUB MS Option */}
+                <Button
+                  variant="outline"
+                  className="h-20 flex flex-col items-center justify-center gap-2 rounded-xl border-2 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                  onClick={() => {
+                    setIsAddMSModalOpen(false);
+                    setAddDeviceForm({
+                      name: '',
+                      power: '1x4',
+                      latitude: selectedParentDevice?.location?.[0] || olt?.latitude || 0,
+                      longitude: selectedParentDevice?.location?.[1] || olt?.longitude || 0,
+                      deviceType: 'subms'
+                    });
+                    setIsAddSubMSModalOpen(true);
+                  }}
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Wifi className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <span className="font-medium text-sm">Add SUB MS</span>
+                </Button>
+
+                {/* Add FDB Option */}
+                <Button
+                  variant="outline"
+                  className="h-20 flex flex-col items-center justify-center gap-2 rounded-xl border-2 hover:border-blue-400 hover:bg-blue-50 transition-all"
+                  onClick={() => {
+                    setIsAddMSModalOpen(false);
+                    setAddDeviceForm({
+                      name: '',
+                      power: '8',
+                      latitude: selectedParentDevice?.location?.[0] || olt?.latitude || 0,
+                      longitude: selectedParentDevice?.location?.[1] || olt?.longitude || 0,
+                      deviceType: 'fdb'
+                    });
+                    setIsAddFDBModalOpen(true);
+                  }}
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <ArrowLeftRight className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <span className="font-medium text-sm">Add FDB</span>
+                </Button>
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button 
+                variant="ghost" 
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full"
+                onClick={() => setIsAddMSModalOpen(false)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add MS Device Modal */}
+        <Dialog open={isAddMSDeviceModalOpen} onOpenChange={setIsAddMSDeviceModalOpen}>
+          <DialogContent className="sm:max-w-[500px] rounded-2xl">
+            <DialogHeader className="text-center pb-2">
+              <DialogTitle className="text-blue-600 text-xl font-semibold">Add MS Device</DialogTitle>
+              <DialogDescription className="text-gray-600 text-sm">
+                Add a new MS device to {olt?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="ms-name">MS Name</Label>
+                <Label htmlFor="ms-device-name" className="text-sm font-medium">MS Device Name</Label>
                 <Input
-                  id="ms-name"
+                  id="ms-device-name"
                   value={addDeviceForm.name}
                   onChange={(e) => setAddDeviceForm({ ...addDeviceForm, name: e.target.value })}
-                  placeholder="MS-Mohali-01"
+                  placeholder="MS-Device-01"
+                  className="rounded-lg"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ms-power">MS Power (e.g., 1x4, 1x8)</Label>
+                <Label htmlFor="ms-device-power" className="text-sm font-medium">MS Power (e.g., 1x4, 1x8)</Label>
                 <Input
-                  id="ms-power"
+                  id="ms-device-power"
                   value={addDeviceForm.power}
                   onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
                   placeholder="1x4"
+                  className="rounded-lg"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ms-latitude">Latitude</Label>
-                <Input
-                  id="ms-latitude"
-                  type="number"
-                  step="0.0001"
-                  value={addDeviceForm.latitude}
-                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) })}
-                  placeholder="30.699138"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ms-longitude">Longitude</Label>
-                <Input
-                  id="ms-longitude"
-                  type="number"
-                  step="0.0001"
-                  value={addDeviceForm.longitude}
-                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) })}
-                  placeholder="76.709269"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="ms-device-latitude" className="text-sm font-medium">Latitude</Label>
+                  <Input
+                    id="ms-device-latitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.latitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="30.699138"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ms-device-longitude" className="text-sm font-medium">Longitude</Label>
+                  <Input
+                    id="ms-device-longitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.longitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="76.709269"
+                    className="rounded-lg"
+                  />
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddMSModalOpen(false)}>
+            <DialogFooter className="pt-2 gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setIsAddMSDeviceModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => {
-                // TODO: Implement MS creation API call
-                toast({
-                  title: "Success",
-                  description: "MS device added successfully!",
-                });
-                setIsAddMSModalOpen(false);
-              }}>
-                Add MS
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  // TODO: Implement MS device creation API call
+                  toast({
+                    title: "Success",
+                    description: "MS device added successfully!",
+                  });
+                  setIsAddMSDeviceModalOpen(false);
+                  setAddDeviceForm({ name: '', power: '', latitude: 0, longitude: 0, deviceType: 'ms' });
+                }}
+              >
+                Add MS Device
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add SUBMS Modal */}
+        <Dialog open={isAddSubMSModalOpen} onOpenChange={setIsAddSubMSModalOpen}>
+          <DialogContent className="sm:max-w-[500px] rounded-2xl">
+            <DialogHeader className="text-center pb-2">
+              <DialogTitle className="text-blue-600 text-xl font-semibold">Add SUB MS</DialogTitle>
+              <DialogDescription className="text-gray-600 text-sm">
+                Add a new SUB MS device to {selectedParentDevice?.[`${selectedParentDevice?.deviceType}_name`] || olt?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="subms-name" className="text-sm font-medium">SUB MS Name</Label>
+                <Input
+                  id="subms-name"
+                  value={addDeviceForm.name}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, name: e.target.value })}
+                  placeholder="SUBMS-Device-01"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subms-power" className="text-sm font-medium">Power (e.g., 1x4, 1x8)</Label>
+                <Input
+                  id="subms-power"
+                  value={addDeviceForm.power}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
+                  placeholder="1x4"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="subms-latitude" className="text-sm font-medium">Latitude</Label>
+                  <Input
+                    id="subms-latitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.latitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="30.699138"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subms-longitude" className="text-sm font-medium">Longitude</Label>
+                  <Input
+                    id="subms-longitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.longitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="76.709269"
+                    className="rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="pt-2 gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setIsAddSubMSModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  // TODO: Implement SUBMS creation API call
+                  toast({
+                    title: "Success",
+                    description: "SUB MS device added successfully!",
+                  });
+                  setIsAddSubMSModalOpen(false);
+                  setAddDeviceForm({ name: '', power: '', latitude: 0, longitude: 0, deviceType: 'subms' });
+                }}
+              >
+                Add SUB MS
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add FDB Modal */}
+        <Dialog open={isAddFDBModalOpen} onOpenChange={setIsAddFDBModalOpen}>
+          <DialogContent className="sm:max-w-[500px] rounded-2xl">
+            <DialogHeader className="text-center pb-2">
+              <DialogTitle className="text-blue-600 text-xl font-semibold">Add FDB</DialogTitle>
+              <DialogDescription className="text-gray-600 text-sm">
+                Add a new FDB device to {selectedParentDevice?.[`${selectedParentDevice?.deviceType}_name`] || olt?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="fdb-name" className="text-sm font-medium">FDB Name</Label>
+                <Input
+                  id="fdb-name"
+                  value={addDeviceForm.name}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, name: e.target.value })}
+                  placeholder="FDB-Device-01"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fdb-power" className="text-sm font-medium">Power (Number of Ports)</Label>
+                <Input
+                  id="fdb-power"
+                  type="number"
+                  value={addDeviceForm.power}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
+                  placeholder="8"
+                  className="rounded-lg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="fdb-latitude" className="text-sm font-medium">Latitude</Label>
+                  <Input
+                    id="fdb-latitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.latitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="30.699138"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fdb-longitude" className="text-sm font-medium">Longitude</Label>
+                  <Input
+                    id="fdb-longitude"
+                    type="number"
+                    step="0.0001"
+                    value={addDeviceForm.longitude}
+                    onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) || 0 })}
+                    placeholder="76.709269"
+                    className="rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="pt-2 gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setIsAddFDBModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={() => {
+                  // TODO: Implement FDB creation API call
+                  toast({
+                    title: "Success",
+                    description: "FDB device added successfully!",
+                  });
+                  setIsAddFDBModalOpen(false);
+                  setAddDeviceForm({ name: '', power: '', latitude: 0, longitude: 0, deviceType: 'fdb' });
+                }}
+              >
+                Add FDB
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1482,7 +1746,7 @@ export default function OLTDetail() {
                   id="device-power"
                   value={addDeviceForm.power}
                   onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
-                  placeholder={addDeviceForm.deviceType === 'ms' ? '1x4' : '2'}
+                  placeholder={addDeviceForm.deviceType === 'ms' || addDeviceForm.deviceType === 'subms' ? '1x4' : '8'}
                 />
               </div>
               <div className="space-y-2">
