@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, MapPin, Globe, Server, Zap, Hash, Calendar, User, Image as ImageIcon, Download, ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Users, Network, Router, Wifi } from 'lucide-react';
+import { ArrowLeft, MapPin, Globe, Server, Zap, Hash, Calendar, User, Image as ImageIcon, Download, ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Users, Network, Router, Wifi, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { MainLayout } from '@/components/layout/main-layout';
-import { BASE_URL } from '@/api';
+import { BASE_URL, useGetOltCompleteDataQuery } from '@/api';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Device Interfaces
 interface DeviceOutput {
@@ -20,16 +23,17 @@ interface DeviceOutput {
 interface MSDevice {
   ms_id: string;
   ms_name: string;
-  ms_type: string;
+  ms_power: string; // Changed from ms_type to ms_power (e.g., "1x4")
   location: [number, number];
   input: {
     type: string;
     id: string;
   };
   outputs: DeviceOutput[];
-  totalPorts: number;
-  activePorts: number;
-  availablePorts: number;
+  attachments?: string[];
+  totalPorts?: number;
+  activePorts?: number;
+  availablePorts?: number;
 }
 
 interface FDBDevice {
@@ -40,27 +44,31 @@ interface FDBDevice {
   input: {
     type: string;
     id: string;
+    port?: number; // Added port for FDB input
   };
   outputs: DeviceOutput[];
-  totalPorts: number;
-  activePorts: number;
-  availablePorts: number;
-  customers: any[];
+  attachments?: string[];
+  totalPorts?: number;
+  activePorts?: number;
+  availablePorts?: number;
+  customers?: any[];
 }
 
 interface SubMSDevice {
   subms_id: string;
   subms_name: string;
-  subms_type: string;
+  subms_power: string; // Changed to string to support "1x4" format
   location: [number, number];
   input: {
     type: string;
     id: string;
+    port?: number; // Added port for SUBMS input
   };
   outputs: DeviceOutput[];
-  totalPorts: number;
-  activePorts: number;
-  availablePorts: number;
+  attachments?: string[];
+  totalPorts?: number;
+  activePorts?: number;
+  availablePorts?: number;
 }
 
 interface X2Device {
@@ -71,12 +79,14 @@ interface X2Device {
   input: {
     type: string;
     id: string;
+    port?: number; // Added port for X2 input
   };
   outputs: DeviceOutput[];
-  totalPorts: number;
-  activePorts: number;
-  availablePorts: number;
-  customers: any[];
+  attachments?: string[];
+  totalPorts?: number;
+  activePorts?: number;
+  availablePorts?: number;
+  customers?: any[];
 }
 
 // OLT Interface
@@ -93,9 +103,9 @@ interface OLT {
   powerStatus: 'on' | 'off';
   oltPower: number;
   status: 'active' | 'inactive' | 'maintenance' | 'error';
-  dnsServers: string[];
-  attachments: string[];
-  outputs: DeviceOutput[];
+  dnsServers?: string[];
+  attachments?: string[];
+  outputs?: DeviceOutput[];
   createdAt: string;
   updatedAt: string;
   location: {
@@ -113,6 +123,7 @@ interface OLT {
     _id: string;
     email: string;
   };
+  customers?: any[];
 }
 
 // Device Tree Node Component
@@ -123,9 +134,12 @@ interface DeviceTreeNodeProps {
   expandedDevices: Set<string>;
   toggleDeviceExpansion: (deviceId: string) => void;
   handleDeviceClick: (device: any, deviceType: string) => void;
+  handleDeviceNavigation: (device: any, deviceType: string) => void;
+  handleAddDevice: (parentDevice: any, deviceType: 'ms' | 'subms' | 'fdb' | 'x2') => void;
   getDeviceIcon: (deviceType: string) => JSX.Element;
   getDeviceTypeBadge: (deviceType: string) => JSX.Element;
   findConnectedDevices: (parentId: string, parentType: string) => any[];
+  calculateDevicePorts: (device: any, deviceType: string) => { total: number; active: number; available: number };
 }
 
 const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
@@ -135,17 +149,38 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
   expandedDevices,
   toggleDeviceExpansion,
   handleDeviceClick,
+  handleDeviceNavigation,
+  handleAddDevice,
   getDeviceIcon,
   getDeviceTypeBadge,
   findConnectedDevices,
+  calculateDevicePorts,
 }) => {
   const deviceId = device[`${device.deviceType}_id`];
   const deviceName = device[`${device.deviceType}_name`];
   const isExpanded = expandedDevices.has(deviceId);
   const connectedDevices = findConnectedDevices(deviceId, device.deviceType);
   const hasChildren = connectedDevices.length > 0;
+  const ports = calculateDevicePorts(device, device.deviceType);
 
   const marginLeft = level * 24;
+
+  const getAvailableDeviceTypes = (deviceType: string) => {
+    switch (deviceType) {
+      case 'ms':
+        return ['subms', 'fdb'];
+      case 'subms':
+        return ['fdb'];
+      case 'fdb':
+        return ['x2'];
+      case 'x2':
+        return [];
+      default:
+        return [];
+    }
+  };
+
+  const availableDeviceTypes = getAvailableDeviceTypes(device.deviceType);
 
   return (
     <div>
@@ -174,7 +209,7 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
         
         <div 
           className="flex items-center gap-2 flex-1"
-          onClick={() => handleDeviceClick(device, device.deviceType)}
+          onClick={() => handleDeviceNavigation(device, device.deviceType)}
         >
           {getDeviceIcon(device.deviceType)}
           <span className="font-medium">{deviceName}</span>
@@ -182,10 +217,29 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
           {getDeviceTypeBadge(device.deviceType)}
           
           <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
-            <span>Ports: {device.activePorts}/{device.totalPorts}</span>
-            <span>Available: {device.availablePorts}</span>
+            <span>Ports: {ports.active}/{ports.total}</span>
+            <span>Available: {ports.available}</span>
           </div>
         </div>
+        
+        {ports.available > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-blue-500 hover:text-blue-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (availableDeviceTypes.length === 1) {
+                handleAddDevice(device, availableDeviceTypes[0] as 'ms' | 'subms' | 'fdb' | 'x2');
+              } else {
+                // Show modal to select device type
+                handleDeviceClick(device, device.deviceType);
+              }
+            }}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Render children if expanded */}
@@ -200,9 +254,12 @@ const DeviceTreeNode: React.FC<DeviceTreeNodeProps> = ({
               expandedDevices={expandedDevices}
               toggleDeviceExpansion={toggleDeviceExpansion}
               handleDeviceClick={handleDeviceClick}
+              handleDeviceNavigation={handleDeviceNavigation}
+              handleAddDevice={handleAddDevice}
               getDeviceIcon={getDeviceIcon}
               getDeviceTypeBadge={getDeviceTypeBadge}
               findConnectedDevices={findConnectedDevices}
+              calculateDevicePorts={calculateDevicePorts}
             />
           ))}
         </div>
@@ -233,8 +290,13 @@ export default function OLTDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const [olt, setOlt] = useState<OLT | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Use RTK Query to fetch OLT data
+  const { data: oltData, isLoading, error } = useGetOltCompleteDataQuery(id || '', {
+    skip: !id, // Skip query if no ID
+  });
+  
+  const olt = oltData?.data;
   const [address, setAddress] = useState<string>('');
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
@@ -242,45 +304,17 @@ export default function OLTDetail() {
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
   const [isDeviceModalOpen, setIsDeviceModalOpen] = useState(false);
 
-  // Fetch OLT data from location state or API
-  useEffect(() => {
-    const fetchOLTData = async () => {
-      try {
-        // Check if OLT data was passed via navigation state
-        const passedOltData = (location.state as any)?.oltData;
-        
-        if (passedOltData) {
-          // Use the passed data directly
-          setOlt(passedOltData);
-          setLoading(false);
-          
-          // Get address from coordinates
-          getAddressFromCoordinates(passedOltData.latitude, passedOltData.longitude);
-        } else {
-          // No data passed via navigation state, redirect to OLT management
-          toast({
-            title: "Redirecting",
-            description: "No OLT data found. Redirecting to OLT Management page.",
-            variant: "destructive",
-          });
-          
-          // Navigate back to OLT management page
-          navigate('/olt-management');
-          return;
-        }
-      } catch (error) {
-        console.error('Error fetching OLT data:', error);
-        setLoading(false);
-        toast({
-          title: "Error",
-          description: "Failed to fetch OLT data",
-          variant: "destructive",
-        });
-      }
-    };
-
-    fetchOLTData();
-  }, [id, location.state, toast]);
+  // State for Add Device Modals
+  const [isAddMSModalOpen, setIsAddMSModalOpen] = useState(false);
+  const [isAddDeviceModalOpen, setIsAddDeviceModalOpen] = useState(false);
+  const [selectedParentDevice, setSelectedParentDevice] = useState<any>(null);
+  const [addDeviceForm, setAddDeviceForm] = useState({
+    name: '',
+    power: '',
+    latitude: 0,
+    longitude: 0,
+    deviceType: 'ms' as 'ms' | 'subms' | 'fdb' | 'x2'
+  });
 
   const getAddressFromCoordinates = async (lat: number, lng: number) => {
     try {
@@ -299,6 +333,25 @@ export default function OLTDetail() {
       setAddress('Address not available');
     }
   };
+
+  // Get address from coordinates when OLT data is loaded
+  useEffect(() => {
+    if (olt && olt.latitude && olt.longitude) {
+      getAddressFromCoordinates(olt.latitude, olt.longitude);
+    }
+  }, [olt]);
+
+  // Handle API errors
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch OLT data. Redirecting to OLT Management.",
+        variant: "destructive",
+      });
+      navigate('/olt-management');
+    }
+  }, [error, navigate, toast]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -397,28 +450,28 @@ export default function OLTDetail() {
     if (!olt) return connected;
 
     // Find MS devices connected to this parent
-    olt.ms_devices?.forEach(ms => {
+    olt.ms_devices?.forEach((ms: MSDevice) => {
       if (ms.input.type === parentType && ms.input.id === parentId) {
         connected.push({ ...ms, deviceType: 'ms' });
       }
     });
 
     // Find FDB devices connected to this parent
-    olt.fdb_devices?.forEach(fdb => {
+    olt.fdb_devices?.forEach((fdb: FDBDevice) => {
       if (fdb.input.type === parentType && fdb.input.id === parentId) {
         connected.push({ ...fdb, deviceType: 'fdb' });
       }
     });
 
     // Find SUBMS devices connected to this parent
-    olt.subms_devices?.forEach(subms => {
+    olt.subms_devices?.forEach((subms: SubMSDevice) => {
       if (subms.input.type === parentType && subms.input.id === parentId) {
         connected.push({ ...subms, deviceType: 'subms' });
       }
     });
 
     // Find X2 devices connected to this parent
-    olt.x2_devices?.forEach(x2 => {
+    olt.x2_devices?.forEach((x2: X2Device) => {
       if (x2.input.type === parentType && x2.input.id === parentId) {
         connected.push({ ...x2, deviceType: 'x2' });
       }
@@ -427,7 +480,79 @@ export default function OLTDetail() {
     return connected;
   };
 
-  if (loading) {
+  // Device Management Functions
+  const handleAddDevice = (parentDevice: any, deviceType: 'ms' | 'subms' | 'fdb' | 'x2') => {
+    setSelectedParentDevice(parentDevice);
+    setAddDeviceForm({
+      name: '',
+      power: '',
+      latitude: parentDevice.location?.[0] || 0,
+      longitude: parentDevice.location?.[1] || 0,
+      deviceType
+    });
+    setIsAddDeviceModalOpen(true);
+  };
+
+  const handleAddMS = () => {
+    setAddDeviceForm({
+      name: '',
+      power: '1x4',
+      latitude: olt?.latitude || 0,
+      longitude: olt?.longitude || 0,
+      deviceType: 'ms'
+    });
+    setIsAddMSModalOpen(true);
+  };
+
+  const handleDeviceNavigation = (device: any, deviceType: string) => {
+    // Navigate to device detail page
+    navigate(`/device-details/${deviceType}/${device[`${deviceType}_id`]}`, {
+      state: { deviceData: device, parentOlt: olt }
+    });
+  };
+
+  const calculateDevicePorts = (device: any, deviceType: string) => {
+    switch (deviceType) {
+      case 'olt':
+        return {
+          total: device.oltPower || 0,
+          active: device.outputs?.length || 0,
+          available: (device.oltPower || 0) - (device.outputs?.length || 0)
+        };
+      case 'ms':
+        const msPower = device.ms_power || '1x4';
+        const msOutputs = parseInt(msPower.split('x')[1] || '0');
+        return {
+          total: msOutputs,
+          active: device.outputs?.length || 0,
+          available: msOutputs - (device.outputs?.length || 0)
+        };
+      case 'fdb':
+        return {
+          total: device.fdb_power || 0,
+          active: device.outputs?.length || 0,
+          available: (device.fdb_power || 0) - (device.outputs?.length || 0)
+        };
+      case 'subms':
+        const submsPower = device.subms_power || '1x4';
+        const submsOutputs = parseInt(submsPower.split('x')[1] || '0');
+        return {
+          total: submsOutputs,
+          active: device.outputs?.length || 0,
+          available: submsOutputs - (device.outputs?.length || 0)
+        };
+      case 'x2':
+        return {
+          total: device.x2_power || 0,
+          active: device.outputs?.length || 0,
+          available: (device.x2_power || 0) - (device.outputs?.length || 0)
+        };
+      default:
+        return { total: 0, active: 0, available: 0 };
+    }
+  };
+
+  if (isLoading) {
     return (
       <MainLayout title="OLT Details">
         <div className="flex items-center justify-center h-64">
@@ -542,7 +667,11 @@ export default function OLTDetail() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Total Ports</label>
-                      <p className="text-sm text-gray-900">{olt.oltPower} Ports</p>
+                      <p className="text-sm text-gray-900">{calculateDevicePorts(olt, 'olt').total} Ports</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Active Ports</label>
+                      <p className="text-sm text-gray-900">{calculateDevicePorts(olt, 'olt').active} Ports</p>
                     </div>
                   </div>
                 </CardContent>
@@ -559,26 +688,26 @@ export default function OLTDetail() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{olt.totalPorts || 0}</p>
+                      <p className="text-2xl font-bold text-gray-900">{calculateDevicePorts(olt, 'olt').total}</p>
                       <label className="text-xs font-medium text-gray-500">Total Ports</label>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-green-600">{olt.activePorts || 0}</p>
+                      <p className="text-2xl font-bold text-green-600">{calculateDevicePorts(olt, 'olt').active}</p>
                       <label className="text-xs font-medium text-gray-500">Active Ports</label>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600">{olt.availablePorts || 0}</p>
+                      <p className="text-2xl font-bold text-blue-600">{calculateDevicePorts(olt, 'olt').available}</p>
                       <label className="text-xs font-medium text-gray-500">Available Ports</label>
                     </div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${((olt.activePorts || 0) / (olt.totalPorts || 1)) * 100}%` }}
+                    <div
+                      className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(calculateDevicePorts(olt, 'olt').active / Math.max(calculateDevicePorts(olt, 'olt').total, 1)) * 100}%` }}
                     ></div>
                   </div>
                   <p className="text-xs text-center text-gray-500">
-                    Port Utilization: {Math.round(((olt.activePorts || 0) / (olt.totalPorts || 1)) * 100)}%
+                    Port Utilization: {Math.round((calculateDevicePorts(olt, 'olt').active / Math.max(calculateDevicePorts(olt, 'olt').total, 1)) * 100)}%
                   </p>
                 </CardContent>
               </Card>
@@ -689,24 +818,74 @@ export default function OLTDetail() {
             {/* Device Hierarchy Tree */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Network className="h-5 w-5" />
-                  Device Hierarchy
-                </CardTitle>
-                <CardDescription>
-                  Connected devices in hierarchical structure. Click on devices to view details.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Network className="h-5 w-5" />
+                      Device Hierarchy
+                    </CardTitle>
+                    <CardDescription>
+                      Connected devices in hierarchical structure. Click on devices to view details.
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleAddMS}
+                    className={`flex items-center gap-2 ${
+                      olt && calculateDevicePorts(olt, 'olt').available === 0 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : ''
+                    }`}
+                    disabled={olt && calculateDevicePorts(olt, 'olt').available === 0}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {olt && calculateDevicePorts(olt, 'olt').available === 0 
+                      ? `All Ports Used (${calculateDevicePorts(olt, 'olt').active}/${calculateDevicePorts(olt, 'olt').total})`
+                      : `Add MS (${olt ? calculateDevicePorts(olt, 'olt').active : 0}/${olt ? calculateDevicePorts(olt, 'olt').total : 0})`
+                    }
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {/* OLT Root */}
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <Server className="h-5 w-5 text-blue-600" />
-                    <span className="font-semibold text-blue-900">{olt.name} ({olt.oltId})</span>
-                    <Badge className="bg-blue-100 text-blue-800 border-blue-200">OLT</Badge>
-                    <div className="ml-auto flex items-center gap-2 text-sm text-blue-700">
-                      <span>Ports: {olt.activePorts || 0}/{olt.totalPorts || 0}</span>
-                      <span>Available: {olt.availablePorts || 0}</span>
+                  <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+                    calculateDevicePorts(olt, 'olt').available === 0 
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <Server className={`h-5 w-5 ${
+                      calculateDevicePorts(olt, 'olt').available === 0 
+                        ? 'text-red-600' 
+                        : 'text-blue-600'
+                    }`} />
+                    <span className={`font-semibold ${
+                      calculateDevicePorts(olt, 'olt').available === 0 
+                        ? 'text-red-900' 
+                        : 'text-blue-900'
+                    }`}>
+                      {olt.name} ({olt.oltId})
+                    </span>
+                    <Badge className={`${
+                      calculateDevicePorts(olt, 'olt').available === 0 
+                        ? 'bg-red-100 text-red-800 border-red-200' 
+                        : 'bg-blue-100 text-blue-800 border-blue-200'
+                    }`}>
+                      OLT
+                    </Badge>
+                    <div className={`ml-auto flex items-center gap-2 text-sm ${
+                      calculateDevicePorts(olt, 'olt').available === 0 
+                        ? 'text-red-700' 
+                        : 'text-blue-700'
+                    }`}>
+                      <span>Ports: {calculateDevicePorts(olt, 'olt').active}/{calculateDevicePorts(olt, 'olt').total}</span>
+                      <span>Available: {calculateDevicePorts(olt, 'olt').available}</span>
+                      {calculateDevicePorts(olt, 'olt').available === 0 && (
+                        <Badge variant="destructive" className="text-xs">
+                          FULL
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -720,9 +899,12 @@ export default function OLTDetail() {
                       expandedDevices={expandedDevices}
                       toggleDeviceExpansion={toggleDeviceExpansion}
                       handleDeviceClick={handleDeviceClick}
+                      handleDeviceNavigation={handleDeviceNavigation}
+                      handleAddDevice={handleAddDevice}
                       getDeviceIcon={getDeviceIcon}
                       getDeviceTypeBadge={getDeviceTypeBadge}
                       findConnectedDevices={findConnectedDevices}
+                      calculateDevicePorts={calculateDevicePorts}
                     />
                   ))}
 
@@ -798,7 +980,7 @@ export default function OLTDetail() {
               <CardContent>
                 {olt.attachments.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {olt.attachments.map((attachment, index) => (
+                    {olt.attachments.map((attachment: string, index: number) => (
                       <div key={index} className="relative group">
                         <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                           <img 
@@ -893,7 +1075,7 @@ export default function OLTDetail() {
                     <label className="text-sm font-medium text-gray-500">DNS Servers</label>
                     {olt.dnsServers.length > 0 ? (
                       <div className="space-y-1">
-                        {olt.dnsServers.map((dns, index) => (
+                        {olt.dnsServers.map((dns: string, index: number) => (
                           <p key={index} className="text-sm font-mono text-gray-900">{dns}</p>
                         ))}
                       </div>
@@ -923,10 +1105,10 @@ export default function OLTDetail() {
                     <div>
                       <label className="text-sm font-medium text-gray-500">Active Connections</label>
                       <p className="text-lg font-semibold text-green-600">
-                        {(olt.ms_devices?.reduce((acc, ms) => acc + ms.activePorts, 0) || 0) + 
-                         (olt.fdb_devices?.reduce((acc, fdb) => acc + fdb.activePorts, 0) || 0) + 
-                         (olt.subms_devices?.reduce((acc, subms) => acc + subms.activePorts, 0) || 0) + 
-                         (olt.x2_devices?.reduce((acc, x2) => acc + x2.activePorts, 0) || 0)}
+                        {(olt.ms_devices?.reduce((acc: number, ms: MSDevice) => acc + (ms.activePorts || 0), 0) || 0) + 
+                         (olt.fdb_devices?.reduce((acc: number, fdb: FDBDevice) => acc + (fdb.activePorts || 0), 0) || 0) + 
+                         (olt.subms_devices?.reduce((acc: number, subms: SubMSDevice) => acc + (subms.activePorts || 0), 0) || 0) + 
+                         (olt.x2_devices?.reduce((acc: number, x2: X2Device) => acc + (x2.activePorts || 0), 0) || 0)}
                       </p>
                     </div>
                   </div>
@@ -1203,6 +1385,142 @@ export default function OLTDetail() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add MS Modal */}
+        <Dialog open={isAddMSModalOpen} onOpenChange={setIsAddMSModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Add MS Device</DialogTitle>
+              <DialogDescription>
+                Add a new MS device connected to {olt?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="ms-name">MS Name</Label>
+                <Input
+                  id="ms-name"
+                  value={addDeviceForm.name}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, name: e.target.value })}
+                  placeholder="MS-Mohali-01"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ms-power">MS Power (e.g., 1x4, 1x8)</Label>
+                <Input
+                  id="ms-power"
+                  value={addDeviceForm.power}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
+                  placeholder="1x4"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ms-latitude">Latitude</Label>
+                <Input
+                  id="ms-latitude"
+                  type="number"
+                  step="0.0001"
+                  value={addDeviceForm.latitude}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) })}
+                  placeholder="30.699138"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ms-longitude">Longitude</Label>
+                <Input
+                  id="ms-longitude"
+                  type="number"
+                  step="0.0001"
+                  value={addDeviceForm.longitude}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) })}
+                  placeholder="76.709269"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddMSModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                // TODO: Implement MS creation API call
+                toast({
+                  title: "Success",
+                  description: "MS device added successfully!",
+                });
+                setIsAddMSModalOpen(false);
+              }}>
+                Add MS
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Device Modal */}
+        <Dialog open={isAddDeviceModalOpen} onOpenChange={setIsAddDeviceModalOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Add {addDeviceForm.deviceType.toUpperCase()} Device</DialogTitle>
+              <DialogDescription>
+                Add a new {addDeviceForm.deviceType.toUpperCase()} device connected to {selectedParentDevice?.[`${selectedParentDevice?.deviceType}_name`]}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="device-name">{addDeviceForm.deviceType.toUpperCase()} Name</Label>
+                <Input
+                  id="device-name"
+                  value={addDeviceForm.name}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, name: e.target.value })}
+                  placeholder={`${addDeviceForm.deviceType.toUpperCase()}-Device-01`}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="device-power">Power/Outputs</Label>
+                <Input
+                  id="device-power"
+                  value={addDeviceForm.power}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, power: e.target.value })}
+                  placeholder={addDeviceForm.deviceType === 'ms' ? '1x4' : '2'}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="device-latitude">Latitude</Label>
+                <Input
+                  id="device-latitude"
+                  type="number"
+                  step="0.0001"
+                  value={addDeviceForm.latitude}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, latitude: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="device-longitude">Longitude</Label>
+                <Input
+                  id="device-longitude"
+                  type="number"
+                  step="0.0001"
+                  value={addDeviceForm.longitude}
+                  onChange={(e) => setAddDeviceForm({ ...addDeviceForm, longitude: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDeviceModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                // TODO: Implement device creation API call
+                toast({
+                  title: "Success",
+                  description: `${addDeviceForm.deviceType.toUpperCase()} device added successfully!`,
+                });
+                setIsAddDeviceModalOpen(false);
+              }}>
+                Add {addDeviceForm.deviceType.toUpperCase()}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -142,7 +142,6 @@ export default function OLTManagement() {
 
   // Form states
   const [createForm, setCreateForm] = useState({
-    oltId: '',
     name: '',
     oltIp: '',
     macAddress: '',
@@ -150,12 +149,25 @@ export default function OLTManagement() {
     latitude: 30.84,
     longitude: 76.19,
     oltType: 'epon' as const,
-    powerStatus: 'on' as const,
     oltPower: 2,
-    dnsServers: ['8.8.8.8', '1.1.1.1']
+    ownedBy: '68a976f837283960f117a7c4' // Default owner ID
   });
 
+  const [createFormImages, setCreateFormImages] = useState<File[]>([]);
+
   const [editForm, setEditForm] = useState<any>({});
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      setCreateFormImages(prev => [...prev, ...fileArray]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setCreateFormImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     filterOLTs();
@@ -226,21 +238,81 @@ export default function OLTManagement() {
   const handleCreateOLT = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Validate required fields
+      if (!createForm.name || !createForm.oltIp || !createForm.macAddress || !createForm.serialNumber) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create FormData for multipart/form-data request
+      const formData = new FormData();
       
-      toast({ 
-        title: "Coming Soon", 
-        description: "Create functionality will be available in the next update" 
+      // Add form fields
+      formData.append("name", createForm.name);
+      formData.append("oltIp", createForm.oltIp);
+      formData.append("macAddress", createForm.macAddress);
+      formData.append("oltType", createForm.oltType);
+      formData.append("ownedBy", createForm.ownedBy);
+      formData.append("latitude", createForm.latitude.toString());
+      formData.append("longitude", createForm.longitude.toString());
+      formData.append("oltPower", createForm.oltPower.toString());
+      formData.append("serialNumber", createForm.serialNumber);
+
+      // Add images
+      createFormImages.forEach((image, index) => {
+        formData.append("images", image);
       });
-      
-      setIsCreateDialogOpen(false);
-      setCreateForm({
-        oltId: '', name: '', oltIp: '', macAddress: '', serialNumber: '',
-        latitude: 30.84, longitude: 76.19, oltType: 'epon', powerStatus: 'on', oltPower: 2,
-        dnsServers: ['8.8.8.8', '1.1.1.1']
+
+      // Get auth token from localStorage or context
+      const token = localStorage.getItem('token') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGEwYWRkNGJiMGY3OTg4YmYxY2I5NmIiLCJyb2xlIjoidXNlciIsImp0aSI6InhlZW9kbnFSIiwiaWF0IjoxNzU2MjMyMTE5LCJleHAiOjE3NTg4MjQxMTl9.HDqiYLuw4CFZjYPkVimGwDgiAd6KXpQvi_An5-paSLg';
+
+      const response = await fetch(`${BASE_URL}/api/v1/network/olt`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        body: formData,
       });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Success",
+          description: "OLT created successfully!",
+        });
+        
+        // Reset form
+        setCreateForm({
+          name: '',
+          oltIp: '',
+          macAddress: '',
+          serialNumber: '',
+          latitude: 30.84,
+          longitude: 76.19,
+          oltType: 'epon',
+          oltPower: 2,
+          ownedBy: '68a976f837283960f117a7c4'
+        });
+        setCreateFormImages([]);
+        setIsCreateDialogOpen(false);
+        
+        // Refresh OLT data
+        // You might want to refetch the OLT list here
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create OLT');
+      }
     } catch (error) {
-      toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+      console.error('Error creating OLT:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create OLT",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -339,10 +411,10 @@ export default function OLTManagement() {
                 <MapPin className="h-4 w-4" />
                 <span className="hidden sm:inline">View on Map</span>
               </Button>
-              {/* <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2 text-xs lg:text-sm" title="Coming Soon">
+              <Button onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-2 text-xs lg:text-sm" title="Coming Soon">
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Add OLT</span>
-              </Button> */}
+              </Button>
             </div>
           </div>
 
@@ -553,32 +625,60 @@ export default function OLTManagement() {
 
       {/* Create OLT Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-          <DialogTitle>Add New OLT - Coming Soon</DialogTitle>
-          <DialogDescription>Create functionality will be available in the next update</DialogDescription>
+            <DialogTitle>Add New OLT</DialogTitle>
+            <DialogDescription>Create a new OLT with all required information</DialogDescription>
         </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          
+          <div className="space-y-6 py-4">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="oltId">OLT ID</Label>
-              <Input id="oltId" value={createForm.oltId} onChange={(e) => setCreateForm({ ...createForm, oltId: e.target.value })} placeholder="OLT1095" />
+                  <Label htmlFor="name">Name *</Label>
+                  <Input 
+                    id="name" 
+                    value={createForm.name} 
+                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} 
+                    placeholder="OLT-Mohali" 
+                  />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="SAMRALA-03" />
+                  <Label htmlFor="serialNumber">Serial Number *</Label>
+                  <Input 
+                    id="serialNumber" 
+                    value={createForm.serialNumber} 
+                    onChange={(e) => setCreateForm({ ...createForm, serialNumber: e.target.value })} 
+                    placeholder="SN12NF098" 
+                  />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="oltIp">IP Address</Label>
-              <Input id="oltIp" value={createForm.oltIp} onChange={(e) => setCreateForm({ ...createForm, oltIp: e.target.value })} placeholder="192.154.1.10" />
+                  <Label htmlFor="oltIp">IP Address *</Label>
+                  <Input 
+                    id="oltIp" 
+                    value={createForm.oltIp} 
+                    onChange={(e) => setCreateForm({ ...createForm, oltIp: e.target.value })} 
+                    placeholder="192.154.1.13" 
+                  />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="macAddress">MAC Address</Label>
-              <Input id="macAddress" value={createForm.macAddress} onChange={(e) => setCreateForm({ ...createForm, macAddress: e.target.value })} placeholder="32:1D:2B:3F:4D:5X" />
+                  <Label htmlFor="macAddress">MAC Address *</Label>
+                  <Input 
+                    id="macAddress" 
+                    value={createForm.macAddress} 
+                    onChange={(e) => setCreateForm({ ...createForm, macAddress: e.target.value })} 
+                    placeholder="32:1D:2B:3F:4D:5R" 
+                  />
+                </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="serialNumber">Serial Number</Label>
-              <Input id="serialNumber" value={createForm.serialNumber} onChange={(e) => setCreateForm({ ...createForm, serialNumber: e.target.value })} placeholder="SN12ND047" />
             </div>
+
+            {/* Technical Specifications */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Technical Specifications</h3>
+              <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="oltType">OLT Type</Label>
               <Select value={createForm.oltType} onValueChange={(value) => setCreateForm({ ...createForm, oltType: value as any })}>
@@ -586,22 +686,107 @@ export default function OLTManagement() {
                 <SelectContent>
                   <SelectItem value="epon">EPON</SelectItem>
                   <SelectItem value="gpon">GPON</SelectItem>
-                  {/* <SelectItem value="xgs-pon">XGS-PON</SelectItem> */}
+                      <SelectItem value="xgs-pon">XGS-PON</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude</Label>
-              <Input id="latitude" type="number" step="0.0001" value={createForm.latitude} onChange={(e) => setCreateForm({ ...createForm, latitude: parseFloat(e.target.value) })} placeholder="30.84" />
+                  <Label htmlFor="oltPower">OLT Power</Label>
+                  <Input 
+                    id="oltPower" 
+                    type="number" 
+                    value={createForm.oltPower} 
+                    onChange={(e) => setCreateForm({ ...createForm, oltPower: parseInt(e.target.value) })} 
+                    placeholder="2" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Location</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude">Latitude</Label>
+                  <Input 
+                    id="latitude" 
+                    type="number" 
+                    step="0.0001" 
+                    value={createForm.latitude} 
+                    onChange={(e) => setCreateForm({ ...createForm, latitude: parseFloat(e.target.value) })} 
+                    placeholder="30.84" 
+                  />
             </div>
             <div className="space-y-2">
               <Label htmlFor="longitude">Longitude</Label>
-              <Input id="longitude" type="number" step="0.0001" value={createForm.longitude} onChange={(e) => setCreateForm({ ...createForm, longitude: parseFloat(e.target.value) })} placeholder="76.19" />
+                  <Input 
+                    id="longitude" 
+                    type="number" 
+                    step="0.0001" 
+                    value={createForm.longitude} 
+                    onChange={(e) => setCreateForm({ ...createForm, longitude: parseFloat(e.target.value) })} 
+                    placeholder="76.19" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Images</h3>
+              <div className="space-y-2">
+                <Label htmlFor="images">Upload Images</Label>
+                <Input 
+                  id="images" 
+                  type="file" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleImageChange}
+                  className="cursor-pointer"
+                />
+                <p className="text-sm text-gray-500">You can select multiple images at once</p>
+              </div>
+              
+              {/* Selected Images Preview */}
+              {createFormImages.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Selected Images ({createFormImages.length})</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {createFormImages.map((image: File, index: number) => (
+                      <div key={index} className="relative group">
+                        <img 
+                          src={URL.createObjectURL(image)} 
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg border"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeImage(index)}
+                        >
+                          ×
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{image.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+          
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateOLT} disabled={loading}>{loading ? 'Processing...' : 'Coming Soon'}</Button>
+            <Button variant="outline" onClick={() => {
+              setIsCreateDialogOpen(false);
+              setCreateFormImages([]);
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateOLT} disabled={loading}>
+              {loading ? 'Creating...' : 'Create OLT'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

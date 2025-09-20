@@ -376,6 +376,12 @@ export const api = createApi({
         method: "GET",
       }),
     }),
+    getOltCompleteData: builder.query({
+      query: (oltId: string) => ({
+        url: `/network/olt/complete/${oltId}`,
+        method: "GET",
+      }),
+    }),
     updateAdminData: builder.mutation({
       query: (body) => ({
         url: `/dashboard/update-admin`,
@@ -563,6 +569,7 @@ export const {
   useGetAllLeaveRequestQuery,
   useApproveRejectLeaveRequestMutation,
   useGetOltDataQuery,
+  useGetOltCompleteDataQuery,
   useGetAllSelectNodesQuery,
   useGetFdbsByOltIdQuery,
   useAddUserMutation,
